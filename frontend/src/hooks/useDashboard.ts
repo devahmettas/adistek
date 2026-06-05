@@ -6,6 +6,25 @@ import { TOKEN_KEY } from '../api/client'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import type { TableStatus } from '../constants/tableStatuses'
 
+function mergeTableData(
+  incoming: RestaurantTable,
+  existing?: RestaurantTable,
+): RestaurantTable {
+  const waiterName =
+    incoming.viewing_waiter_name ??
+    incoming.viewing_waiter?.name ??
+    existing?.viewing_waiter_name ??
+    existing?.viewing_waiter?.name ??
+    null
+
+  return {
+    ...incoming,
+    viewing_waiter_id: incoming.viewing_waiter_id ?? existing?.viewing_waiter_id ?? null,
+    viewing_waiter_name: waiterName,
+    viewing_waiter: incoming.viewing_waiter ?? existing?.viewing_waiter ?? null,
+  }
+}
+
 export default function useDashboard() {
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -27,7 +46,7 @@ export default function useDashboard() {
       ])
       setCategories(categoryData)
       setProducts(productData)
-      setTables(tableData)
+      setTables((prev) => tableData.map((table) => mergeTableData(table, prev.find((item) => item.id === table.id))))
     } catch (err) {
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const status = (err as { response?: { status?: number } }).response?.status
@@ -49,12 +68,39 @@ export default function useDashboard() {
 
   const patchTable = (updatedTable: RestaurantTable) => {
     setTables((prev) =>
-      prev.map((table) => (table.id === updatedTable.id ? updatedTable : table)),
+      prev.map((table) =>
+        table.id === updatedTable.id ? mergeTableData(updatedTable, table) : table,
+      ),
     )
   }
 
   useEffect(() => {
     fetchData()
+  }, [fetchData])
+
+  const refreshTables = useCallback(async () => {
+    try {
+      const tableData = await getTables()
+      setTables((prev) => tableData.map((table) => mergeTableData(table, prev.find((item) => item.id === table.id))))
+    } catch {
+      // Keep existing table data on background refresh errors.
+    }
+  }, [])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      refreshTables()
+    }, 3000)
+
+    return () => window.clearInterval(interval)
+  }, [refreshTables])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetchData(true)
+    }, 30000)
+
+    return () => window.clearInterval(interval)
   }, [fetchData])
 
   const addCategory = async (name: string) => {

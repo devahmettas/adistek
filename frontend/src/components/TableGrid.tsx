@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import {
   TABLE_STATUS_LABELS,
@@ -9,6 +9,7 @@ import {
   formatOccupiedDuration,
   getTableItemCount,
   getTableTotalAmount,
+  getTableWaiterName,
 } from '../utils/tableHelpers'
 import TableDetailModal from './TableDetailModal'
 
@@ -17,6 +18,7 @@ interface TableGridProps {
   categories: Category[]
   products: Product[]
   now: number
+  isWaiter?: boolean
   onAddProduct: (
     tableId: number,
     productId: number,
@@ -30,6 +32,7 @@ interface TableGridProps {
   ) => Promise<void>
   onRequestBill: (tableId: number) => Promise<void>
   onPayBill: (tableId: number) => Promise<void>
+  onClaimView?: (tableId: number) => Promise<void>
 }
 
 export default function TableGrid({
@@ -37,12 +40,48 @@ export default function TableGrid({
   categories,
   products,
   now,
+  isWaiter = false,
   onAddProduct,
   onUpdateProduct,
   onRequestBill,
   onPayBill,
+  onClaimView,
 }: TableGridProps) {
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null)
+  const onClaimViewRef = useRef(onClaimView)
+
+  useEffect(() => {
+    onClaimViewRef.current = onClaimView
+  }, [onClaimView])
+
+  const openTable = async (table: RestaurantTable) => {
+    if (isWaiter && onClaimViewRef.current) {
+      try {
+        await onClaimViewRef.current(table.id)
+      } catch {
+        // Modal still opens even if claim fails.
+      }
+    }
+
+    setSelectedTable(table)
+  }
+
+  const closeTable = () => {
+    setSelectedTable(null)
+  }
+
+  useEffect(() => {
+    if (!isWaiter || !selectedTable) {
+      return
+    }
+
+    const tableId = selectedTable.id
+    const heartbeat = window.setInterval(() => {
+      onClaimViewRef.current?.(tableId).catch(() => undefined)
+    }, 30000)
+
+    return () => window.clearInterval(heartbeat)
+  }, [isWaiter, selectedTable?.id])
 
   if (tables.length === 0) {
     return <p className="text-sm text-gray-500">Henüz masa eklenmemiş.</p>
@@ -55,7 +94,7 @@ export default function TableGrid({
   return (
     <>
       <p className="mb-4 text-sm text-gray-500">
-        Masayı açmak için karta tıklayın. Ürün ekleyin veya hesap isteyin.
+        Masayı açmak için karta tıklayın. Garson bilgisi kartın üstünde görünür.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -65,17 +104,25 @@ export default function TableGrid({
           const total = getTableTotalAmount(table.products)
           const duration = formatOccupiedDuration(table.occupied_at ?? null, now)
           const itemCount = getTableItemCount(table.products)
+          const waiterName = getTableWaiterName(table)
 
           return (
             <button
               key={table.id}
               type="button"
-              onClick={() => setSelectedTable(table)}
+              onClick={() => openTable(table)}
               className={`flex aspect-square flex-col justify-between rounded-2xl border-2 p-4 text-left shadow-sm transition hover:scale-[1.02] hover:shadow-md ${styles.card}`}
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-lg font-bold text-gray-900">{table.name}</h3>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-bold text-gray-900">{table.name}</p>
+                    {waiterName ? (
+                      <p className="mt-1 truncate rounded-md bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">
+                        Garson: {waiterName}
+                      </p>
+                    ) : null}
+                  </div>
                   <span className={`h-3 w-3 shrink-0 rounded-full ${styles.dot}`} />
                 </div>
                 <span
@@ -103,13 +150,13 @@ export default function TableGrid({
           categories={categories}
           products={products}
           now={now}
-          onClose={() => setSelectedTable(null)}
+          onClose={closeTable}
           onAddProduct={onAddProduct}
           onUpdateProduct={onUpdateProduct}
           onRequestBill={onRequestBill}
           onPayBill={async (tableId) => {
             await onPayBill(tableId)
-            setSelectedTable(null)
+            closeTable()
           }}
         />
       )}

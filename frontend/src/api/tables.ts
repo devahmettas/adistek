@@ -1,8 +1,9 @@
+import type { AxiosInstance } from 'axios'
 import apiClient from './client'
 import type { ApiResponse, RestaurantTable } from './types'
 
-export const getTables = async (): Promise<RestaurantTable[]> => {
-  const { data } = await apiClient.get<ApiResponse<RestaurantTable[]>>('/tables')
+export const getTables = async (client: AxiosInstance = apiClient): Promise<RestaurantTable[]> => {
+  const { data } = await client.get<ApiResponse<RestaurantTable[]>>('/tables')
   return data.data
 }
 
@@ -18,8 +19,9 @@ export const addProductToTable = async (
     quantity?: number
     note?: string
   },
+  client: AxiosInstance = apiClient,
 ): Promise<RestaurantTable> => {
-  const { data } = await apiClient.post<ApiResponse<RestaurantTable>>(
+  const { data } = await client.post<ApiResponse<RestaurantTable>>(
     `/tables/${tableId}/products`,
     payload,
   )
@@ -33,8 +35,9 @@ export const updateTableProduct = async (
     quantity: number
     note?: string | null
   },
+  client: AxiosInstance = apiClient,
 ): Promise<RestaurantTable> => {
-  const { data } = await apiClient.patch<ApiResponse<RestaurantTable>>(
+  const { data } = await client.patch<ApiResponse<RestaurantTable>>(
     `/tables/${tableId}/products/${productId}`,
     payload,
   )
@@ -44,15 +47,35 @@ export const updateTableProduct = async (
 export const updateTableStatus = async (
   tableId: number,
   status: string,
+  client: AxiosInstance = apiClient,
 ): Promise<RestaurantTable> => {
-  const { data } = await apiClient.patch<ApiResponse<RestaurantTable>>(
+  const { data } = await client.patch<ApiResponse<RestaurantTable>>(
     `/tables/${tableId}/status`,
     { status },
   )
   return data.data
 }
 
-export const closeTable = async (tableId: number): Promise<RestaurantTable> => {
-  const { data } = await apiClient.post<ApiResponse<RestaurantTable>>(`/tables/${tableId}/close`)
+export const closeTable = async (
+  tableId: number,
+  client: AxiosInstance = apiClient,
+): Promise<RestaurantTable> => {
+  const { data } = await client.post<ApiResponse<RestaurantTable>>(`/tables/${tableId}/close`)
+  return data.data
+}
+
+export const claimTableView = async (
+  tableId: number,
+  client: AxiosInstance = apiClient,
+): Promise<RestaurantTable> => {
+  const { data } = await client.post<ApiResponse<RestaurantTable>>(`/tables/${tableId}/view`)
+  return data.data
+}
+
+export const releaseTableView = async (
+  tableId: number,
+  client: AxiosInstance = apiClient,
+): Promise<RestaurantTable> => {
+  const { data } = await client.delete<ApiResponse<RestaurantTable>>(`/tables/${tableId}/view`)
   return data.data
 }

@@ -10,8 +10,10 @@ class TableRepository
 {
     public function getByRestaurant(int $restaurantId): Collection
     {
+        $this->clearStaleViews($restaurantId);
+
         return RestaurantTable::query()
-            ->with(['products.category'])
+            ->with(['products.category', 'viewingWaiter'])
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('created_at')
             ->get();
@@ -27,14 +29,14 @@ class TableRepository
 
     public function create(array $data): RestaurantTable
     {
-        return RestaurantTable::create($data)->load(['products.category']);
+        return RestaurantTable::create($data)->load(['products.category', 'viewingWaiter']);
     }
 
     public function update(RestaurantTable $table, array $data): RestaurantTable
     {
         $table->update($data);
 
-        return $table->fresh(['products.category']);
+        return $table->fresh(['products.category', 'viewingWaiter']);
     }
 
     public function attachProduct(
@@ -87,5 +89,48 @@ class TableRepository
     public function detachAllProducts(RestaurantTable $table): void
     {
         $table->products()->detach();
+    }
+
+    public function clearStaleViews(int $restaurantId): void
+    {
+        RestaurantTable::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereNotNull('viewing_waiter_id')
+            ->where('viewing_waiter_at', '<', now()->subMinutes(30))
+            ->update([
+                'viewing_waiter_id' => null,
+                'viewing_waiter_at' => null,
+            ]);
+    }
+
+    public function claimView(RestaurantTable $table, int $waiterId): RestaurantTable
+    {
+        $table->update([
+            'viewing_waiter_id' => $waiterId,
+            'viewing_waiter_at' => now(),
+        ]);
+
+        return $table->fresh(['products.category', 'viewingWaiter']);
+    }
+
+    public function releaseView(RestaurantTable $table, int $waiterId): RestaurantTable
+    {
+        if ((int) $table->viewing_waiter_id === $waiterId) {
+            $table->update([
+                'viewing_waiter_id' => null,
+                'viewing_waiter_at' => null,
+            ]);
+        }
+
+        return $table->fresh(['products.category', 'viewingWaiter']);
+    }
+
+    public function refreshView(RestaurantTable $table, int $waiterId): RestaurantTable
+    {
+        if ((int) $table->viewing_waiter_id === $waiterId) {
+            $table->update(['viewing_waiter_at' => now()]);
+        }
+
+        return $table->fresh(['products.category', 'viewingWaiter']);
     }
 }

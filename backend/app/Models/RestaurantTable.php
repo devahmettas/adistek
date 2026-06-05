@@ -18,16 +18,20 @@ class RestaurantTable extends Model
         'name',
         'status',
         'occupied_at',
+        'viewing_waiter_id',
+        'viewing_waiter_at',
     ];
 
     protected $appends = [
         'total_amount',
         'occupied_minutes',
+        'viewing_waiter_name',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'occupied_at' => 'datetime',
+        'viewing_waiter_at' => 'datetime',
         'status' => \App\Enums\TableStatus::class,
     ];
 
@@ -59,6 +63,21 @@ class RestaurantTable extends Model
         });
     }
 
+    protected function viewingWaiterName(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if ($this->relationLoaded('viewingWaiter')) {
+                return $this->viewingWaiter?->name;
+            }
+
+            if (! $this->viewing_waiter_id) {
+                return null;
+            }
+
+            return Waiter::query()->whereKey($this->viewing_waiter_id)->value('name');
+        });
+    }
+
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
@@ -68,5 +87,10 @@ class RestaurantTable extends Model
     {
         return $this->belongsToMany(Product::class, 'product_restaurant_table')
             ->withPivot(['quantity', 'note', 'created_at']);
+    }
+
+    public function viewingWaiter(): BelongsTo
+    {
+        return $this->belongsTo(Waiter::class, 'viewing_waiter_id');
     }
 }

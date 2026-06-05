@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -12,13 +13,15 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    use ResolvesRestaurantId;
+
     public function __construct(
         private readonly ProductService $service,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $products = $this->service->listByRestaurant($request->user()->id);
+        $products = $this->service->listByRestaurant($this->restaurantId($request));
 
         return response()->json([
             'data' => $products,
@@ -27,7 +30,7 @@ class ProductController extends Controller
 
     public function show(Request $request, Product $product): JsonResponse
     {
-        $item = $this->service->findForRestaurant($request->user()->id, $product->id);
+        $item = $this->service->findForRestaurant($this->restaurantId($request), $product->id);
 
         return response()->json([
             'data' => $item,

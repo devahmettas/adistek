@@ -4,6 +4,7 @@ import Card from '../components/Card'
 import Input from '../components/Input'
 import ProductList from '../components/ProductList'
 import TableGrid from '../components/TableGrid'
+import WaiterList from '../components/WaiterList'
 import Select from '../components/Select'
 import Textarea from '../components/Textarea'
 import useDashboard from '../hooks/useDashboard'
@@ -216,6 +217,10 @@ export default function DashboardPage() {
                 {submittingProduct ? 'Kaydediliyor...' : 'Ürün Ekle'}
               </Button>
             </form>
+          </Card>
+
+          <Card title="Garsonlar">
+            <WaiterList />
           </Card>
 
           <Card title="Masalar">

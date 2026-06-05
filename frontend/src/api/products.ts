@@ -1,8 +1,9 @@
+import type { AxiosInstance } from 'axios'
 import apiClient from './client'
 import type { ApiResponse, Product } from './types'
 
-export const getProducts = async (): Promise<Product[]> => {
-  const { data } = await apiClient.get<ApiResponse<Product[]>>('/products')
+export const getProducts = async (client: AxiosInstance = apiClient): Promise<Product[]> => {
+  const { data } = await client.get<ApiResponse<Product[]>>('/products')
   return data.data
 }
 

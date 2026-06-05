@@ -24,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'restaurant' => \App\Http\Middleware\EnsureRestaurant::class,
+            'waiter' => \App\Http\Middleware\EnsureWaiter::class,
+            'restaurant_or_waiter' => \App\Http\Middleware\EnsureRestaurantOrWaiter::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
         ]);
     })

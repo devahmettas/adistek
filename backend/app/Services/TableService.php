@@ -41,8 +41,12 @@ class TableService
         ]);
     }
 
-    public function updateStatus(int $restaurantId, int $tableId, string $status): RestaurantTable
-    {
+    public function updateStatus(
+        int $restaurantId,
+        int $tableId,
+        string $status,
+        ?int $waiterId = null,
+    ): RestaurantTable {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
         if (! $table) {
@@ -51,10 +55,12 @@ class TableService
 
         $newStatus = TableStatus::from($status);
 
-        return $this->repository->update($table, [
+        $updated = $this->repository->update($table, [
             'status' => $status,
             'occupied_at' => $this->resolveOccupiedAt($newStatus, $table->occupied_at),
         ]);
+
+        return $this->assignWaiter($updated, $waiterId);
     }
 
     public function addProduct(
@@ -63,6 +69,7 @@ class TableService
         int $productId,
         int $quantity = 1,
         ?string $note = null,
+        ?int $waiterId = null,
     ): RestaurantTable {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
@@ -93,8 +100,10 @@ class TableService
             $table->update($updates);
         }
 
-        return $this->repository->findForRestaurant($tableId, $restaurantId)
-            ->load(['products.category']);
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load(['products.category', 'viewingWaiter']);
+
+        return $this->assignWaiter($table, $waiterId);
     }
 
     public function updateProduct(
@@ -103,6 +112,7 @@ class TableService
         int $productId,
         int $quantity,
         ?string $note = null,
+        ?int $waiterId = null,
     ): RestaurantTable {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
@@ -123,8 +133,10 @@ class TableService
             $note ?? $product->pivot->note,
         );
 
-        return $this->repository->findForRestaurant($tableId, $restaurantId)
-            ->load(['products.category']);
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load(['products.category', 'viewingWaiter']);
+
+        return $this->assignWaiter($table, $waiterId);
     }
 
     public function closeTable(int $restaurantId, int $tableId): RestaurantTable
@@ -140,7 +152,40 @@ class TableService
         return $this->repository->update($table, [
             'status' => TableStatus::Empty->value,
             'occupied_at' => null,
+            'viewing_waiter_id' => null,
+            'viewing_waiter_at' => null,
         ]);
+    }
+
+    public function claimView(int $restaurantId, int $tableId, int $waiterId): RestaurantTable
+    {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        return $this->repository->claimView($table, $waiterId);
+    }
+
+    public function releaseView(int $restaurantId, int $tableId, int $waiterId): RestaurantTable
+    {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        return $this->repository->releaseView($table, $waiterId);
+    }
+
+    private function assignWaiter(RestaurantTable $table, ?int $waiterId): RestaurantTable
+    {
+        if (! $waiterId) {
+            return $table;
+        }
+
+        return $this->repository->claimView($table, $waiterId);
     }
 
     private function resolveOccupiedAt(TableStatus $status, ?DateTimeInterface $current): ?DateTimeInterface

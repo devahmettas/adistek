@@ -144,6 +144,10 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-sm text-gray-500">
+          <Link to="/waiter/login" className="text-blue-600 hover:text-blue-700">
+            Garson girişi
+          </Link>
+          {' · '}
           <Link to="/admin/login" className="text-blue-600 hover:text-blue-700">
             Süper Admin girişi
           </Link>

@@ -33,3 +33,10 @@ export function getTableTotalAmount(products?: { price: string; pivot?: { quanti
 export function getTableItemCount(products?: { pivot?: { quantity: number } }[]): number {
   return products?.reduce((sum, product) => sum + (product.pivot?.quantity ?? 1), 0) ?? 0
 }
+
+export function getTableWaiterName(table: {
+  viewing_waiter_name?: string | null
+  viewing_waiter?: { name?: string | null } | null
+}): string | null {
+  return table.viewing_waiter_name ?? table.viewing_waiter?.name ?? null
+}
