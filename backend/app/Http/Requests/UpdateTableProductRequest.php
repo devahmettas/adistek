@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTableProductRequest extends FormRequest
+class UpdateTableProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,8 +14,7 @@ class StoreTableProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_id' => ['required', 'integer', 'exists:products,id'],
-            'quantity' => ['sometimes', 'integer', 'min:1', 'max:99'],
+            'quantity' => ['required', 'integer', 'min:0', 'max:99'],
             'note' => ['nullable', 'string', 'max:255'],
         ];
     }

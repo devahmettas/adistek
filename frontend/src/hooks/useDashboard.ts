@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createCategory, getCategories } from '../api/categories'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../api/products'
-import { createTable, addProductToTable, getTables } from '../api/tables'
+import { createTable, addProductToTable, closeTable, getTables, updateTableProduct, updateTableStatus } from '../api/tables'
+import { TOKEN_KEY } from '../api/client'
 import type { Category, Product, RestaurantTable } from '../api/types'
+import type { TableStatus } from '../constants/tableStatuses'
 
 export default function useDashboard() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -11,9 +13,11 @@ export default function useDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true)
+      setError(null)
+    }
 
     try {
       const [categoryData, productData, tableData] = await Promise.all([
@@ -24,12 +28,30 @@ export default function useDashboard() {
       setCategories(categoryData)
       setProducts(productData)
       setTables(tableData)
-    } catch {
-      setError('Veriler yüklenemedi.')
+    } catch (err) {
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const status = (err as { response?: { status?: number } }).response?.status
+        if (status === 401) {
+          localStorage.removeItem(TOKEN_KEY)
+          window.location.href = '/login'
+          return
+        }
+      }
+      if (!silent) {
+        setError('Veriler yüklenemedi. Backend çalışıyor mu kontrol edin.')
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }, [])
+
+  const patchTable = (updatedTable: RestaurantTable) => {
+    setTables((prev) =>
+      prev.map((table) => (table.id === updatedTable.id ? updatedTable : table)),
+    )
+  }
 
   useEffect(() => {
     fetchData()
@@ -37,7 +59,7 @@ export default function useDashboard() {
 
   const addCategory = async (name: string) => {
     await createCategory(name)
-    await fetchData()
+    await fetchData(true)
   }
 
   const addProduct = async (payload: {
@@ -47,7 +69,7 @@ export default function useDashboard() {
     description?: string
   }) => {
     await createProduct(payload)
-    await fetchData()
+    await fetchData(true)
   }
 
   const editProduct = async (
@@ -61,12 +83,12 @@ export default function useDashboard() {
     },
   ) => {
     await updateProduct(id, payload)
-    await fetchData()
+    await fetchData(true)
   }
 
   const removeProduct = async (id: number) => {
     await deleteProduct(id)
-    await fetchData()
+    await fetchData(true)
   }
 
   const toggleProductStatus = async (product: Product) => {
@@ -77,17 +99,53 @@ export default function useDashboard() {
       description: product.description,
       is_active: !product.is_active,
     })
-    await fetchData()
+    await fetchData(true)
   }
 
   const addTable = async (name: string) => {
     await createTable(name)
-    await fetchData()
+    await fetchData(true)
   }
 
-  const assignProductToTable = async (tableId: number, productId: number) => {
-    await addProductToTable(tableId, productId)
-    await fetchData()
+  const assignProductToTable = async (
+    tableId: number,
+    productId: number,
+    quantity = 1,
+    note?: string,
+  ) => {
+    const updatedTable = await addProductToTable(tableId, {
+      product_id: productId,
+      quantity,
+      note: note?.trim() || undefined,
+    })
+    patchTable(updatedTable)
+  }
+
+  const updateTableProductQuantity = async (
+    tableId: number,
+    productId: number,
+    payload: {
+      quantity: number
+      note?: string | null
+    },
+  ) => {
+    const updatedTable = await updateTableProduct(tableId, productId, payload)
+    patchTable(updatedTable)
+  }
+
+  const changeTableStatus = async (tableId: number, status: TableStatus) => {
+    const updatedTable = await updateTableStatus(tableId, status)
+    patchTable(updatedTable)
+  }
+
+  const requestTableBill = async (tableId: number) => {
+    const updatedTable = await updateTableStatus(tableId, 'bill_requested')
+    patchTable(updatedTable)
+  }
+
+  const payTableBill = async (tableId: number) => {
+    const updatedTable = await closeTable(tableId)
+    patchTable(updatedTable)
   }
 
   return {
@@ -103,6 +161,10 @@ export default function useDashboard() {
     toggleProductStatus,
     addTable,
     assignProductToTable,
+    updateTableProductQuantity,
+    changeTableStatus,
+    requestTableBill,
+    payTableBill,
     refresh: fetchData,
   }
 }

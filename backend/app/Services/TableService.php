@@ -2,15 +2,25 @@
 
 namespace App\Services;
 
+use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Repositories\ProductRepository;
 use App\Repositories\TableRepository;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class TableService
 {
+    private const ACTIVE_STATUSES = [
+        TableStatus::Occupied,
+        TableStatus::WaitingOrder,
+        TableStatus::Ordered,
+        TableStatus::Served,
+        TableStatus::BillRequested,
+    ];
+
     public function __construct(
         private readonly TableRepository $repository,
         private readonly ProductRepository $productRepository,
@@ -26,11 +36,34 @@ class TableService
         return $this->repository->create([
             'restaurant_id' => $restaurantId,
             'name' => $data['name'],
+            'status' => TableStatus::Empty->value,
+            'occupied_at' => null,
         ]);
     }
 
-    public function addProduct(int $restaurantId, int $tableId, int $productId): RestaurantTable
+    public function updateStatus(int $restaurantId, int $tableId, string $status): RestaurantTable
     {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        $newStatus = TableStatus::from($status);
+
+        return $this->repository->update($table, [
+            'status' => $status,
+            'occupied_at' => $this->resolveOccupiedAt($newStatus, $table->occupied_at),
+        ]);
+    }
+
+    public function addProduct(
+        int $restaurantId,
+        int $tableId,
+        int $productId,
+        int $quantity = 1,
+        ?string $note = null,
+    ): RestaurantTable {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
         if (! $table) {
@@ -43,13 +76,79 @@ class TableService
             throw new UnprocessableEntityHttpException('Ürün bu restorana ait değil.');
         }
 
-        if ($table->products()->where('product_id', $productId)->exists()) {
-            throw new UnprocessableEntityHttpException('Ürün zaten bu masada.');
+        if (! $product->is_active) {
+            throw new UnprocessableEntityHttpException('Pasif ürün masaya eklenemez.');
         }
 
-        $this->repository->attachProduct($table, $product);
+        $this->repository->attachProduct($table, $product, $quantity, $note);
+
+        $updates = [];
+
+        if ($table->status === TableStatus::Empty) {
+            $updates['status'] = TableStatus::WaitingOrder->value;
+            $updates['occupied_at'] = $table->occupied_at ?? now();
+        }
+
+        if ($updates !== []) {
+            $table->update($updates);
+        }
 
         return $this->repository->findForRestaurant($tableId, $restaurantId)
             ->load(['products.category']);
+    }
+
+    public function updateProduct(
+        int $restaurantId,
+        int $tableId,
+        int $productId,
+        int $quantity,
+        ?string $note = null,
+    ): RestaurantTable {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        $product = $table->products()->where('product_id', $productId)->first();
+
+        if (! $product) {
+            throw new NotFoundHttpException('Ürün bu masada bulunamadı.');
+        }
+
+        $this->repository->updateProductPivot(
+            $table,
+            $productId,
+            $quantity,
+            $note ?? $product->pivot->note,
+        );
+
+        return $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load(['products.category']);
+    }
+
+    public function closeTable(int $restaurantId, int $tableId): RestaurantTable
+    {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        $this->repository->detachAllProducts($table);
+
+        return $this->repository->update($table, [
+            'status' => TableStatus::Empty->value,
+            'occupied_at' => null,
+        ]);
+    }
+
+    private function resolveOccupiedAt(TableStatus $status, ?DateTimeInterface $current): ?DateTimeInterface
+    {
+        if (in_array($status, self::ACTIVE_STATUSES, true)) {
+            return $current ?? now();
+        }
+
+        return null;
     }
 }

@@ -22,12 +22,23 @@ export interface Product {
   is_active: boolean
   created_at: string
   category?: Category
+  pivot?: {
+    quantity: number
+    note: string | null
+    created_at: string
+  }
 }
+
+import type { TableStatus } from '../constants/tableStatuses'
 
 export interface RestaurantTable {
   id: number
   restaurant_id: number
   name: string
+  status: TableStatus
+  occupied_at: string | null
+  total_amount: string
+  occupied_minutes: number | null
   created_at: string
   products?: Product[]
 }

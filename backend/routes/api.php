@@ -28,7 +28,10 @@ Route::middleware(['auth:sanctum', 'restaurant'])->group(function () {
 
     Route::get('/tables', [TableController::class, 'index']);
     Route::post('/tables', [TableController::class, 'store']);
+    Route::patch('/tables/{table}/status', [TableController::class, 'updateStatus']);
     Route::post('/tables/{table}/products', [TableController::class, 'addProduct']);
+    Route::patch('/tables/{table}/products/{product}', [TableController::class, 'updateProduct']);
+    Route::post('/tables/{table}/close', [TableController::class, 'close']);
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

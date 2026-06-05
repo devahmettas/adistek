@@ -3,9 +3,11 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
 import ProductList from '../components/ProductList'
+import TableGrid from '../components/TableGrid'
 import Select from '../components/Select'
 import Textarea from '../components/Textarea'
 import useDashboard from '../hooks/useDashboard'
+import useNow from '../hooks/useNow'
 import { useAuth } from '../store/AuthStore'
 
 export default function DashboardPage() {
@@ -23,23 +25,23 @@ export default function DashboardPage() {
     toggleProductStatus,
     addTable,
     assignProductToTable,
+    updateTableProductQuantity,
+    requestTableBill,
+    payTableBill,
   } = useDashboard()
+  const now = useNow()
 
   const [categoryName, setCategoryName] = useState('')
   const [tableName, setTableName] = useState('')
-  const [tableProductTableId, setTableProductTableId] = useState('')
-  const [tableProductId, setTableProductId] = useState('')
   const [productName, setProductName] = useState('')
   const [productPrice, setProductPrice] = useState('')
   const [productDescription, setProductDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [categoryError, setCategoryError] = useState<string | null>(null)
   const [tableError, setTableError] = useState<string | null>(null)
-  const [tableProductError, setTableProductError] = useState<string | null>(null)
   const [productError, setProductError] = useState<string | null>(null)
   const [submittingCategory, setSubmittingCategory] = useState(false)
   const [submittingTable, setSubmittingTable] = useState(false)
-  const [submittingTableProduct, setSubmittingTableProduct] = useState(false)
   const [submittingProduct, setSubmittingProduct] = useState(false)
 
   const handleCategorySubmit = async (event: FormEvent) => {
@@ -81,32 +83,6 @@ export default function DashboardPage() {
       setTableError('Masa eklenemedi.')
     } finally {
       setSubmittingTable(false)
-    }
-  }
-
-  const handleTableProductSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-    setTableProductError(null)
-
-    if (!tableProductTableId) {
-      setTableProductError('Masa seçimi zorunludur.')
-      return
-    }
-
-    if (!tableProductId) {
-      setTableProductError('Ürün seçimi zorunludur.')
-      return
-    }
-
-    setSubmittingTableProduct(true)
-
-    try {
-      await assignProductToTable(Number(tableProductTableId), Number(tableProductId))
-      setTableProductId('')
-    } catch {
-      setTableProductError('Ürün masaya eklenemedi.')
-    } finally {
-      setSubmittingTableProduct(false)
     }
   }
 
@@ -242,81 +218,18 @@ export default function DashboardPage() {
             </form>
           </Card>
 
-          <Card title="Masaya Ürün Ekle">
-            <form onSubmit={handleTableProductSubmit} className="space-y-4">
-              <Select
-                label="Masa"
-                name="tableProductTableId"
-                value={tableProductTableId}
-                onChange={(event) => setTableProductTableId(event.target.value)}
-                options={[
-                  { value: '', label: 'Masa seçin' },
-                  ...tables.map((table) => ({
-                    value: table.id,
-                    label: table.name,
-                  })),
-                ]}
-              />
-              <Select
-                label="Ürün"
-                name="tableProductId"
-                value={tableProductId}
-                onChange={(event) => setTableProductId(event.target.value)}
-                options={[
-                  { value: '', label: 'Ürün seçin' },
-                  ...products
-                    .filter((product) => product.is_active)
-                    .map((product) => ({
-                    value: product.id,
-                    label: `${product.name} (${Number(product.price).toFixed(2)} ₺)`,
-                  })),
-                ]}
-              />
-              {tableProductError && <p className="text-sm text-red-600">{tableProductError}</p>}
-              <Button
-                type="submit"
-                disabled={submittingTableProduct || tables.length === 0 || products.length === 0}
-              >
-                {submittingTableProduct ? 'Ekleniyor...' : 'Masaya Ekle'}
-              </Button>
-            </form>
+          <Card title="Masalar">
+            <TableGrid
+              tables={tables}
+              categories={categories}
+              products={products}
+              now={now}
+              onAddProduct={assignProductToTable}
+              onUpdateProduct={updateTableProductQuantity}
+              onRequestBill={requestTableBill}
+              onPayBill={payTableBill}
+            />
           </Card>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card title="Masalar">
-              {tables.length === 0 ? (
-                <p className="text-sm text-gray-500">Henüz masa eklenmemiş.</p>
-              ) : (
-                <ul className="divide-y divide-gray-100">
-                  {tables.map((table) => (
-                    <li key={table.id} className="py-3 first:pt-0 last:pb-0">
-                      <p className="font-medium text-gray-900">{table.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(table.created_at).toLocaleString('tr-TR')}
-                      </p>
-                      {table.products && table.products.length > 0 ? (
-                        <ul className="mt-2 space-y-1">
-                          {table.products.map((product) => (
-                            <li
-                              key={product.id}
-                              className="flex items-center justify-between rounded-md bg-gray-50 px-2 py-1 text-sm"
-                            >
-                              <span>{product.name}</span>
-                              <span className="font-medium text-blue-700">
-                                {Number(product.price).toFixed(2)} ₺
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-1 text-xs text-gray-400">Henüz ürün eklenmemiş</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </div>
 
           <Card title="Ürün Listesi">
             <ProductList

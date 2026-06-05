@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTableProductRequest;
 use App\Http\Requests\StoreTableRequest;
+use App\Http\Requests\UpdateTableProductRequest;
+use App\Http\Requests\UpdateTableStatusRequest;
+use App\Models\Product;
 use App\Models\RestaurantTable;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
@@ -34,6 +37,21 @@ class TableController extends Controller
         ], 201);
     }
 
+    public function updateStatus(
+        UpdateTableStatusRequest $request,
+        RestaurantTable $table,
+    ): JsonResponse {
+        $updatedTable = $this->service->updateStatus(
+            $request->user()->id,
+            $table->id,
+            $request->validated('status'),
+        );
+
+        return response()->json([
+            'data' => $updatedTable,
+        ]);
+    }
+
     public function addProduct(
         StoreTableProductRequest $request,
         RestaurantTable $table,
@@ -42,10 +60,40 @@ class TableController extends Controller
             $request->user()->id,
             $table->id,
             (int) $request->validated('product_id'),
+            (int) ($request->validated('quantity') ?? 1),
+            $request->validated('note'),
         );
 
         return response()->json([
             'data' => $updatedTable,
         ], 201);
+    }
+
+    public function updateProduct(
+        UpdateTableProductRequest $request,
+        RestaurantTable $table,
+        Product $product,
+    ): JsonResponse {
+        $updatedTable = $this->service->updateProduct(
+            $request->user()->id,
+            $table->id,
+            $product->id,
+            (int) $request->validated('quantity'),
+            $request->validated('note'),
+        );
+
+        return response()->json([
+            'data' => $updatedTable,
+        ]);
+    }
+
+    public function close(Request $request, RestaurantTable $table): JsonResponse
+    {
+        $closedTable = $this->service->closeTable($request->user()->id, $table->id);
+
+        return response()->json([
+            'data' => $closedTable,
+            'message' => 'Hesap kapatıldı, masa boşaltıldı.',
+        ]);
     }
 }
