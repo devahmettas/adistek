@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ListProductRequest extends FormRequest
+class StoreTableProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,7 @@ class ListProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'restaurant_id' => ['required', 'integer', 'exists:restaurants,id'],
+            'product_id' => ['required', 'integer', 'exists:products,id'],
         ];
     }
 }

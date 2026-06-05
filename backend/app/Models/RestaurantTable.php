@@ -6,20 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Product extends Model
+class RestaurantTable extends Model
 {
+    protected $table = 'restaurant_tables';
+
     public $timestamps = false;
 
     protected $fillable = [
         'restaurant_id',
-        'category_id',
         'name',
-        'price',
-        'description',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
         'created_at' => 'datetime',
     ];
 
@@ -28,14 +26,9 @@ class Product extends Model
         return $this->belongsTo(Restaurant::class);
     }
 
-    public function category(): BelongsTo
+    public function products(): BelongsToMany
     {
-        return $this->belongsTo(Category::class);
-    }
-
-    public function tables(): BelongsToMany
-    {
-        return $this->belongsToMany(RestaurantTable::class, 'product_restaurant_table')
+        return $this->belongsToMany(Product::class, 'product_restaurant_table')
             ->withPivot('created_at');
     }
 }

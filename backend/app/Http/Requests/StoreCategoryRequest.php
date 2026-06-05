@@ -14,7 +14,6 @@ class StoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'restaurant_id' => ['required', 'integer', 'exists:restaurants,id'],
             'name' => ['required', 'string', 'max:255'],
         ];
     }

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ListCategoryRequest extends FormRequest
+class LoginRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,8 @@ class ListCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'restaurant_id' => ['required', 'integer', 'exists:restaurants,id'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ];
     }
 }

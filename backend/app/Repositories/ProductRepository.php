@@ -20,4 +20,9 @@ class ProductRepository
     {
         return Product::create($data);
     }
+
+    public function find(int $id): ?Product
+    {
+        return Product::find($id);
+    }
 }

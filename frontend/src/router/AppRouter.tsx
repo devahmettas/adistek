@@ -1,15 +1,22 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
-import RestaurantDetailPage from '../pages/RestaurantDetailPage'
-import RestaurantsPage from '../pages/RestaurantsPage'
+import DashboardPage from '../pages/DashboardPage'
+import LoginPage from '../pages/LoginPage'
+import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<RestaurantsPage />} />
-        <Route path="restaurants/:id" element={<RestaurantDetailPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
       </Route>
+
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }

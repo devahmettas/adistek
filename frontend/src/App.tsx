@@ -1,14 +1,14 @@
 import { BrowserRouter } from 'react-router-dom'
 import AppRouter from './router/AppRouter'
-import { StoreProvider } from './store/AppStore'
+import { AuthProvider } from './store/AuthStore'
 
 function App() {
   return (
-    <StoreProvider>
+    <AuthProvider>
       <BrowserRouter>
         <AppRouter />
       </BrowserRouter>
-    </StoreProvider>
+    </AuthProvider>
   )
 }
 

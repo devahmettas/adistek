@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createCategory, getCategories } from '../api/categories'
 import { createProduct, getProducts } from '../api/products'
-import type { Category, Product } from '../api/types'
+import { createTable, addProductToTable, getTables } from '../api/tables'
+import type { Category, Product, RestaurantTable } from '../api/types'
 
-export default function useRestaurantDetail(restaurantId: number) {
+export default function useDashboard() {
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [tables, setTables] = useState<RestaurantTable[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -14,25 +16,27 @@ export default function useRestaurantDetail(restaurantId: number) {
     setError(null)
 
     try {
-      const [categoryData, productData] = await Promise.all([
-        getCategories(restaurantId),
-        getProducts(restaurantId),
+      const [categoryData, productData, tableData] = await Promise.all([
+        getCategories(),
+        getProducts(),
+        getTables(),
       ])
       setCategories(categoryData)
       setProducts(productData)
+      setTables(tableData)
     } catch {
-      setError('Restoran detayları yüklenemedi.')
+      setError('Veriler yüklenemedi.')
     } finally {
       setLoading(false)
     }
-  }, [restaurantId])
+  }, [])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
   const addCategory = async (name: string) => {
-    await createCategory(restaurantId, name)
+    await createCategory(name)
     await fetchData()
   }
 
@@ -42,20 +46,30 @@ export default function useRestaurantDetail(restaurantId: number) {
     price: number
     description?: string
   }) => {
-    await createProduct({
-      restaurant_id: restaurantId,
-      ...payload,
-    })
+    await createProduct(payload)
+    await fetchData()
+  }
+
+  const addTable = async (name: string) => {
+    await createTable(name)
+    await fetchData()
+  }
+
+  const assignProductToTable = async (tableId: number, productId: number) => {
+    await addProductToTable(tableId, productId)
     await fetchData()
   }
 
   return {
     categories,
     products,
+    tables,
     loading,
     error,
     addCategory,
     addProduct,
+    addTable,
+    assignProductToTable,
     refresh: fetchData,
   }
 }
