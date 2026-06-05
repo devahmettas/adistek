@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
@@ -142,6 +142,12 @@ export default function LoginPage() {
             </Button>
           </form>
         </Card>
+
+        <p className="text-center text-sm text-gray-500">
+          <Link to="/admin/login" className="text-blue-600 hover:text-blue-700">
+            Süper Admin girişi
+          </Link>
+        </p>
       </div>
     </div>
   )

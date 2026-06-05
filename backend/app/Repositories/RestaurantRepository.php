@@ -14,6 +14,14 @@ class RestaurantRepository
             ->get();
     }
 
+    public function allWithStats(): Collection
+    {
+        return Restaurant::query()
+            ->withCount(['categories', 'products', 'tables'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
     public function create(array $data): Restaurant
     {
         return Restaurant::create($data);

@@ -25,12 +25,39 @@ class ProductService
         return $this->repository->getByRestaurant($restaurantId);
     }
 
+    public function findForRestaurant(int $restaurantId, int $productId): Product
+    {
+        $product = $this->repository->findForRestaurant($productId, $restaurantId);
+
+        if (! $product) {
+            throw new NotFoundHttpException('Ürün bulunamadı.');
+        }
+
+        return $product;
+    }
+
     public function create(array $data): Product
     {
         $this->ensureRestaurantExists($data['restaurant_id']);
         $this->ensureCategoryBelongsToRestaurant($data['category_id'], $data['restaurant_id']);
 
+        $data['is_active'] = $data['is_active'] ?? true;
+
         return $this->repository->create($data);
+    }
+
+    public function update(int $restaurantId, int $productId, array $data): Product
+    {
+        $product = $this->findForRestaurant($restaurantId, $productId);
+        $this->ensureCategoryBelongsToRestaurant($data['category_id'], $restaurantId);
+
+        return $this->repository->update($product, $data);
+    }
+
+    public function delete(int $restaurantId, int $productId): void
+    {
+        $product = $this->findForRestaurant($restaurantId, $productId);
+        $this->repository->delete($product);
     }
 
     private function ensureRestaurantExists(int $restaurantId): void

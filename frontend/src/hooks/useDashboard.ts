@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createCategory, getCategories } from '../api/categories'
-import { createProduct, getProducts } from '../api/products'
+import { createProduct, deleteProduct, getProducts, updateProduct } from '../api/products'
 import { createTable, addProductToTable, getTables } from '../api/tables'
 import type { Category, Product, RestaurantTable } from '../api/types'
 
@@ -50,6 +50,36 @@ export default function useDashboard() {
     await fetchData()
   }
 
+  const editProduct = async (
+    id: number,
+    payload: {
+      category_id: number
+      name: string
+      price: number
+      description?: string | null
+      is_active: boolean
+    },
+  ) => {
+    await updateProduct(id, payload)
+    await fetchData()
+  }
+
+  const removeProduct = async (id: number) => {
+    await deleteProduct(id)
+    await fetchData()
+  }
+
+  const toggleProductStatus = async (product: Product) => {
+    await updateProduct(product.id, {
+      category_id: product.category_id,
+      name: product.name,
+      price: Number(product.price),
+      description: product.description,
+      is_active: !product.is_active,
+    })
+    await fetchData()
+  }
+
   const addTable = async (name: string) => {
     await createTable(name)
     await fetchData()
@@ -68,6 +98,9 @@ export default function useDashboard() {
     error,
     addCategory,
     addProduct,
+    editProduct,
+    removeProduct,
+    toggleProductStatus,
     addTable,
     assignProductToTable,
     refresh: fetchData,

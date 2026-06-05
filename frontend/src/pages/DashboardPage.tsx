@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import ProductList from '../components/ProductList'
 import Select from '../components/Select'
 import Textarea from '../components/Textarea'
 import useDashboard from '../hooks/useDashboard'
@@ -9,8 +10,20 @@ import { useAuth } from '../store/AuthStore'
 
 export default function DashboardPage() {
   const { restaurant } = useAuth()
-  const { categories, products, tables, loading, error, addCategory, addProduct, addTable, assignProductToTable } =
-    useDashboard()
+  const {
+    categories,
+    products,
+    tables,
+    loading,
+    error,
+    addCategory,
+    addProduct,
+    editProduct,
+    removeProduct,
+    toggleProductStatus,
+    addTable,
+    assignProductToTable,
+  } = useDashboard()
 
   const [categoryName, setCategoryName] = useState('')
   const [tableName, setTableName] = useState('')
@@ -251,7 +264,9 @@ export default function DashboardPage() {
                 onChange={(event) => setTableProductId(event.target.value)}
                 options={[
                   { value: '', label: 'Ürün seçin' },
-                  ...products.map((product) => ({
+                  ...products
+                    .filter((product) => product.is_active)
+                    .map((product) => ({
                     value: product.id,
                     label: `${product.name} (${Number(product.price).toFixed(2)} ₺)`,
                   })),
@@ -301,37 +316,17 @@ export default function DashboardPage() {
                 </ul>
               )}
             </Card>
-
-            <Card title="Ürünler">
-              {products.length === 0 ? (
-                <p className="text-sm text-gray-500">Henüz ürün eklenmemiş.</p>
-              ) : (
-                <div className="space-y-3">
-                  {products.map((product) => (
-                    <article
-                      key={product.id}
-                      className="rounded-lg border border-gray-100 bg-gray-50 p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {product.category?.name || 'Kategori yok'}
-                          </p>
-                        </div>
-                        <p className="font-semibold text-blue-700">
-                          {Number(product.price).toFixed(2)} ₺
-                        </p>
-                      </div>
-                      {product.description && (
-                        <p className="mt-2 text-sm text-gray-600">{product.description}</p>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </Card>
           </div>
+
+          <Card title="Ürün Listesi">
+            <ProductList
+              products={products}
+              categories={categories}
+              onUpdate={editProduct}
+              onDelete={removeProduct}
+              onToggleStatus={toggleProductStatus}
+            />
+          </Card>
         </>
       )}
     </div>
