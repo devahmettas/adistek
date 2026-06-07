@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRestaurantRequest;
 use App\Models\Restaurant;
+use App\Support\RestaurantSlugGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,7 +16,10 @@ class AuthController extends Controller
 {
     public function register(RegisterRestaurantRequest $request): JsonResponse
     {
-        $restaurant = Restaurant::create($request->validated());
+        $restaurant = Restaurant::create([
+            ...$request->validated(),
+            'slug' => RestaurantSlugGenerator::generate($request->validated('name')),
+        ]);
         $token = $restaurant->createToken('auth')->plainTextToken;
 
         return response()->json([

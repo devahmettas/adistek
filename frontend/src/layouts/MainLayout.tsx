@@ -9,14 +9,18 @@ export default function MainLayout() {
 
   return (
     <DashboardProvider>
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
         <RestaurantSidebar
           open={sidebarOpen}
           mobileOpen={mobileMenuOpen}
           onCloseMobile={() => setMobileMenuOpen(false)}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ${
+            sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
+          }`}
+        >
           <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
             <button
               type="button"

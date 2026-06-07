@@ -1,6 +1,7 @@
 export interface Restaurant {
   id: number
   name: string
+  slug?: string | null
   email: string
   created_at: string
 }

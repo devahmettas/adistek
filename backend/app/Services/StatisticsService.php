@@ -107,6 +107,8 @@ class StatisticsService
         });
 
         $live = $this->getLiveSnapshot($restaurantId);
+        $waiterPerformance = $this->getWaiterPerformance($daySessions, $revenue);
+        $tableDensity = $this->getTableDensity($daySessions, $live, $hourlyRows);
 
         return [
             'date' => $dateString,
@@ -117,6 +119,8 @@ class StatisticsService
                 'average_bill' => $averageBill,
             ],
             'live' => $live,
+            'waiter_performance' => $waiterPerformance,
+            'table_density' => $tableDensity,
             'top_products' => $topProducts->map(fn ($row) => [
                 'product_id' => $row->product_id,
                 'product_name' => $row->product_name,
@@ -160,6 +164,111 @@ class StatisticsService
             'active_tables' => $activeTables->count(),
             'open_revenue' => round($openRevenue, 2),
             'total_tables' => $tables->count(),
+        ];
+    }
+
+    private function getWaiterPerformance($daySessions, float $totalRevenue): array
+    {
+        if ($daySessions->isEmpty()) {
+            return [
+                'top_waiter' => null,
+                'waiters' => [],
+            ];
+        }
+
+        $waiters = $daySessions
+            ->groupBy(fn ($session) => $session->assigned_waiter_id ?? 0)
+            ->map(function ($sessions, $waiterId) use ($totalRevenue) {
+                $revenue = (float) $sessions->sum('total_amount');
+                $tableSessions = $sessions->count();
+                $first = $sessions->first();
+
+                return [
+                    'waiter_id' => $waiterId > 0 ? (int) $waiterId : null,
+                    'waiter_name' => $first->assigned_waiter_name ?: 'Atanmamış',
+                    'table_sessions' => $tableSessions,
+                    'revenue' => round($revenue, 2),
+                    'items_sold' => (int) $sessions->sum('item_count'),
+                    'average_bill' => $tableSessions > 0 ? round($revenue / $tableSessions, 2) : 0.0,
+                    'revenue_share' => $totalRevenue > 0 ? round(($revenue / $totalRevenue) * 100, 1) : 0.0,
+                ];
+            })
+            ->sortByDesc('revenue')
+            ->values();
+
+        return [
+            'top_waiter' => $waiters->first(),
+            'waiters' => $waiters->all(),
+        ];
+    }
+
+    private function getTableDensity($daySessions, array $live, $hourlyRows): array
+    {
+        $totalTables = max((int) ($live['total_tables'] ?? 0), 1);
+        $sessionCount = $daySessions->count();
+        $totalRevenue = (float) $daySessions->sum('total_amount');
+
+        $peakHour = null;
+        $peakHourSessions = 0;
+
+        if ($hourlyRows->isNotEmpty()) {
+            $peak = $hourlyRows->sortByDesc('sessions')->first();
+            $peakHour = sprintf('%02d:00', (int) $peak->hour);
+            $peakHourSessions = (int) $peak->sessions;
+        }
+
+        $tables = $daySessions
+            ->groupBy(fn ($session) => $session->restaurant_table_id ?? 0)
+            ->map(function ($sessions, $tableId) use ($sessionCount, $totalRevenue) {
+                $revenue = (float) $sessions->sum('total_amount');
+                $count = $sessions->count();
+                $first = $sessions->first();
+
+                return [
+                    'table_id' => $tableId > 0 ? (int) $tableId : null,
+                    'table_name' => $first->table_name,
+                    'sessions' => $count,
+                    'revenue' => round($revenue, 2),
+                    'average_bill' => $count > 0 ? round($revenue / $count, 2) : 0.0,
+                    'session_share' => $sessionCount > 0 ? round(($count / $sessionCount) * 100, 1) : 0.0,
+                    'revenue_share' => $totalRevenue > 0 ? round(($revenue / $totalRevenue) * 100, 1) : 0.0,
+                ];
+            })
+            ->sortByDesc('sessions')
+            ->values()
+            ->all();
+
+        $hourlyOccupancy = collect(range(0, 23))->map(function (int $hour) use ($hourlyRows, $totalTables) {
+            $row = $hourlyRows->get($hour);
+            $sessions = (int) ($row->sessions ?? 0);
+
+            return [
+                'hour' => $hour,
+                'label' => sprintf('%02d:00', $hour),
+                'sessions' => $sessions,
+                'occupancy_rate' => round(min(($sessions / $totalTables) * 100, 100), 1),
+            ];
+        })->filter(fn (array $row) => $row['sessions'] > 0)->values()->all();
+
+        $currentOccupancyRate = $live['total_tables'] > 0
+            ? round(($live['active_tables'] / $live['total_tables']) * 100, 1)
+            : 0.0;
+
+        return [
+            'summary' => [
+                'total_tables' => (int) $live['total_tables'],
+                'sessions_today' => $sessionCount,
+                'average_sessions_per_table' => $sessionCount > 0
+                    ? round($sessionCount / $totalTables, 2)
+                    : 0.0,
+                'turnover_rate' => round(($sessionCount / $totalTables) * 100, 1),
+                'current_occupancy_rate' => $currentOccupancyRate,
+                'current_active_tables' => (int) $live['active_tables'],
+                'peak_hour' => $peakHour,
+                'peak_hour_sessions' => $peakHourSessions,
+            ],
+            'tables' => $tables,
+            'hourly_occupancy' => $hourlyOccupancy,
         ];
     }
 }

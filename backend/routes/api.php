@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\KitchenOrderController;
 use App\Http\Controllers\Api\KitchenStaffController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\PublicMenuController;
 use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\WaiterAuthController;
@@ -22,6 +23,8 @@ Route::post('/waiter/auth/login', [WaiterAuthController::class, 'login']);
 Route::post('/kitchen/auth/login', [KitchenAuthController::class, 'login']);
 
 Route::post('/admin/auth/login', [AdminAuthController::class, 'login']);
+
+Route::get('/public/menu/{identifier}', [PublicMenuController::class, 'show']);
 
 Route::middleware(['auth:sanctum', 'restaurant_or_waiter'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);

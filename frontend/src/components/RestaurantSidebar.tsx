@@ -5,6 +5,7 @@ import { useAuth } from '../store/AuthStore'
 const navItems = [
   { to: '/dashboard', label: 'Masalar', end: true },
   { to: '/dashboard/stats', label: 'İstatistikler' },
+  { to: '/dashboard/menu', label: 'Müşteri Menüsü' },
   { to: '/dashboard/categories', label: 'Kategoriler' },
   { to: '/dashboard/products', label: 'Ürünler' },
   { to: '/dashboard/tables', label: 'Masa Ayarları' },
@@ -77,11 +78,17 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 shrink-0 border-r border-gray-200 bg-white transition-all duration-200 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:border-r-0'}`}
+        } lg:translate-x-0 ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:border-r-0'}`}
       >
-        <div className={`h-full ${open ? 'lg:block' : 'lg:hidden'}`}>{sidebarContent}</div>
+        <div
+          className={`flex h-screen w-64 flex-col ${
+            open ? 'lg:opacity-100' : 'lg:pointer-events-none lg:opacity-0'
+          }`}
+        >
+          {sidebarContent}
+        </div>
       </aside>
     </>
   )

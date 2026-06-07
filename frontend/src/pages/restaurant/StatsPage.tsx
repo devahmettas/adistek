@@ -3,6 +3,7 @@ import { getRestaurantStats, type RestaurantStats } from '../../api/stats'
 import Card from '../../components/Card'
 import HourlyLineChart from '../../components/HourlyLineChart'
 import Input from '../../components/Input'
+import { TableDensitySection, WaiterPerformanceSection } from '../../components/StatsSections'
 
 function formatMoney(value: number): string {
   return `${value.toFixed(2)} ₺`
@@ -95,7 +96,7 @@ export default function StatsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">İstatistikler</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Günlük ciro, oturulan masa sayısı ve en çok satılan ürünler.
+            Günlük ciro, garson performansı, masa yoğunluğu ve satış analizleri.
           </p>
         </div>
 
@@ -162,6 +163,10 @@ export default function StatsPage() {
               <BarChart items={stats.last_7_days} valueKey="revenue" labelKey="label" />
             </Card>
           </div>
+
+          <WaiterPerformanceSection data={stats.waiter_performance} />
+
+          <TableDensitySection data={stats.table_density} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card title="En Çok Satılan Ürünler">

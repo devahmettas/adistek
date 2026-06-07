@@ -14,6 +14,55 @@ export interface StatsLive {
   total_tables: number
 }
 
+export interface StatsWaiterRow {
+  waiter_id: number | null
+  waiter_name: string
+  table_sessions: number
+  revenue: number
+  items_sold: number
+  average_bill: number
+  revenue_share: number
+}
+
+export interface StatsWaiterPerformance {
+  top_waiter: StatsWaiterRow | null
+  waiters: StatsWaiterRow[]
+}
+
+export interface StatsTableDensitySummary {
+  total_tables: number
+  sessions_today: number
+  average_sessions_per_table: number
+  turnover_rate: number
+  current_occupancy_rate: number
+  current_active_tables: number
+  peak_hour: string | null
+  peak_hour_sessions: number
+}
+
+export interface StatsTableDensityRow {
+  table_id: number | null
+  table_name: string
+  sessions: number
+  revenue: number
+  average_bill: number
+  session_share: number
+  revenue_share: number
+}
+
+export interface StatsHourlyOccupancy {
+  hour: number
+  label: string
+  sessions: number
+  occupancy_rate: number
+}
+
+export interface StatsTableDensity {
+  summary: StatsTableDensitySummary
+  tables: StatsTableDensityRow[]
+  hourly_occupancy: StatsHourlyOccupancy[]
+}
+
 export interface StatsTopProduct {
   product_id: number | null
   product_name: string
@@ -45,6 +94,8 @@ export interface RestaurantStats {
   date: string
   summary: StatsSummary
   live: StatsLive
+  waiter_performance: StatsWaiterPerformance
+  table_density: StatsTableDensity
   top_products: StatsTopProduct[]
   top_categories: StatsTopCategory[]
   hourly_revenue: StatsHourlyRow[]
