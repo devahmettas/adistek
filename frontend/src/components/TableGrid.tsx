@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
+import type { PaymentMethod } from '../constants/paymentMethods'
+import type { PartialPayItem } from '../utils/billHelpers'
 import { TABLE_STATUS_STYLES, type TableStatus } from '../constants/tableStatuses'
 import {
   formatOccupiedDuration,
@@ -31,7 +33,12 @@ interface TableGridProps {
   onCancelProduct: (tableId: number, pivotId: number) => Promise<void>
   onChangeStatus?: (tableId: number, status: TableStatus) => Promise<void>
   onRequestBill: (tableId: number) => Promise<void>
-  onPayBill: (tableId: number) => Promise<void>
+  onPayBill: (tableId: number, paymentMethod: PaymentMethod) => Promise<void>
+  onPartialPayBill: (
+    tableId: number,
+    paymentMethod: PaymentMethod,
+    items: PartialPayItem[],
+  ) => Promise<{ table: RestaurantTable; message: string }>
   onClaimView?: (tableId: number) => Promise<void>
   onAcknowledgeKitchen?: (tableId: number) => Promise<RestaurantTable | void>
   showKitchenAlerts?: boolean
@@ -49,6 +56,7 @@ export default function TableGrid({
   onChangeStatus,
   onRequestBill,
   onPayBill,
+  onPartialPayBill,
   onClaimView,
   onAcknowledgeKitchen,
   showKitchenAlerts = false,
@@ -224,10 +232,11 @@ export default function TableGrid({
           onCancelProduct={onCancelProduct}
           onChangeStatus={onChangeStatus}
           onRequestBill={onRequestBill}
-          onPayBill={async (tableId) => {
-            await onPayBill(tableId)
+          onPayBill={async (tableId, paymentMethod) => {
+            await onPayBill(tableId, paymentMethod)
             closeTable()
           }}
+          onPartialPayBill={onPartialPayBill}
         />
       )}
     </>

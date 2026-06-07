@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\KitchenStatus;
 use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Repositories\ProductRepository;
@@ -203,7 +204,7 @@ class TableService
             ->load($this->repository->productRelations());
     }
 
-    public function closeTable(int $restaurantId, int $tableId): RestaurantTable
+    public function closeTable(int $restaurantId, int $tableId, string $paymentMethod): RestaurantTable
     {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
@@ -212,7 +213,7 @@ class TableService
         }
 
         $table->load($this->repository->productRelations());
-        $this->sessionRepository->recordFromTable($table);
+        $this->sessionRepository->recordFromTable($table, $paymentMethod);
 
         $this->repository->detachAllProducts($table);
 
@@ -224,6 +225,88 @@ class TableService
             'assigned_waiter_id' => null,
             'assigned_at' => null,
         ]);
+    }
+
+    public function partialPay(
+        int $restaurantId,
+        int $tableId,
+        string $paymentMethod,
+        array $items,
+    ): RestaurantTable {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        $table->load($this->repository->productRelations());
+
+        $validatedItems = [];
+
+        foreach ($items as $item) {
+            $pivotId = (int) $item['pivot_id'];
+            $quantity = (int) $item['quantity'];
+
+            $product = $table->products->first(
+                fn ($row) => (int) ($row->pivot->id ?? 0) === $pivotId,
+            );
+
+            if (
+                ! $product
+                || ($product->pivot->kitchen_status ?? null) === KitchenStatus::Cancelled->value
+            ) {
+                throw new UnprocessableEntityHttpException('Seçilen ürünler masada bulunamadı.');
+            }
+
+            if ($quantity > (int) ($product->pivot->quantity ?? 0)) {
+                throw new UnprocessableEntityHttpException('Seçilen adet masadaki adetten fazla olamaz.');
+            }
+
+            $validatedItems[] = [
+                'pivot_id' => $pivotId,
+                'quantity' => $quantity,
+            ];
+        }
+
+        if ($validatedItems === []) {
+            throw new UnprocessableEntityHttpException('Ödenecek ürün seçilmedi.');
+        }
+
+        $session = $this->sessionRepository->recordPartialPayment(
+            $table,
+            $paymentMethod,
+            $validatedItems,
+        );
+
+        if (! $session) {
+            throw new UnprocessableEntityHttpException('Ödeme kaydedilemedi.');
+        }
+
+        $this->repository->reduceProductPivotQuantities($table, $validatedItems);
+
+        if ($this->repository->activeProductCount($table) === 0) {
+            return $this->repository->update($table, [
+                'status' => TableStatus::Empty->value,
+                'occupied_at' => null,
+                'viewing_waiter_id' => null,
+                'viewing_waiter_at' => null,
+                'assigned_waiter_id' => null,
+                'assigned_at' => null,
+            ]);
+        }
+
+        $updates = [];
+
+        if ($table->status === TableStatus::BillRequested) {
+            $updates['status'] = TableStatus::Ordered->value;
+        }
+
+        if ($updates !== []) {
+            $table->update($updates);
+        }
+
+        return $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load($this->repository->productRelations());
     }
 
     public function claimView(int $restaurantId, int $tableId, int $waiterId): RestaurantTable

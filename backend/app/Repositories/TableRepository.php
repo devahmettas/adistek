@@ -218,6 +218,45 @@ class TableRepository
         $table->products()->detach();
     }
 
+    public function detachProductsByPivotIds(RestaurantTable $table, array $pivotIds): void
+    {
+        if ($pivotIds === []) {
+            return;
+        }
+
+        DB::table('product_restaurant_table')
+            ->where('restaurant_table_id', $table->id)
+            ->whereIn('id', $pivotIds)
+            ->delete();
+    }
+
+    public function reduceProductPivotQuantities(RestaurantTable $table, array $items): void
+    {
+        foreach ($items as $item) {
+            $pivotId = (int) $item['pivot_id'];
+            $quantity = (int) $item['quantity'];
+
+            $pivot = DB::table('product_restaurant_table')
+                ->where('id', $pivotId)
+                ->where('restaurant_table_id', $table->id)
+                ->first();
+
+            if (! $pivot) {
+                continue;
+            }
+
+            if ($quantity >= (int) $pivot->quantity) {
+                DB::table('product_restaurant_table')->where('id', $pivotId)->delete();
+
+                continue;
+            }
+
+            DB::table('product_restaurant_table')
+                ->where('id', $pivotId)
+                ->update(['quantity' => (int) $pivot->quantity - $quantity]);
+        }
+    }
+
     public function clearStaleViews(int $restaurantId): void
     {
         RestaurantTable::query()

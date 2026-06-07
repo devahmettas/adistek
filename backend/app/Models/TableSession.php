@@ -15,6 +15,8 @@ class TableSession extends Model
         'restaurant_table_id',
         'table_name',
         'total_amount',
+        'payment_method',
+        'is_partial',
         'item_count',
         'assigned_waiter_id',
         'assigned_waiter_name',
@@ -23,7 +25,9 @@ class TableSession extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'payment_method' => \App\Enums\PaymentMethod::class,
         'closed_at' => 'datetime',
+        'is_partial' => 'boolean',
     ];
 
     public function restaurant(): BelongsTo

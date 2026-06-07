@@ -15,6 +15,7 @@ export default function TablesHomePage() {
     changeTableStatus,
     requestTableBill,
     payTableBill,
+    partialPayTableBill,
     acknowledgeKitchen,
   } = useDashboardData()
   const now = useNow()
@@ -39,6 +40,7 @@ export default function TablesHomePage() {
       onChangeStatus={changeTableStatus}
       onRequestBill={requestTableBill}
       onPayBill={payTableBill}
+      onPartialPayBill={partialPayTableBill}
       onAcknowledgeKitchen={acknowledgeKitchen}
       showKitchenAlerts
     />

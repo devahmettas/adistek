@@ -7,12 +7,15 @@ import {
   cancelTableItem,
   claimTableView,
   closeTable,
+  partialPayTable,
   getTables,
   updateTableItem,
   updateTableStatus,
 } from '../api/tables'
 import waiterClient, { WAITER_TOKEN_KEY } from '../api/waiterClient'
 import type { Category, Product, RestaurantTable } from '../api/types'
+import type { PaymentMethod } from '../constants/paymentMethods'
+import type { PartialPayItem } from '../utils/billHelpers'
 import type { TableStatus } from '../constants/tableStatuses'
 
 export default function useWaiterDashboard() {
@@ -122,9 +125,19 @@ export default function useWaiterDashboard() {
   )
 
   const payTableBill = useCallback(
-    async (tableId: number) => {
-      const updatedTable = await closeTable(tableId, waiterClient)
+    async (tableId: number, paymentMethod: PaymentMethod) => {
+      const updatedTable = await closeTable(tableId, paymentMethod, waiterClient)
       patchTable(updatedTable)
+      return updatedTable
+    },
+    [patchTable],
+  )
+
+  const partialPayTableBill = useCallback(
+    async (tableId: number, paymentMethod: PaymentMethod, items: PartialPayItem[]) => {
+      const result = await partialPayTable(tableId, paymentMethod, items, waiterClient)
+      patchTable(result.table)
+      return result
     },
     [patchTable],
   )
@@ -166,6 +179,7 @@ export default function useWaiterDashboard() {
     changeTableStatus,
     requestTableBill,
     payTableBill,
+    partialPayTableBill,
     claimView,
     acknowledgeKitchen,
     refresh: fetchData,

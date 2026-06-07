@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Enums\KitchenStatus;
 use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CloseTableRequest;
+use App\Http\Requests\PartialPayTableRequest;
 use App\Http\Requests\StoreTableProductRequest;
 use App\Http\Requests\StoreTableRequest;
 use App\Http\Requests\UpdateTableProductRequest;
 use App\Http\Requests\UpdateTableRequest;
 use App\Http\Requests\UpdateTableStatusRequest;
+use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Services\KitchenOrderService;
 use App\Services\TableService;
@@ -165,13 +168,38 @@ class TableController extends Controller
         ]);
     }
 
-    public function close(Request $request, RestaurantTable $table): JsonResponse
+    public function close(CloseTableRequest $request, RestaurantTable $table): JsonResponse
     {
-        $closedTable = $this->service->closeTable($this->restaurantId($request), $table->id);
+        $closedTable = $this->service->closeTable(
+            $this->restaurantId($request),
+            $table->id,
+            $request->validated('payment_method'),
+        );
 
         return response()->json([
             'data' => $this->formatTable($closedTable),
             'message' => 'Hesap kapatıldı, masa boşaltıldı.',
+        ]);
+    }
+
+    public function partialPay(PartialPayTableRequest $request, RestaurantTable $table): JsonResponse
+    {
+        $this->ensureTableBelongsToRestaurant($request, $table);
+
+        $updatedTable = $this->service->partialPay(
+            $this->restaurantId($request),
+            $table->id,
+            $request->validated('payment_method'),
+            $request->validated('items'),
+        );
+
+        $message = $updatedTable->status === TableStatus::Empty
+            ? 'Seçilen ürünler ödendi, masa boşaltıldı.'
+            : 'Parça ödeme alındı, masa açık kalmaya devam ediyor.';
+
+        return response()->json([
+            'data' => $this->formatTable($updatedTable),
+            'message' => $message,
         ]);
     }
 

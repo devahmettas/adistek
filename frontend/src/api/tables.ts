@@ -1,4 +1,6 @@
 import type { AxiosInstance } from 'axios'
+import type { PaymentMethod } from '../constants/paymentMethods'
+import type { PartialPayItem } from '../utils/billHelpers'
 import apiClient from './client'
 import type { ApiResponse, RestaurantTable } from './types'
 
@@ -78,10 +80,29 @@ export const updateTableStatus = async (
 
 export const closeTable = async (
   tableId: number,
+  paymentMethod: PaymentMethod,
   client: AxiosInstance = apiClient,
 ): Promise<RestaurantTable> => {
-  const { data } = await client.post<ApiResponse<RestaurantTable>>(`/tables/${tableId}/close`)
+  const { data } = await client.post<ApiResponse<RestaurantTable>>(`/tables/${tableId}/close`, {
+    payment_method: paymentMethod,
+  })
   return data.data
+}
+
+export const partialPayTable = async (
+  tableId: number,
+  paymentMethod: PaymentMethod,
+  items: PartialPayItem[],
+  client: AxiosInstance = apiClient,
+): Promise<{ table: RestaurantTable; message: string }> => {
+  const { data } = await client.post<ApiResponse<RestaurantTable> & { message: string }>(
+    `/tables/${tableId}/partial-pay`,
+    {
+      payment_method: paymentMethod,
+      items,
+    },
+  )
+  return { table: data.data, message: data.message }
 }
 
 export const claimTableView = async (

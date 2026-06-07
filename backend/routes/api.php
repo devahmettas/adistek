@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum', 'restaurant_or_waiter'])->group(function () {
     Route::patch('/tables/{table}/items/{pivotId}', [TableController::class, 'updateTableItem']);
     Route::post('/tables/{table}/items/{pivotId}/cancel', [TableController::class, 'cancelTableItem']);
     Route::post('/tables/{table}/close', [TableController::class, 'close']);
+    Route::post('/tables/{table}/partial-pay', [TableController::class, 'partialPay']);
     Route::post('/tables/{table}/view', [TableController::class, 'claimView']);
     Route::delete('/tables/{table}/view', [TableController::class, 'releaseView']);
     Route::post('/tables/{table}/kitchen/acknowledge', [TableController::class, 'acknowledgeKitchen']);

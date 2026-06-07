@@ -6,6 +6,10 @@ export interface StatsSummary {
   table_sessions: number
   items_sold: number
   average_bill: number
+  cash_revenue: number
+  card_revenue: number
+  cash_sessions: number
+  card_sessions: number
 }
 
 export interface StatsLive {

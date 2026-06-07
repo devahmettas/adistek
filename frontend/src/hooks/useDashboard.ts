@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createCategory, deleteCategory, getCategories, updateCategory } from '../api/categories'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../api/products'
-import { createTable, addProductToTable, acknowledgeKitchenReady, cancelTableItem, closeTable, deleteTable, getTables, updateTable, updateTableItem, updateTableStatus } from '../api/tables'
+import { createTable, addProductToTable, acknowledgeKitchenReady, cancelTableItem, closeTable, deleteTable, getTables, partialPayTable, updateTable, updateTableItem, updateTableStatus } from '../api/tables'
 import { TOKEN_KEY } from '../api/client'
 import type { Category, Product, RestaurantTable } from '../api/types'
+import type { PaymentMethod } from '../constants/paymentMethods'
+import type { PartialPayItem } from '../utils/billHelpers'
 import type { TableStatus } from '../constants/tableStatuses'
 
 function mergeTableData(
@@ -226,9 +228,20 @@ export default function useDashboard() {
     patchTable(updatedTable)
   }
 
-  const payTableBill = async (tableId: number) => {
-    const updatedTable = await closeTable(tableId)
+  const payTableBill = async (tableId: number, paymentMethod: PaymentMethod) => {
+    const updatedTable = await closeTable(tableId, paymentMethod)
     patchTable(updatedTable)
+    return updatedTable
+  }
+
+  const partialPayTableBill = async (
+    tableId: number,
+    paymentMethod: PaymentMethod,
+    items: PartialPayItem[],
+  ) => {
+    const { table, message } = await partialPayTable(tableId, paymentMethod, items)
+    patchTable(table)
+    return { table, message }
   }
 
   const acknowledgeKitchen = async (tableId: number) => {
@@ -259,6 +272,7 @@ export default function useDashboard() {
     changeTableStatus,
     requestTableBill,
     payTableBill,
+    partialPayTableBill,
     acknowledgeKitchen,
     refresh: fetchData,
   }

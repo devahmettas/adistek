@@ -23,6 +23,7 @@ export default function WaiterDashboardPage() {
     changeTableStatus,
     requestTableBill,
     payTableBill,
+    partialPayTableBill,
     claimView,
     acknowledgeKitchen,
   } = useWaiterDashboard()
@@ -106,6 +107,7 @@ export default function WaiterDashboardPage() {
               onChangeStatus={changeTableStatus}
               onRequestBill={requestTableBill}
               onPayBill={payTableBill}
+              onPartialPayBill={partialPayTableBill}
               onClaimView={claimView}
               onAcknowledgeKitchen={acknowledgeKitchen}
               showKitchenAlerts

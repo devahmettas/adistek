@@ -29,6 +29,16 @@ class StatisticsService
         $itemsSold = (int) $daySessions->sum('item_count');
         $averageBill = $tableSessions > 0 ? round($revenue / $tableSessions, 2) : 0.0;
 
+        $cashSessions = $daySessions->filter(
+            fn ($session) => ($session->payment_method?->value ?? $session->payment_method ?? 'cash') === 'cash',
+        );
+        $cardSessions = $daySessions->filter(
+            fn ($session) => ($session->payment_method?->value ?? $session->payment_method ?? 'cash') === 'card',
+        );
+
+        $cashRevenue = (float) $cashSessions->sum('total_amount');
+        $cardRevenue = (float) $cardSessions->sum('total_amount');
+
         $sessionIds = $daySessions->pluck('id');
 
         $topProducts = $sessionIds->isEmpty()
@@ -117,6 +127,10 @@ class StatisticsService
                 'table_sessions' => $tableSessions,
                 'items_sold' => $itemsSold,
                 'average_bill' => $averageBill,
+                'cash_revenue' => round($cashRevenue, 2),
+                'card_revenue' => round($cardRevenue, 2),
+                'cash_sessions' => $cashSessions->count(),
+                'card_sessions' => $cardSessions->count(),
             ],
             'live' => $live,
             'waiter_performance' => $waiterPerformance,

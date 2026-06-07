@@ -121,6 +121,31 @@ export default function StatsPage() {
               <p className="text-3xl font-bold text-blue-700">{formatMoney(summary?.revenue ?? 0)}</p>
               <p className="mt-1 text-xs text-gray-500">Seçilen gün kapanan hesaplar</p>
             </Card>
+            <Card title="Nakit Tahsilat">
+              <p className="text-3xl font-bold text-emerald-700">
+                {formatMoney(summary?.cash_revenue ?? 0)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {summary?.cash_sessions ?? 0} hesap · nakit ödeme
+              </p>
+            </Card>
+            <Card title="Kart Tahsilat">
+              <p className="text-3xl font-bold text-indigo-700">
+                {formatMoney(summary?.card_revenue ?? 0)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {summary?.card_sessions ?? 0} hesap · kart ödeme
+              </p>
+            </Card>
+            <Card title="Ortalama Hesap">
+              <p className="text-3xl font-bold text-gray-900">
+                {formatMoney(summary?.average_bill ?? 0)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">Masa başına ortalama</p>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <Card title="Oturulan Masa">
               <p className="text-3xl font-bold text-gray-900">{summary?.table_sessions ?? 0}</p>
               <p className="mt-1 text-xs text-gray-500">Ödenerek kapanan masa sayısı</p>
@@ -128,12 +153,6 @@ export default function StatsPage() {
             <Card title="Satılan Ürün">
               <p className="text-3xl font-bold text-gray-900">{summary?.items_sold ?? 0}</p>
               <p className="mt-1 text-xs text-gray-500">Toplam adet</p>
-            </Card>
-            <Card title="Ortalama Hesap">
-              <p className="text-3xl font-bold text-emerald-700">
-                {formatMoney(summary?.average_bill ?? 0)}
-              </p>
-              <p className="mt-1 text-xs text-gray-500">Masa başına ortalama</p>
             </Card>
           </div>
 

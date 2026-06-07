@@ -1,9 +1,26 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import {
   TABLE_STATUS_STYLES,
   type TableStatus,
 } from '../constants/tableStatuses'
+import {
+  buildPartialPayItems,
+  getAllBillSelections,
+  getSelectedBillCount,
+  getSelectedBillTotal,
+  groupBillProducts,
+  type PartialPayItem,
+} from '../utils/billHelpers'
+import Button from './Button'
+import Input from './Input'
+import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
+import {
+  DEFAULT_PAYMENT_METHOD,
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHOD_OPTIONS,
+  type PaymentMethod,
+} from '../constants/paymentMethods'
 import {
   formatOccupiedDuration,
   getActiveTableProducts,
@@ -11,9 +28,6 @@ import {
   getTableTotalAmount,
   getTableWaiterName,
 } from '../utils/tableHelpers'
-import Button from './Button'
-import Input from './Input'
-import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
 
 type ViewMode = 'main' | 'categories' | 'products' | 'bill'
 
@@ -37,7 +51,12 @@ interface TableDetailModalProps {
   onCancelProduct: (tableId: number, pivotId: number) => Promise<void>
   onChangeStatus?: (tableId: number, status: TableStatus) => Promise<void>
   onRequestBill: (tableId: number) => Promise<void>
-  onPayBill: (tableId: number) => Promise<void>
+  onPayBill: (tableId: number, paymentMethod: PaymentMethod) => Promise<void>
+  onPartialPayBill: (
+    tableId: number,
+    paymentMethod: PaymentMethod,
+    items: PartialPayItem[],
+  ) => Promise<{ table: RestaurantTable; message: string }>
 }
 
 export default function TableDetailModal({
@@ -52,6 +71,7 @@ export default function TableDetailModal({
   onChangeStatus,
   onRequestBill,
   onPayBill,
+  onPartialPayBill,
 }: TableDetailModalProps) {
   const status = (table.status || 'empty') as TableStatus
   const styles = TABLE_STATUS_STYLES[status] ?? TABLE_STATUS_STYLES.empty
@@ -63,6 +83,10 @@ export default function TableDetailModal({
   const [addQuantity, setAddQuantity] = useState(1)
   const [addNote, setAddNote] = useState('')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(DEFAULT_PAYMENT_METHOD)
+  const [showPayConfirm, setShowPayConfirm] = useState(false)
+  const [payMode, setPayMode] = useState<'full' | 'partial'>('full')
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({})
 
   const total = getTableTotalAmount(table.products)
   const itemCount = getTableItemCount(table.products)
@@ -73,6 +97,54 @@ export default function TableDetailModal({
   const categoryProducts = selectedCategory
     ? activeProducts.filter((product) => product.category_id === selectedCategory.id)
     : []
+
+  const billGroups = useMemo(() => groupBillProducts(tableProducts), [tableProducts])
+
+  const selectedTotal = useMemo(
+    () => getSelectedBillTotal(billGroups, selectedQuantities),
+    [billGroups, selectedQuantities],
+  )
+
+  const selectedCount = useMemo(
+    () => getSelectedBillCount(selectedQuantities),
+    [selectedQuantities],
+  )
+
+  const confirmTotal = payMode === 'full' ? total : selectedTotal
+
+  const increaseGroupSelection = (groupKey: string, maxQuantity: number, step = 1) => {
+    setSelectedQuantities((current) => {
+      const next = Math.min(maxQuantity, (current[groupKey] ?? 0) + step)
+
+      if (next <= 0) {
+        const { [groupKey]: _, ...rest } = current
+        return rest
+      }
+
+      return { ...current, [groupKey]: next }
+    })
+  }
+
+  const decreaseGroupSelection = (groupKey: string) => {
+    setSelectedQuantities((current) => {
+      const next = (current[groupKey] ?? 0) - 1
+
+      if (next <= 0) {
+        const { [groupKey]: _, ...rest } = current
+        return rest
+      }
+
+      return { ...current, [groupKey]: next }
+    })
+  }
+
+  const selectAllBillItems = () => {
+    setSelectedQuantities(getAllBillSelections(billGroups))
+  }
+
+  const clearBillSelection = () => {
+    setSelectedQuantities({})
+  }
 
   const resetAddForm = () => {
     setAddingProduct(null)
@@ -176,18 +248,53 @@ export default function TableDetailModal({
     }
   }
 
-  const handlePayBill = async () => {
-    if (!window.confirm('Hesap ödendi olarak işaretlensin ve masa boşaltılsın mı?')) {
+  const handlePayBill = () => {
+    if (itemCount === 0) {
       return
     }
 
+    setPayMode('full')
+    setPaymentMethod(DEFAULT_PAYMENT_METHOD)
+    setShowPayConfirm(true)
+  }
+
+  const handlePartialPay = () => {
+    if (selectedCount === 0) {
+      setFeedback('Ödenecek ürün seçin.')
+      return
+    }
+
+    setPayMode('partial')
+    setPaymentMethod(DEFAULT_PAYMENT_METHOD)
+    setShowPayConfirm(true)
+  }
+
+  const confirmPayBill = async () => {
     setSubmitting(true)
+    setFeedback(null)
 
     try {
-      await onPayBill(table.id)
-      onClose()
+      if (payMode === 'full') {
+        await onPayBill(table.id, paymentMethod)
+        setShowPayConfirm(false)
+        onClose()
+        return
+      }
+
+      const payItems = buildPartialPayItems(billGroups, selectedQuantities)
+      const result = await onPartialPayBill(table.id, paymentMethod, payItems)
+      setShowPayConfirm(false)
+      setSelectedQuantities({})
+      setFeedback(result.message)
+
+      if (result.table.status === 'empty') {
+        onClose()
+      } else {
+        setView('main')
+      }
     } catch {
-      window.alert('Hesap kapatılamadı.')
+      setShowPayConfirm(false)
+      setFeedback(payMode === 'full' ? 'Hesap kapatılamadı.' : 'Parça ödeme alınamadı.')
     } finally {
       setSubmitting(false)
     }
@@ -594,44 +701,115 @@ export default function TableDetailModal({
 
           {view === 'bill' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-gray-900">Hesap Detayı</h3>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Hesap Detayı</h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  Ürüne dokunarak seçin, + / − ile adedi ayarlayın veya tüm hesabı kapatın.
+                </p>
+              </div>
 
-              {tableProducts.length > 0 ? (
+              {billGroups.length > 0 ? (
                 <div className="space-y-3">
-                  {tableProducts.map((product) => {
-                    const quantity = product.pivot?.quantity ?? 1
-                    const unitPrice = Number(product.price)
-                    const lineTotal = unitPrice * quantity
-                    const note = product.pivot?.note
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={selectAllBillItems}
+                      className="font-medium text-blue-700 hover:text-blue-800"
+                    >
+                      Tümünü Seç
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearBillSelection}
+                      className="font-medium text-gray-600 hover:text-gray-800"
+                    >
+                      Seçimi Temizle
+                    </button>
+                    {selectedCount > 0 && (
+                      <span className="text-gray-500">
+                        {selectedCount} adet seçili · {selectedTotal.toFixed(2)} ₺
+                      </span>
+                    )}
+                  </div>
+
+                  {billGroups.map((group) => {
+                    const selectedQty = selectedQuantities[group.key] ?? 0
+                    const isSelected = selectedQty > 0
 
                     return (
                       <div
-                        key={`bill-${product.pivot?.id ?? product.id}`}
-                        className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                        key={group.key}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => increaseGroupSelection(group.key, group.totalQuantity)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            increaseGroupSelection(group.key, group.totalQuantity)
+                          }
+                        }}
+                        className={`rounded-xl border p-4 transition ${
+                          isSelected
+                            ? 'border-indigo-400 bg-indigo-50/70 ring-1 ring-indigo-200'
+                            : 'border-gray-100 bg-gray-50 hover:border-indigo-200 hover:bg-indigo-50/30'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="font-semibold text-gray-900">
-                              {product.name}
-                              {quantity > 1 && (
-                                <span className="ml-2 text-sm font-normal text-gray-500">
-                                  x{quantity}
-                                </span>
-                              )}
+                              {group.name}
+                              <span className="ml-2 text-sm font-bold text-indigo-700">
+                                x{group.totalQuantity}
+                              </span>
                             </p>
-                            {note && (
-                              <p className="mt-1 text-sm italic text-amber-700">{note}</p>
+                            {group.note && (
+                              <p className="mt-1 text-sm italic text-amber-700">{group.note}</p>
                             )}
-                            {product.description && (
-                              <p className="mt-1 text-sm text-gray-600">{product.description}</p>
+                            {group.description && (
+                              <p className="mt-1 text-sm text-gray-600">{group.description}</p>
                             )}
-                            {product.category?.name && (
-                              <p className="mt-1 text-xs text-gray-500">{product.category.name}</p>
+                            {group.categoryName && (
+                              <p className="mt-1 text-xs text-gray-500">{group.categoryName}</p>
                             )}
+                            <p className="mt-2 text-xs text-gray-500">
+                              Birim: {group.unitPrice.toFixed(2)} ₺
+                            </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">{unitPrice.toFixed(2)} ₺</p>
-                            <p className="font-bold text-blue-700">{lineTotal.toFixed(2)} ₺</p>
+
+                          <div className="flex shrink-0 flex-col items-end gap-2">
+                            <p className="font-bold text-blue-700">{group.lineTotal.toFixed(2)} ₺</p>
+
+                            {isSelected ? (
+                              <div
+                                className="flex items-center gap-2"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => decreaseGroupSelection(group.key)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-bold text-gray-700 ring-1 ring-gray-200"
+                                >
+                                  −
+                                </button>
+                                <span className="min-w-[2rem] text-center text-sm font-bold text-indigo-800">
+                                  {selectedQty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    increaseGroupSelection(group.key, group.totalQuantity)
+                                  }
+                                  disabled={selectedQty >= group.totalQuantity}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-lg font-bold text-white disabled:opacity-40"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 ring-1 ring-gray-200">
+                                Seçmek için dokun
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -647,18 +825,129 @@ export default function TableDetailModal({
                 <p className="text-sm text-gray-500">Hesapta ürün bulunmuyor.</p>
               )}
 
-              <Button
-                type="button"
-                onClick={handlePayBill}
-                disabled={submitting || itemCount === 0}
-                className="w-full"
-              >
-                {submitting ? 'İşleniyor...' : 'Hesap Ödendi — Masayı Boşalt'}
-              </Button>
+              {feedback && view === 'bill' && (
+                <p
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    feedback.includes('alınamadı') || feedback.includes('kapatılamadı')
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-green-50 text-green-700'
+                  }`}
+                >
+                  {feedback}
+                </p>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handlePartialPay}
+                  disabled={submitting || selectedCount === 0}
+                  className="w-full"
+                >
+                  Seçilenleri Öde
+                  {selectedCount > 0 && ` (${selectedTotal.toFixed(2)} ₺)`}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handlePayBill}
+                  disabled={submitting || itemCount === 0}
+                  className="w-full"
+                >
+                  Tüm Hesabı Kapat
+                </Button>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {showPayConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={(event) => {
+            event.stopPropagation()
+            if (!submitting) {
+              setShowPayConfirm(false)
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900">
+              {payMode === 'full' ? 'Tüm Hesabı Kapat' : 'Parça Ödeme'}
+            </h3>
+            <p className="mt-2 text-sm font-semibold text-blue-700">
+              Tutar: {confirmTotal.toFixed(2)} ₺
+            </p>
+
+            <div className="mt-4">
+              <p className="mb-3 text-sm font-semibold text-gray-800">Ödeme Yöntemi</p>
+              <div className="grid grid-cols-2 gap-3">
+                {PAYMENT_METHOD_OPTIONS.map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    disabled={submitting}
+                    className={`rounded-xl border-2 px-4 py-3 text-sm font-semibold transition ${
+                      paymentMethod === method
+                        ? method === 'card'
+                          ? 'border-blue-500 bg-blue-50 text-blue-800'
+                          : 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {PAYMENT_METHOD_LABELS[method]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm leading-relaxed text-gray-600">
+              {payMode === 'full' ? (
+                <>
+                  Hesap{' '}
+                  <span className="font-semibold text-gray-900">
+                    {PAYMENT_METHOD_LABELS[paymentMethod]}
+                  </span>{' '}
+                  olarak ödendi sayılsın ve masa boşaltılsın mı?
+                </>
+              ) : (
+                <>
+                  Seçilen {selectedCount} adet{' '}
+                  <span className="font-semibold text-gray-900">
+                    {PAYMENT_METHOD_LABELS[paymentMethod]}
+                  </span>{' '}
+                  ile tahsil edilsin mi? Masa açık kalacak, kalan ürünler hesapta durmaya devam eder.
+                </>
+              )}
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowPayConfirm(false)}
+                disabled={submitting}
+                className="flex-1"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmPayBill}
+                disabled={submitting}
+                className="flex-1"
+              >
+                {submitting ? 'İşleniyor...' : 'Onayla'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
