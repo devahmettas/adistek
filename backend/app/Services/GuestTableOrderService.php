@@ -54,7 +54,7 @@ class GuestTableOrderService
         }
 
         return [
-            'message' => 'Siparişiniz mutfağa iletildi.',
+            'message' => 'Siparişiniz alındı. Ürünleriniz hazırlanıyor.',
             'table_name' => $table->name,
             'item_count' => count($items),
         ];
