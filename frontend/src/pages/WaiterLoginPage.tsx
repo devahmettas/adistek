@@ -76,6 +76,10 @@ export default function WaiterLoginPage() {
           <Link to="/login" className="text-blue-600 hover:text-blue-700">
             Restoran yönetici girişi
           </Link>
+          {' · '}
+          <Link to="/kitchen/login" className="text-orange-600 hover:text-orange-700">
+            Mutfak girişi
+          </Link>
         </p>
       </div>
     </div>

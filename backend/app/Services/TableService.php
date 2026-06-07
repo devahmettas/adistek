@@ -6,6 +6,7 @@ use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Repositories\ProductRepository;
 use App\Repositories\TableRepository;
+use App\Repositories\TableSessionRepository;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -24,6 +25,7 @@ class TableService
     public function __construct(
         private readonly TableRepository $repository,
         private readonly ProductRepository $productRepository,
+        private readonly TableSessionRepository $sessionRepository,
     ) {}
 
     public function listByRestaurant(int $restaurantId): Collection
@@ -39,6 +41,38 @@ class TableService
             'status' => TableStatus::Empty->value,
             'occupied_at' => null,
         ]);
+    }
+
+    public function update(int $restaurantId, int $tableId, array $data): RestaurantTable
+    {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        return $this->repository->update($table, [
+            'name' => $data['name'],
+        ]);
+    }
+
+    public function delete(int $restaurantId, int $tableId): void
+    {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        if ($table->status !== TableStatus::Empty) {
+            throw new UnprocessableEntityHttpException('Aktif masa silinemez. Önce masayı boşaltın.');
+        }
+
+        if ($this->repository->activeProductCount($table) > 0) {
+            throw new UnprocessableEntityHttpException('Ürün bulunan masa silinemez.');
+        }
+
+        $this->repository->delete($table);
     }
 
     public function updateStatus(
@@ -60,7 +94,11 @@ class TableService
             'occupied_at' => $this->resolveOccupiedAt($newStatus, $table->occupied_at),
         ]);
 
-        return $this->assignWaiter($updated, $waiterId);
+        if ($newStatus === TableStatus::Served) {
+            $this->repository->acknowledgeActiveKitchenItems($table);
+        }
+
+        return $updated->load($this->repository->productRelations());
     }
 
     public function addProduct(
@@ -87,32 +125,44 @@ class TableService
             throw new UnprocessableEntityHttpException('Pasif ürün masaya eklenemez.');
         }
 
-        $this->repository->attachProduct($table, $product, $quantity, $note);
+        $isFirstProduct = $table->products()->count() === 0;
+        $isExtraOrder = $this->isExtraKitchenOrder($table);
+
+        if ($isExtraOrder) {
+            $this->repository->acknowledgeActiveKitchenItems($table);
+        }
+
+        $this->repository->attachProduct($table, $product, $quantity, $note, $isExtraOrder);
 
         $updates = [];
 
-        if ($table->status === TableStatus::Empty) {
-            $updates['status'] = TableStatus::WaitingOrder->value;
-            $updates['occupied_at'] = $table->occupied_at ?? now();
+        if ($table->status !== TableStatus::BillRequested) {
+            $updates['status'] = TableStatus::Ordered->value;
+
+            if (! $table->occupied_at) {
+                $updates['occupied_at'] = now();
+            }
+        }
+
+        if ($isFirstProduct && $waiterId && ! $table->assigned_waiter_id) {
+            $updates['assigned_waiter_id'] = $waiterId;
+            $updates['assigned_at'] = now();
         }
 
         if ($updates !== []) {
             $table->update($updates);
         }
 
-        $table = $this->repository->findForRestaurant($tableId, $restaurantId)
-            ->load(['products.category', 'viewingWaiter']);
-
-        return $this->assignWaiter($table, $waiterId);
+        return $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load($this->repository->productRelations());
     }
 
-    public function updateProduct(
+    public function updateTableItem(
         int $restaurantId,
         int $tableId,
-        int $productId,
+        int $pivotId,
         int $quantity,
         ?string $note = null,
-        ?int $waiterId = null,
     ): RestaurantTable {
         $table = $this->repository->findForRestaurant($tableId, $restaurantId);
 
@@ -120,23 +170,37 @@ class TableService
             throw new NotFoundHttpException('Masa bulunamadı.');
         }
 
-        $product = $table->products()->where('product_id', $productId)->first();
+        $pivotExists = $table->products()->wherePivot('id', $pivotId)->exists();
 
-        if (! $product) {
-            throw new NotFoundHttpException('Ürün bu masada bulunamadı.');
+        if (! $pivotExists) {
+            throw new NotFoundHttpException('Ürün kalemi bu masada bulunamadı.');
         }
 
-        $this->repository->updateProductPivot(
-            $table,
-            $productId,
-            $quantity,
-            $note ?? $product->pivot->note,
-        );
+        $this->repository->updateProductPivotById($table, $pivotId, $quantity, $note);
 
-        $table = $this->repository->findForRestaurant($tableId, $restaurantId)
-            ->load(['products.category', 'viewingWaiter']);
+        return $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load($this->repository->productRelations());
+    }
 
-        return $this->assignWaiter($table, $waiterId);
+    public function cancelTableItem(
+        int $restaurantId,
+        int $tableId,
+        int $pivotId,
+    ): RestaurantTable {
+        $table = $this->repository->findForRestaurant($tableId, $restaurantId);
+
+        if (! $table) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
+        $cancelled = $this->repository->cancelProductPivot($table, $pivotId);
+
+        if (! $cancelled) {
+            throw new NotFoundHttpException('Ürün kalemi bu masada bulunamadı.');
+        }
+
+        return $this->repository->findForRestaurant($tableId, $restaurantId)
+            ->load($this->repository->productRelations());
     }
 
     public function closeTable(int $restaurantId, int $tableId): RestaurantTable
@@ -147,6 +211,9 @@ class TableService
             throw new NotFoundHttpException('Masa bulunamadı.');
         }
 
+        $table->load($this->repository->productRelations());
+        $this->sessionRepository->recordFromTable($table);
+
         $this->repository->detachAllProducts($table);
 
         return $this->repository->update($table, [
@@ -154,6 +221,8 @@ class TableService
             'occupied_at' => null,
             'viewing_waiter_id' => null,
             'viewing_waiter_at' => null,
+            'assigned_waiter_id' => null,
+            'assigned_at' => null,
         ]);
     }
 
@@ -179,15 +248,6 @@ class TableService
         return $this->repository->releaseView($table, $waiterId);
     }
 
-    private function assignWaiter(RestaurantTable $table, ?int $waiterId): RestaurantTable
-    {
-        if (! $waiterId) {
-            return $table;
-        }
-
-        return $this->repository->claimView($table, $waiterId);
-    }
-
     private function resolveOccupiedAt(TableStatus $status, ?DateTimeInterface $current): ?DateTimeInterface
     {
         if (in_array($status, self::ACTIVE_STATUSES, true)) {
@@ -195,5 +255,18 @@ class TableService
         }
 
         return null;
+    }
+
+    private function isExtraKitchenOrder(RestaurantTable $table): bool
+    {
+        if ($table->products()->count() === 0) {
+            return false;
+        }
+
+        if ($table->status === TableStatus::Served) {
+            return true;
+        }
+
+        return $this->repository->hasKitchenProcessedItems($table);
     }
 }

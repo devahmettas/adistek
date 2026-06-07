@@ -1,34 +1,44 @@
-import { Link, Outlet } from 'react-router-dom'
-import Button from '../components/Button'
-import { useAuth } from '../store/AuthStore'
+import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import RestaurantSidebar from '../components/RestaurantSidebar'
+import { DashboardProvider } from '../context/DashboardContext'
 
 export default function MainLayout() {
-  const { restaurant, isAuthenticated, logout } = useAuth()
-
-  const handleLogout = async () => {
-    await logout()
-  }
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link to={isAuthenticated ? '/dashboard' : '/login'} className="text-xl font-bold text-gray-900">
-            Menu Yönetimi
-          </Link>
-          {isAuthenticated && restaurant && (
-            <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-gray-600 sm:inline">{restaurant.name}</span>
-              <Button variant="secondary" onClick={handleLogout}>
-                Çıkış
-              </Button>
-            </div>
-          )}
+    <DashboardProvider>
+      <div className="flex min-h-screen bg-gray-50">
+        <RestaurantSidebar
+          open={sidebarOpen}
+          mobileOpen={mobileMenuOpen}
+          onCloseMobile={() => setMobileMenuOpen(false)}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.matchMedia('(min-width: 1024px)').matches) {
+                  setSidebarOpen((value) => !value)
+                } else {
+                  setMobileMenuOpen((value) => !value)
+                }
+              }}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              aria-label="Menüyü aç/kapat"
+            >
+              ☰ Menü
+            </button>
+          </header>
+
+          <main className="flex-1 p-4 lg:p-6">
+            <Outlet />
+          </main>
         </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <Outlet />
-      </main>
-    </div>
+      </div>
+    </DashboardProvider>
   )
 }

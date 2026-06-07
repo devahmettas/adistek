@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createCategory, getCategories } from '../api/categories'
+import { createCategory, deleteCategory, getCategories, updateCategory } from '../api/categories'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../api/products'
-import { createTable, addProductToTable, closeTable, getTables, updateTableProduct, updateTableStatus } from '../api/tables'
+import { createTable, addProductToTable, acknowledgeKitchenReady, cancelTableItem, closeTable, deleteTable, getTables, updateTable, updateTableItem, updateTableStatus } from '../api/tables'
 import { TOKEN_KEY } from '../api/client'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import type { TableStatus } from '../constants/tableStatuses'
@@ -10,17 +10,20 @@ function mergeTableData(
   incoming: RestaurantTable,
   existing?: RestaurantTable,
 ): RestaurantTable {
-  const waiterName =
-    incoming.viewing_waiter_name ??
-    incoming.viewing_waiter?.name ??
-    existing?.viewing_waiter_name ??
-    existing?.viewing_waiter?.name ??
+  const assignedWaiterName =
+    incoming.assigned_waiter_name ??
+    incoming.assigned_waiter?.name ??
+    existing?.assigned_waiter_name ??
+    existing?.assigned_waiter?.name ??
     null
 
   return {
     ...incoming,
+    assigned_waiter_id: incoming.assigned_waiter_id ?? existing?.assigned_waiter_id ?? null,
+    assigned_waiter_name: assignedWaiterName,
+    assigned_waiter: incoming.assigned_waiter ?? existing?.assigned_waiter ?? null,
     viewing_waiter_id: incoming.viewing_waiter_id ?? existing?.viewing_waiter_id ?? null,
-    viewing_waiter_name: waiterName,
+    viewing_waiter_name: incoming.viewing_waiter_name ?? existing?.viewing_waiter_name ?? null,
     viewing_waiter: incoming.viewing_waiter ?? existing?.viewing_waiter ?? null,
   }
 }
@@ -108,6 +111,25 @@ export default function useDashboard() {
     await fetchData(true)
   }
 
+  const editCategory = async (categoryId: number, name: string) => {
+    const updatedCategory = await updateCategory(categoryId, name)
+    setCategories((prev) =>
+      prev.map((category) => (category.id === categoryId ? updatedCategory : category)),
+    )
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.category_id === categoryId && product.category
+          ? { ...product, category: { ...product.category, name: updatedCategory.name } }
+          : product,
+      ),
+    )
+  }
+
+  const removeCategory = async (categoryId: number) => {
+    await deleteCategory(categoryId)
+    setCategories((prev) => prev.filter((category) => category.id !== categoryId))
+  }
+
   const addProduct = async (payload: {
     category_id: number
     name: string
@@ -153,6 +175,16 @@ export default function useDashboard() {
     await fetchData(true)
   }
 
+  const editTable = async (tableId: number, name: string) => {
+    const updatedTable = await updateTable(tableId, name)
+    patchTable(updatedTable)
+  }
+
+  const removeTable = async (tableId: number) => {
+    await deleteTable(tableId)
+    setTables((prev) => prev.filter((table) => table.id !== tableId))
+  }
+
   const assignProductToTable = async (
     tableId: number,
     productId: number,
@@ -169,13 +201,18 @@ export default function useDashboard() {
 
   const updateTableProductQuantity = async (
     tableId: number,
-    productId: number,
+    pivotId: number,
     payload: {
       quantity: number
       note?: string | null
     },
   ) => {
-    const updatedTable = await updateTableProduct(tableId, productId, payload)
+    const updatedTable = await updateTableItem(tableId, pivotId, payload)
+    patchTable(updatedTable)
+  }
+
+  const cancelTableProduct = async (tableId: number, pivotId: number) => {
+    const updatedTable = await cancelTableItem(tableId, pivotId)
     patchTable(updatedTable)
   }
 
@@ -194,6 +231,12 @@ export default function useDashboard() {
     patchTable(updatedTable)
   }
 
+  const acknowledgeKitchen = async (tableId: number) => {
+    const updatedTable = await acknowledgeKitchenReady(tableId)
+    patchTable(updatedTable)
+    return updatedTable
+  }
+
   return {
     categories,
     products,
@@ -201,16 +244,22 @@ export default function useDashboard() {
     loading,
     error,
     addCategory,
+    editCategory,
+    removeCategory,
     addProduct,
     editProduct,
     removeProduct,
     toggleProductStatus,
     addTable,
+    editTable,
+    removeTable,
     assignProductToTable,
     updateTableProductQuantity,
+    cancelTableProduct,
     changeTableStatus,
     requestTableBill,
     payTableBill,
+    acknowledgeKitchen,
     refresh: fetchData,
   }
 }

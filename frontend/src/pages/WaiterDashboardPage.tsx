@@ -14,9 +14,12 @@ export default function WaiterDashboardPage() {
     error,
     assignProductToTable,
     updateTableProductQuantity,
+    cancelTableProduct,
+    changeTableStatus,
     requestTableBill,
     payTableBill,
     claimView,
+    acknowledgeKitchen,
   } = useWaiterDashboard()
   const now = useNow()
 
@@ -44,9 +47,13 @@ export default function WaiterDashboardPage() {
             isWaiter
             onAddProduct={assignProductToTable}
             onUpdateProduct={updateTableProductQuantity}
+            onCancelProduct={cancelTableProduct}
+            onChangeStatus={changeTableStatus}
             onRequestBill={requestTableBill}
             onPayBill={payTableBill}
             onClaimView={claimView}
+            onAcknowledgeKitchen={acknowledgeKitchen}
+            showKitchenAlerts
           />
         </Card>
       )}

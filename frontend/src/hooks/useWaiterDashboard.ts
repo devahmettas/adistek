@@ -3,14 +3,17 @@ import { getCategories } from '../api/categories'
 import { getProducts } from '../api/products'
 import {
   addProductToTable,
+  acknowledgeKitchenReady,
+  cancelTableItem,
   claimTableView,
   closeTable,
   getTables,
-  updateTableProduct,
+  updateTableItem,
   updateTableStatus,
 } from '../api/tables'
 import waiterClient, { WAITER_TOKEN_KEY } from '../api/waiterClient'
 import type { Category, Product, RestaurantTable } from '../api/types'
+import type { TableStatus } from '../constants/tableStatuses'
 
 export default function useWaiterDashboard() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -66,7 +69,7 @@ export default function useWaiterDashboard() {
   useEffect(() => {
     const interval = window.setInterval(() => {
       fetchData(true)
-    }, 10000)
+    }, 5000)
 
     return () => window.clearInterval(interval)
   }, [fetchData])
@@ -90,13 +93,21 @@ export default function useWaiterDashboard() {
   const updateTableProductQuantity = useCallback(
     async (
       tableId: number,
-      productId: number,
+      pivotId: number,
       payload: {
         quantity: number
         note?: string | null
       },
     ) => {
-      const updatedTable = await updateTableProduct(tableId, productId, payload, waiterClient)
+      const updatedTable = await updateTableItem(tableId, pivotId, payload, waiterClient)
+      patchTable(updatedTable)
+    },
+    [patchTable],
+  )
+
+  const cancelTableProduct = useCallback(
+    async (tableId: number, pivotId: number) => {
+      const updatedTable = await cancelTableItem(tableId, pivotId, waiterClient)
       patchTable(updatedTable)
     },
     [patchTable],
@@ -126,6 +137,23 @@ export default function useWaiterDashboard() {
     [patchTable],
   )
 
+  const changeTableStatus = useCallback(
+    async (tableId: number, status: TableStatus) => {
+      const updatedTable = await updateTableStatus(tableId, status, waiterClient)
+      patchTable(updatedTable)
+    },
+    [patchTable],
+  )
+
+  const acknowledgeKitchen = useCallback(
+    async (tableId: number) => {
+      const updatedTable = await acknowledgeKitchenReady(tableId, waiterClient)
+      patchTable(updatedTable)
+      return updatedTable
+    },
+    [patchTable],
+  )
+
   return {
     categories,
     products,
@@ -134,9 +162,12 @@ export default function useWaiterDashboard() {
     error,
     assignProductToTable,
     updateTableProductQuantity,
+    cancelTableProduct,
+    changeTableStatus,
     requestTableBill,
     payTableBill,
     claimView,
+    acknowledgeKitchen,
     refresh: fetchData,
   }
 }

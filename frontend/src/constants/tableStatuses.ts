@@ -22,7 +22,7 @@ export const TABLE_STATUS_LABELS: Record<TableStatus, string> = {
   occupied: 'Dolu',
   waiting_order: 'Sipariş Vermedi',
   ordered: 'Sipariş Verildi',
-  served: 'Servis Edildi',
+  served: 'Teslim Edildi',
   bill_requested: 'Hesap İstendi',
   reserved: 'Rezerve',
 }

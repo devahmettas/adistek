@@ -1,11 +1,36 @@
 import { FormEvent, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import axios from 'axios'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
 import { useAuth } from '../store/AuthStore'
 
 type Mode = 'login' | 'register'
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!axios.isAxiosError(error) || !error.response?.data) {
+    return fallback
+  }
+
+  const data = error.response.data as {
+    message?: string
+    errors?: Record<string, string[]>
+  }
+
+  if (data.errors) {
+    const firstError = Object.values(data.errors).flat()[0]
+    if (firstError) {
+      return firstError
+    }
+  }
+
+  if (data.message) {
+    return data.message
+  }
+
+  return fallback
+}
 
 export default function LoginPage() {
   const { login, register, isAuthenticated, loading } = useAuth()
@@ -51,11 +76,14 @@ export default function LoginPage() {
           password_confirmation: passwordConfirmation,
         })
       }
-    } catch {
+    } catch (error) {
       setError(
-        mode === 'login'
-          ? 'Giriş başarısız. E-posta veya şifreyi kontrol edin.'
-          : 'Kayıt başarısız. Bilgileri kontrol edin.',
+        getApiErrorMessage(
+          error,
+          mode === 'login'
+            ? 'Giriş başarısız. E-posta veya şifreyi kontrol edin.'
+            : 'Kayıt başarısız. Bilgileri kontrol edin.',
+        ),
       )
     } finally {
       setSubmitting(false)
@@ -146,6 +174,10 @@ export default function LoginPage() {
         <p className="text-center text-sm text-gray-500">
           <Link to="/waiter/login" className="text-blue-600 hover:text-blue-700">
             Garson girişi
+          </Link>
+          {' · '}
+          <Link to="/kitchen/login" className="text-orange-600 hover:text-orange-700">
+            Mutfak girişi
           </Link>
           {' · '}
           <Link to="/admin/login" className="text-blue-600 hover:text-blue-700">

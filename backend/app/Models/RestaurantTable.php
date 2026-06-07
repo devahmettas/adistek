@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\KitchenStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,18 +21,22 @@ class RestaurantTable extends Model
         'occupied_at',
         'viewing_waiter_id',
         'viewing_waiter_at',
+        'assigned_waiter_id',
+        'assigned_at',
     ];
 
     protected $appends = [
         'total_amount',
         'occupied_minutes',
         'viewing_waiter_name',
+        'assigned_waiter_name',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'occupied_at' => 'datetime',
         'viewing_waiter_at' => 'datetime',
+        'assigned_at' => 'datetime',
         'status' => \App\Enums\TableStatus::class,
     ];
 
@@ -42,11 +47,13 @@ class RestaurantTable extends Model
                 return '0.00';
             }
 
-            $total = $this->products->sum(function (Product $product) {
-                $quantity = $product->pivot->quantity ?? 1;
+            $total = $this->products
+                ->filter(fn (Product $product) => ($product->pivot->kitchen_status ?? null) !== KitchenStatus::Cancelled->value)
+                ->sum(function (Product $product) {
+                    $quantity = $product->pivot->quantity ?? 1;
 
-                return (float) $product->price * $quantity;
-            });
+                    return (float) $product->price * $quantity;
+                });
 
             return number_format($total, 2, '.', '');
         });
@@ -78,6 +85,21 @@ class RestaurantTable extends Model
         });
     }
 
+    protected function assignedWaiterName(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if ($this->relationLoaded('assignedWaiter')) {
+                return $this->assignedWaiter?->name;
+            }
+
+            if (! $this->assigned_waiter_id) {
+                return null;
+            }
+
+            return Waiter::query()->whereKey($this->assigned_waiter_id)->value('name');
+        });
+    }
+
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
@@ -86,11 +108,17 @@ class RestaurantTable extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_restaurant_table')
-            ->withPivot(['quantity', 'note', 'created_at']);
+            ->withPivot(['id', 'quantity', 'note', 'kitchen_status', 'ready_at', 'created_at'])
+            ->orderByPivot('created_at');
     }
 
     public function viewingWaiter(): BelongsTo
     {
         return $this->belongsTo(Waiter::class, 'viewing_waiter_id');
+    }
+
+    public function assignedWaiter(): BelongsTo
+    {
+        return $this->belongsTo(Waiter::class, 'assigned_waiter_id');
     }
 }

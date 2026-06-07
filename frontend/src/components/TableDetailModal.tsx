@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import {
-  TABLE_STATUS_LABELS,
   TABLE_STATUS_STYLES,
   type TableStatus,
 } from '../constants/tableStatuses'
 import {
   formatOccupiedDuration,
+  getActiveTableProducts,
   getTableItemCount,
   getTableTotalAmount,
+  getTableWaiterName,
 } from '../utils/tableHelpers'
 import Button from './Button'
 import Input from './Input'
+import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
 
 type ViewMode = 'main' | 'categories' | 'products' | 'bill'
 
@@ -29,9 +31,11 @@ interface TableDetailModalProps {
   ) => Promise<void>
   onUpdateProduct: (
     tableId: number,
-    productId: number,
+    pivotId: number,
     payload: { quantity: number; note?: string | null },
   ) => Promise<void>
+  onCancelProduct: (tableId: number, pivotId: number) => Promise<void>
+  onChangeStatus?: (tableId: number, status: TableStatus) => Promise<void>
   onRequestBill: (tableId: number) => Promise<void>
   onPayBill: (tableId: number) => Promise<void>
 }
@@ -44,6 +48,8 @@ export default function TableDetailModal({
   onClose,
   onAddProduct,
   onUpdateProduct,
+  onCancelProduct,
+  onChangeStatus,
   onRequestBill,
   onPayBill,
 }: TableDetailModalProps) {
@@ -56,10 +62,13 @@ export default function TableDetailModal({
   const [addingProduct, setAddingProduct] = useState<Product | null>(null)
   const [addQuantity, setAddQuantity] = useState(1)
   const [addNote, setAddNote] = useState('')
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false)
 
   const total = getTableTotalAmount(table.products)
   const itemCount = getTableItemCount(table.products)
+  const tableProducts = getActiveTableProducts(table.products)
   const duration = formatOccupiedDuration(table.occupied_at ?? null, now)
+  const waiterName = getTableWaiterName(table)
   const activeProducts = products.filter((product) => product.is_active)
   const categoryProducts = selectedCategory
     ? activeProducts.filter((product) => product.category_id === selectedCategory.id)
@@ -91,16 +100,64 @@ export default function TableDetailModal({
   }
 
   const handleQuantityChange = async (product: Product, newQuantity: number) => {
+    const pivotId = product.pivot?.id
+
+    if (!pivotId) {
+      return
+    }
+
     setSubmitting(true)
     setFeedback(null)
 
     try {
-      await onUpdateProduct(table.id, product.id, {
+      await onUpdateProduct(table.id, pivotId, {
         quantity: newQuantity,
         note: product.pivot?.note ?? null,
       })
     } catch {
       setFeedback('Adet güncellenemedi')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleIncrement = async (product: Product) => {
+    setSubmitting(true)
+    setFeedback(null)
+
+    try {
+      await onAddProduct(
+        table.id,
+        product.id,
+        1,
+        product.pivot?.note?.trim() || undefined,
+      )
+    } catch {
+      setFeedback('Ürün eklenemedi')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCancelProduct = async (product: Product) => {
+    const pivotId = product.pivot?.id
+
+    if (!pivotId) {
+      return
+    }
+
+    if (!window.confirm(`${product.name} siparişi iptal edilsin mi?`)) {
+      return
+    }
+
+    setSubmitting(true)
+    setFeedback(null)
+
+    try {
+      await onCancelProduct(table.id, pivotId)
+      setFeedback(`${product.name} iptal edildi`)
+    } catch {
+      setFeedback('Sipariş iptal edilemedi')
     } finally {
       setSubmitting(false)
     }
@@ -131,6 +188,42 @@ export default function TableDetailModal({
       onClose()
     } catch {
       window.alert('Hesap kapatılamadı.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleMarkDelivered = async () => {
+    if (!onChangeStatus) {
+      return
+    }
+
+    setSubmitting(true)
+    setFeedback(null)
+
+    try {
+      await onChangeStatus(table.id, 'served')
+      setFeedback('Masa teslim edildi olarak işaretlendi.')
+    } catch {
+      setFeedback('Durum güncellenemedi.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleStatusChange = async (nextStatus: TableStatus) => {
+    if (!onChangeStatus) {
+      return
+    }
+
+    setSubmitting(true)
+    setFeedback(null)
+
+    try {
+      await onChangeStatus(table.id, nextStatus)
+      setStatusMenuOpen(false)
+    } catch {
+      setFeedback('Durum güncellenemedi.')
     } finally {
       setSubmitting(false)
     }
@@ -177,11 +270,31 @@ export default function TableDetailModal({
                 </button>
               )}
               <h2 className="text-xl font-bold text-gray-900">{table.name}</h2>
-              <span
-                className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${styles.badge}`}
-              >
-                {TABLE_STATUS_LABELS[status]}
-              </span>
+              {waiterName && (
+                <p className="mt-1 text-sm font-medium text-indigo-700">
+                  Sorumlu garson: {waiterName}
+                </p>
+              )}
+              <div className="relative mt-2">
+                <TableStatusBadge
+                  status={status}
+                  onClick={
+                    onChangeStatus
+                      ? (event) => {
+                          event.stopPropagation()
+                          setStatusMenuOpen((open) => !open)
+                        }
+                      : undefined
+                  }
+                />
+                {statusMenuOpen && onChangeStatus && (
+                  <TableStatusPicker
+                    status={status}
+                    onChange={handleStatusChange}
+                    onClose={() => setStatusMenuOpen(false)}
+                  />
+                )}
+              </div>
             </div>
             <button
               type="button"
@@ -212,7 +325,15 @@ export default function TableDetailModal({
           {view === 'main' && (
             <div className="space-y-5">
               {feedback && (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{feedback}</p>
+                <p
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    feedback.includes('edilemedi') || feedback.includes('eklenemedi')
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-green-50 text-green-700'
+                  }`}
+                >
+                  {feedback}
+                </p>
               )}
 
               <div className="grid grid-cols-2 gap-3">
@@ -235,31 +356,60 @@ export default function TableDetailModal({
                 </Button>
               </div>
 
+              {onChangeStatus && itemCount > 0 && status !== 'served' && status !== 'empty' && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleMarkDelivered}
+                  disabled={submitting}
+                  className="w-full border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100"
+                >
+                  Teslim Edildi
+                </Button>
+              )}
+
               {itemCount > 0 ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {table.products?.map((product) => {
+                  {tableProducts.map((product) => {
                     const quantity = product.pivot?.quantity ?? 1
                     const lineTotal = Number(product.price) * quantity
                     const note = product.pivot?.note
 
                     return (
                       <div
-                        key={`${product.id}-${product.pivot?.created_at ?? ''}`}
+                        key={product.pivot?.id ?? `${product.id}-${product.pivot?.created_at ?? ''}`}
                         className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-gray-900">{product.name}</p>
-                            {note && (
-                              <p className="mt-1 text-xs italic text-gray-500">{note}</p>
+                            {product.pivot?.kitchen_status === 'ready' && (
+                              <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                                Mutfaktan hazır
+                              </span>
+                            )}
+                            {note ? (
+                              <p className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                                {note}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs text-gray-400">Standart</p>
                             )}
                             <p className="mt-2 font-bold text-blue-700">{lineTotal.toFixed(2)} ₺</p>
+                            <button
+                              type="button"
+                              disabled={submitting}
+                              onClick={() => handleCancelProduct(product)}
+                              className="mt-2 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                            >
+                              İptal
+                            </button>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-2">
                             <button
                               type="button"
-                              disabled={submitting}
+                              disabled={submitting || quantity <= 1}
                               onClick={() => handleQuantityChange(product, quantity - 1)}
                               className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-lg font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                               aria-label="Azalt"
@@ -272,7 +422,7 @@ export default function TableDetailModal({
                             <button
                               type="button"
                               disabled={submitting || quantity >= 99}
-                              onClick={() => handleQuantityChange(product, quantity + 1)}
+                              onClick={() => handleIncrement(product)}
                               className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-lg font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
                               aria-label="Artır"
                             >
@@ -369,7 +519,7 @@ export default function TableDetailModal({
                       name="addNote"
                       value={addNote}
                       onChange={(event) => setAddNote(event.target.value)}
-                      placeholder="Örn: az demli, baharatsız"
+                      placeholder="Örn: badem sütlü, buzsuz — farklı not ayrı kalem olur"
                     />
 
                     {feedback && (
@@ -446,9 +596,9 @@ export default function TableDetailModal({
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-gray-900">Hesap Detayı</h3>
 
-              {table.products && table.products.length > 0 ? (
+              {tableProducts.length > 0 ? (
                 <div className="space-y-3">
-                  {table.products.map((product) => {
+                  {tableProducts.map((product) => {
                     const quantity = product.pivot?.quantity ?? 1
                     const unitPrice = Number(product.price)
                     const lineTotal = unitPrice * quantity
@@ -456,7 +606,7 @@ export default function TableDetailModal({
 
                     return (
                       <div
-                        key={`bill-${product.id}-${product.pivot?.created_at ?? ''}`}
+                        key={`bill-${product.pivot?.id ?? product.id}`}
                         className="rounded-xl border border-gray-100 bg-gray-50 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">

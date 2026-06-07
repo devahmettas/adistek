@@ -20,6 +20,7 @@ interface ProductListProps {
   ) => Promise<void>
   onDelete: (id: number) => Promise<void>
   onToggleStatus: (product: Product) => Promise<void>
+  showCategoryFilter?: boolean
 }
 
 export default function ProductList({
@@ -28,7 +29,9 @@ export default function ProductList({
   onUpdate,
   onDelete,
   onToggleStatus,
+  showCategoryFilter = false,
 }: ProductListProps) {
+  const [filterCategoryId, setFilterCategoryId] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
   const [editCategoryId, setEditCategoryId] = useState('')
@@ -120,12 +123,39 @@ export default function ProductList({
     }
   }
 
+  const filteredProducts =
+    filterCategoryId === ''
+      ? products
+      : products.filter((product) => product.category_id === Number(filterCategoryId))
+
   if (products.length === 0) {
     return <p className="text-sm text-gray-500">Henüz ürün eklenmemiş.</p>
   }
 
   return (
     <div className="space-y-4">
+      {showCategoryFilter && (
+        <div className="max-w-xs">
+          <Select
+            label="Kategoriye göre filtrele"
+            name="filterCategory"
+            value={filterCategoryId}
+            onChange={(event) => setFilterCategoryId(event.target.value)}
+            options={[
+              { value: '', label: 'Tüm kategoriler' },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+              })),
+            ]}
+          />
+        </div>
+      )}
+
+      {filteredProducts.length === 0 ? (
+        <p className="text-sm text-gray-500">Bu kategoride ürün bulunamadı.</p>
+      ) : (
+        <>
       <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full text-left text-sm">
           <thead>
@@ -138,7 +168,7 @@ export default function ProductList({
             </tr>
           </thead>
           <tbody>
-            {products.map((product) =>
+            {filteredProducts.map((product) =>
               editingId === product.id ? (
                 <tr key={product.id} className="border-b border-gray-100 bg-blue-50/40">
                   <td colSpan={5} className="px-3 py-4">
@@ -266,7 +296,7 @@ export default function ProductList({
       </div>
 
       <div className="space-y-3 md:hidden">
-        {products.map((product) =>
+        {filteredProducts.map((product) =>
           editingId === product.id ? (
             <form
               key={product.id}
@@ -384,6 +414,8 @@ export default function ProductList({
           ),
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }

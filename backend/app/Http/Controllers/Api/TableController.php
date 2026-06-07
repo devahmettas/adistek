@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\KitchenStatus;
 use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTableProductRequest;
 use App\Http\Requests\StoreTableRequest;
 use App\Http\Requests\UpdateTableProductRequest;
+use App\Http\Requests\UpdateTableRequest;
 use App\Http\Requests\UpdateTableStatusRequest;
-use App\Models\Product;
 use App\Models\RestaurantTable;
+use App\Services\KitchenOrderService;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class TableController extends Controller
 
     public function __construct(
         private readonly TableService $service,
+        private readonly KitchenOrderService $kitchenOrderService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -39,6 +42,24 @@ class TableController extends Controller
         $data['viewing_waiter'] = $table->viewingWaiter
             ? $table->viewingWaiter->only(['id', 'name', 'email'])
             : null;
+        $data['assigned_waiter_name'] = $table->assigned_waiter_name;
+        $data['assigned_waiter'] = $table->assignedWaiter
+            ? $table->assignedWaiter->only(['id', 'name', 'email'])
+            : null;
+
+        if (isset($data['products']) && is_array($data['products'])) {
+            $data['products'] = array_values(array_filter(
+                $data['products'],
+                fn (array $product) => ($product['pivot']['kitchen_status'] ?? null) !== KitchenStatus::Cancelled->value,
+            ));
+
+            $total = array_reduce(
+                $data['products'],
+                fn (float $sum, array $product) => $sum + ((float) ($product['price'] ?? 0) * (int) ($product['pivot']['quantity'] ?? 1)),
+                0.0,
+            );
+            $data['total_amount'] = number_format($total, 2, '.', '');
+        }
 
         return $data;
     }
@@ -50,6 +71,32 @@ class TableController extends Controller
         return response()->json([
             'data' => $this->formatTable($table),
         ], 201);
+    }
+
+    public function update(UpdateTableRequest $request, RestaurantTable $table): JsonResponse
+    {
+        $this->ensureTableBelongsToRestaurant($request, $table);
+
+        $updatedTable = $this->service->update(
+            $this->restaurantId($request),
+            $table->id,
+            $request->validated(),
+        );
+
+        return response()->json([
+            'data' => $this->formatTable($updatedTable),
+        ]);
+    }
+
+    public function destroy(Request $request, RestaurantTable $table): JsonResponse
+    {
+        $this->ensureTableBelongsToRestaurant($request, $table);
+
+        $this->service->delete($this->restaurantId($request), $table->id);
+
+        return response()->json([
+            'message' => 'Masa silindi.',
+        ]);
     }
 
     public function updateStatus(
@@ -86,22 +133,35 @@ class TableController extends Controller
         ], 201);
     }
 
-    public function updateProduct(
+    public function updateTableItem(
         UpdateTableProductRequest $request,
         RestaurantTable $table,
-        Product $product,
+        int $pivotId,
     ): JsonResponse {
-        $updatedTable = $this->service->updateProduct(
+        $updatedTable = $this->service->updateTableItem(
             $this->restaurantId($request),
             $table->id,
-            $product->id,
+            $pivotId,
             (int) $request->validated('quantity'),
             $request->validated('note'),
-            $this->waiterId($request),
         );
 
         return response()->json([
             'data' => $this->formatTable($updatedTable),
+        ]);
+    }
+
+    public function cancelTableItem(Request $request, RestaurantTable $table, int $pivotId): JsonResponse
+    {
+        $updatedTable = $this->service->cancelTableItem(
+            $this->restaurantId($request),
+            $table->id,
+            $pivotId,
+        );
+
+        return response()->json([
+            'data' => $this->formatTable($updatedTable),
+            'message' => 'Sipariş iptal edildi.',
         ]);
     }
 
@@ -151,5 +211,28 @@ class TableController extends Controller
         return response()->json([
             'data' => $this->formatTable($updatedTable),
         ]);
+    }
+
+    public function acknowledgeKitchen(Request $request, RestaurantTable $table): JsonResponse
+    {
+        $this->kitchenOrderService->acknowledgeTableReadyItems(
+            $this->restaurantId($request),
+            $table->id,
+        );
+
+        $updatedTable = $this->service->listByRestaurant($this->restaurantId($request))
+            ->firstWhere('id', $table->id);
+
+        return response()->json([
+            'data' => $this->formatTable($updatedTable),
+            'message' => 'Hazır bildirimi alındı.',
+        ]);
+    }
+
+    private function ensureTableBelongsToRestaurant(Request $request, RestaurantTable $table): void
+    {
+        if ($table->restaurant_id !== $this->restaurantId($request)) {
+            abort(404);
+        }
     }
 }

@@ -12,13 +12,11 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        User::where('email', 'admin@adistek.com')->delete();
-
         User::updateOrCreate(
-            ['email' => 'ahmet@gmail.com'],
+            ['email' => 'ahmet123@gmail.com'],
             [
                 'name' => 'Ahmet',
-                'password' => '12345',
+                'password' => '12345678',
                 'is_admin' => true,
             ],
         );

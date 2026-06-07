@@ -1,17 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
-import {
-  TABLE_STATUS_LABELS,
-  TABLE_STATUS_STYLES,
-  type TableStatus,
-} from '../constants/tableStatuses'
+import { TABLE_STATUS_STYLES, type TableStatus } from '../constants/tableStatuses'
 import {
   formatOccupiedDuration,
+  getReadyKitchenItemCount,
   getTableItemCount,
   getTableTotalAmount,
   getTableWaiterName,
 } from '../utils/tableHelpers'
 import TableDetailModal from './TableDetailModal'
+import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
 
 interface TableGridProps {
   tables: RestaurantTable[]
@@ -27,12 +25,16 @@ interface TableGridProps {
   ) => Promise<void>
   onUpdateProduct: (
     tableId: number,
-    productId: number,
+    pivotId: number,
     payload: { quantity: number; note?: string | null },
   ) => Promise<void>
+  onCancelProduct: (tableId: number, pivotId: number) => Promise<void>
+  onChangeStatus?: (tableId: number, status: TableStatus) => Promise<void>
   onRequestBill: (tableId: number) => Promise<void>
   onPayBill: (tableId: number) => Promise<void>
   onClaimView?: (tableId: number) => Promise<void>
+  onAcknowledgeKitchen?: (tableId: number) => Promise<RestaurantTable | void>
+  showKitchenAlerts?: boolean
 }
 
 export default function TableGrid({
@@ -43,16 +45,26 @@ export default function TableGrid({
   isWaiter = false,
   onAddProduct,
   onUpdateProduct,
+  onCancelProduct,
+  onChangeStatus,
   onRequestBill,
   onPayBill,
   onClaimView,
+  onAcknowledgeKitchen,
+  showKitchenAlerts = false,
 }: TableGridProps) {
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null)
+  const [statusMenuTableId, setStatusMenuTableId] = useState<number | null>(null)
   const onClaimViewRef = useRef(onClaimView)
+  const onAcknowledgeKitchenRef = useRef(onAcknowledgeKitchen)
 
   useEffect(() => {
     onClaimViewRef.current = onClaimView
   }, [onClaimView])
+
+  useEffect(() => {
+    onAcknowledgeKitchenRef.current = onAcknowledgeKitchen
+  }, [onAcknowledgeKitchen])
 
   const openTable = async (table: RestaurantTable) => {
     if (isWaiter && onClaimViewRef.current) {
@@ -63,11 +75,46 @@ export default function TableGrid({
       }
     }
 
-    setSelectedTable(table)
+    let tableToOpen = table
+
+    if (showKitchenAlerts && getReadyKitchenItemCount(table.products) > 0) {
+      try {
+        const updated = await onAcknowledgeKitchenRef.current?.(table.id)
+        if (updated) {
+          tableToOpen = updated
+        }
+      } catch {
+        // Keep modal open even if acknowledge fails.
+      }
+    }
+
+    setSelectedTable(tableToOpen)
   }
 
   const closeTable = () => {
     setSelectedTable(null)
+  }
+
+  const handleStatusClick = (event: MouseEvent, tableId: number) => {
+    event.stopPropagation()
+
+    if (!onChangeStatus) {
+      return
+    }
+
+    setStatusMenuTableId((current) => (current === tableId ? null : tableId))
+  }
+
+  const handleStatusChange = async (tableId: number, status: TableStatus) => {
+    if (!onChangeStatus) {
+      return
+    }
+
+    try {
+      await onChangeStatus(tableId, status)
+    } catch {
+      window.alert('Masa durumu güncellenemedi.')
+    }
   }
 
   useEffect(() => {
@@ -94,7 +141,9 @@ export default function TableGrid({
   return (
     <>
       <p className="mb-4 text-sm text-gray-500">
-        Masayı açmak için karta tıklayın. Garson bilgisi kartın üstünde görünür.
+        {isWaiter
+          ? 'Masayı açmak için karta tıklayın. Durumu değiştirmek için rozetine tıklayın.'
+          : 'Masayı açmak için karta tıklayın. Mutfak hazır bildirimi kartta görünür. İlk siparişi alan garson sorumlu olarak listelenir.'}
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -105,32 +154,51 @@ export default function TableGrid({
           const duration = formatOccupiedDuration(table.occupied_at ?? null, now)
           const itemCount = getTableItemCount(table.products)
           const waiterName = getTableWaiterName(table)
+          const readyCount = getReadyKitchenItemCount(table.products)
 
           return (
             <button
               key={table.id}
               type="button"
               onClick={() => openTable(table)}
-              className={`flex aspect-square flex-col justify-between rounded-2xl border-2 p-4 text-left shadow-sm transition hover:scale-[1.02] hover:shadow-md ${styles.card}`}
+              className={`relative flex aspect-square flex-col justify-between rounded-2xl border-2 p-4 text-left shadow-sm transition hover:scale-[1.02] hover:shadow-md ${styles.card}`}
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-bold text-gray-900">{table.name}</p>
-                    {waiterName ? (
-                      <p className="mt-1 truncate rounded-md bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">
-                        Garson: {waiterName}
-                      </p>
-                    ) : null}
+                    <p
+                      className={`mt-1 truncate rounded-md px-2 py-0.5 text-xs font-semibold ${
+                        waiterName
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {waiterName ? `Sorumlu: ${waiterName}` : 'Garson atanmadı'}
+                    </p>
                   </div>
                   <span className={`h-3 w-3 shrink-0 rounded-full ${styles.dot}`} />
                 </div>
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${styles.badge}`}
-                >
-                  {TABLE_STATUS_LABELS[status]}
-                </span>
+                <div className="relative">
+                  <TableStatusBadge
+                    status={status}
+                    onClick={onChangeStatus ? (event) => handleStatusClick(event, table.id) : undefined}
+                  />
+                  {statusMenuTableId === table.id && onChangeStatus && (
+                    <TableStatusPicker
+                      status={status}
+                      onChange={(nextStatus) => handleStatusChange(table.id, nextStatus)}
+                      onClose={() => setStatusMenuTableId(null)}
+                    />
+                  )}
+                </div>
               </div>
+
+              {showKitchenAlerts && readyCount > 0 && (
+                <p className="animate-pulse rounded-lg bg-emerald-500 px-2 py-1 text-center text-xs font-bold text-white">
+                  {readyCount} ürün hazır!
+                </p>
+              )}
 
               <div className="space-y-1">
                 <p className="text-base font-bold text-blue-700">{total.toFixed(2)} ₺</p>
@@ -153,6 +221,8 @@ export default function TableGrid({
           onClose={closeTable}
           onAddProduct={onAddProduct}
           onUpdateProduct={onUpdateProduct}
+          onCancelProduct={onCancelProduct}
+          onChangeStatus={onChangeStatus}
           onRequestBill={onRequestBill}
           onPayBill={async (tableId) => {
             await onPayBill(tableId)
