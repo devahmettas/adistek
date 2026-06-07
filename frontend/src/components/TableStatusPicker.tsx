@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import {
   TABLE_STATUS_LABELS,
   TABLE_STATUS_STYLES,
@@ -11,15 +11,33 @@ interface TableStatusPickerProps {
   onChange: (status: TableStatus) => void
   onClose: () => void
   className?: string
+  variant?: 'compact' | 'large'
 }
+
+const PICKER_VARIANTS = {
+  compact: {
+    menu: 'min-w-[10rem] rounded-xl py-1 shadow-lg',
+    item: 'gap-2 px-3 py-2 text-sm',
+    dot: 'h-2 w-2',
+    active: 'font-semibold',
+  },
+  large: {
+    menu: 'min-w-[14rem] rounded-2xl py-2 shadow-xl sm:min-w-[16rem]',
+    item: 'gap-3 px-4 py-3 text-base sm:py-3.5 sm:text-lg',
+    dot: 'h-2.5 w-2.5 sm:h-3 sm:w-3',
+    active: 'font-bold',
+  },
+} as const
 
 export default function TableStatusPicker({
   status,
   onChange,
   onClose,
   className = '',
+  variant = 'compact',
 }: TableStatusPickerProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const styles = PICKER_VARIANTS[variant]
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,11 +53,11 @@ export default function TableStatusPicker({
   return (
     <div
       ref={menuRef}
-      className={`absolute left-0 top-full z-20 mt-1 min-w-[10rem] rounded-xl border border-gray-200 bg-white py-1 shadow-lg ${className}`}
+      className={`absolute left-0 top-full z-20 mt-1 border border-gray-200 bg-white ${styles.menu} ${className}`}
       onClick={(event) => event.stopPropagation()}
     >
       {TABLE_STATUSES.map((option) => {
-        const styles = TABLE_STATUS_STYLES[option]
+        const optionStyles = TABLE_STATUS_STYLES[option]
 
         return (
           <button
@@ -49,11 +67,11 @@ export default function TableStatusPicker({
               onChange(option)
               onClose()
             }}
-            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-              option === status ? 'bg-gray-50 font-semibold' : ''
+            className={`flex w-full items-center text-left hover:bg-gray-50 ${styles.item} ${
+              option === status ? `bg-gray-50 ${styles.active}` : ''
             }`}
           >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${styles.dot}`} />
+            <span className={`shrink-0 rounded-full ${styles.dot} ${optionStyles.dot}`} />
             {TABLE_STATUS_LABELS[option]}
           </button>
         )
@@ -68,7 +86,7 @@ export function TableStatusBadge({
   className = '',
 }: {
   status: TableStatus
-  onClick?: (event: MouseEvent) => void
+  onClick?: (event: ReactMouseEvent) => void
   className?: string
 }) {
   const styles = TABLE_STATUS_STYLES[status] ?? TABLE_STATUS_STYLES.empty
@@ -83,7 +101,7 @@ export function TableStatusBadge({
           ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
-                onClick(event as unknown as MouseEvent)
+                onClick(event as unknown as ReactMouseEvent)
               }
             }
           : undefined
