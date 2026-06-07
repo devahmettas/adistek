@@ -73,9 +73,16 @@ class GuestTableOrderService
 
     private function canOrder(RestaurantTable $table): bool
     {
-        return ! in_array($table->status, [
-            TableStatus::BillRequested,
-            TableStatus::Reserved,
-        ], true);
+        $status = $table->status instanceof TableStatus
+            ? $table->status
+            : TableStatus::tryFrom((string) $table->status);
+
+        if ($status === null) {
+            return true;
+        }
+
+        // Yalnızca rezerve masalar kapalıdır. Teslim edilmiş veya hesap istenmiş
+        // masalardan da müşteri ek sipariş verebilir.
+        return $status !== TableStatus::Reserved;
     }
 }

@@ -136,14 +136,12 @@ class TableService
 
         $this->repository->attachProduct($table, $product, $quantity, $note, $isExtraOrder);
 
-        $updates = [];
+        $updates = [
+            'status' => TableStatus::Ordered->value,
+        ];
 
-        if ($table->status !== TableStatus::BillRequested) {
-            $updates['status'] = TableStatus::Ordered->value;
-
-            if (! $table->occupied_at) {
-                $updates['occupied_at'] = now();
-            }
+        if (! $table->occupied_at) {
+            $updates['occupied_at'] = now();
         }
 
         if ($isFirstProduct && $waiterId && ! $table->assigned_waiter_id) {
