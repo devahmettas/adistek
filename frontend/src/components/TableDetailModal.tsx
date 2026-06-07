@@ -14,6 +14,7 @@ import {
 } from '../utils/billHelpers'
 import Button from './Button'
 import Input from './Input'
+import StaffActionToasts, { useStaffToasts } from './StaffActionToasts'
 import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
 import {
   DEFAULT_PAYMENT_METHOD,
@@ -79,6 +80,7 @@ export default function TableDetailModal({
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const { toasts, pushToast, dismissToast } = useStaffToasts()
   const [addingProduct, setAddingProduct] = useState<Product | null>(null)
   const [addQuantity, setAddQuantity] = useState(1)
   const [addNote, setAddNote] = useState('')
@@ -162,10 +164,15 @@ export default function TableDetailModal({
 
     try {
       await onAddProduct(table.id, addingProduct.id, addQuantity, addNote.trim() || undefined)
-      setFeedback(`${addingProduct.name} eklendi`)
+      pushToast(
+        'success',
+        addQuantity > 1
+          ? `${addingProduct.name} x${addQuantity} eklendi`
+          : `${addingProduct.name} eklendi`,
+      )
       resetAddForm()
     } catch {
-      setFeedback('Ürün eklenemedi')
+      pushToast('error', 'Ürün eklenemedi')
     } finally {
       setSubmitting(false)
     }
@@ -204,8 +211,9 @@ export default function TableDetailModal({
         1,
         product.pivot?.note?.trim() || undefined,
       )
+      pushToast('success', `${product.name} eklendi`)
     } catch {
-      setFeedback('Ürün eklenemedi')
+      pushToast('error', 'Ürün eklenemedi')
     } finally {
       setSubmitting(false)
     }
@@ -213,12 +221,9 @@ export default function TableDetailModal({
 
   const handleCancelProduct = async (product: Product) => {
     const pivotId = product.pivot?.id
+    const quantity = product.pivot?.quantity ?? 1
 
     if (!pivotId) {
-      return
-    }
-
-    if (!window.confirm(`${product.name} siparişi iptal edilsin mi?`)) {
       return
     }
 
@@ -226,10 +231,18 @@ export default function TableDetailModal({
     setFeedback(null)
 
     try {
-      await onCancelProduct(table.id, pivotId)
-      setFeedback(`${product.name} iptal edildi`)
+      if (quantity > 1) {
+        await onUpdateProduct(table.id, pivotId, {
+          quantity: quantity - 1,
+          note: product.pivot?.note ?? null,
+        })
+        pushToast('warning', `${product.name} — 1 adet iptal edildi`)
+      } else {
+        await onCancelProduct(table.id, pivotId)
+        pushToast('warning', `${product.name} iptal edildi`)
+      }
     } catch {
-      setFeedback('Sipariş iptal edilemedi')
+      pushToast('error', 'Sipariş iptal edilemedi')
     } finally {
       setSubmitting(false)
     }
@@ -358,10 +371,11 @@ export default function TableDetailModal({
   const isBillView = view === 'bill'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-2 sm:items-center sm:p-4"
-      onClick={onClose}
-    >
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-2 sm:items-center sm:p-4"
+        onClick={onClose}
+      >
       <div
         className="flex max-h-[94vh] min-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:min-h-[82vh] lg:max-w-7xl"
         onClick={(event) => event.stopPropagation()}
@@ -546,7 +560,7 @@ export default function TableDetailModal({
                                   onClick={() => handleCancelProduct(product)}
                                   className="font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
                                 >
-                                  İptal
+                                  {quantity > 1 ? 'Adet İptal' : 'İptal'}
                                 </button>
                               </div>
                             </div>
@@ -1000,6 +1014,9 @@ export default function TableDetailModal({
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      <StaffActionToasts toasts={toasts} onDismiss={dismissToast} />
+    </>
   )
 }
