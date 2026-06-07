@@ -43,6 +43,13 @@ class TableRepository
             ->first();
     }
 
+    public function findByQrToken(string $token): ?RestaurantTable
+    {
+        return RestaurantTable::query()
+            ->where('qr_token', $token)
+            ->first();
+    }
+
     public function update(RestaurantTable $table, array $data): RestaurantTable
     {
         $table->update($data);

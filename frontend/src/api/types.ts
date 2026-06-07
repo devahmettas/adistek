@@ -39,6 +39,7 @@ export interface RestaurantTable {
   id: number
   restaurant_id: number
   name: string
+  qr_token: string
   status: TableStatus
   occupied_at: string | null
   viewing_waiter_id: number | null

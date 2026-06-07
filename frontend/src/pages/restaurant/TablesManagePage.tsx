@@ -36,7 +36,9 @@ export default function TablesManagePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Masa Ayarları</h1>
-        <p className="mt-1 text-sm text-gray-600">Restoran masalarını ekleyin, düzenleyin veya silin.</p>
+        <p className="mt-1 text-sm text-gray-600">
+          Restoran masalarını ekleyin, her masa için QR kod oluşturun ve müşterilerin doğrudan sipariş vermesini sağlayın.
+        </p>
       </div>
 
       {loading && <p className="text-sm text-gray-500">Yükleniyor...</p>}

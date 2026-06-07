@@ -9,6 +9,7 @@ use App\Repositories\TableRepository;
 use App\Repositories\TableSessionRepository;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
@@ -38,6 +39,7 @@ class TableService
         return $this->repository->create([
             'restaurant_id' => $restaurantId,
             'name' => $data['name'],
+            'qr_token' => (string) Str::uuid(),
             'status' => TableStatus::Empty->value,
             'occupied_at' => null,
         ]);

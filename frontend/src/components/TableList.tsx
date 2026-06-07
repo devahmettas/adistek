@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import type { RestaurantTable } from '../api/types'
 import Button from './Button'
 import Input from './Input'
+import TableQrPanel from './TableQrPanel'
 import { TABLE_STATUS_LABELS } from '../constants/tableStatuses'
 
 interface TableListProps {
@@ -142,6 +143,8 @@ export default function TableList({ tables, onUpdate, onDelete }: TableListProps
                   </div>
                 </div>
               )}
+
+              {!isEditing && table.qr_token && <TableQrPanel table={table} />}
             </li>
           )
         })}

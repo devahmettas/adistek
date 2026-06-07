@@ -12,6 +12,7 @@ import CategoriesPage from '../pages/restaurant/CategoriesPage'
 import ProductsPage from '../pages/restaurant/ProductsPage'
 import StaffPage from '../pages/restaurant/StaffPage'
 import PublicMenuPage from '../pages/PublicMenuPage'
+import TableOrderPage from '../pages/TableOrderPage'
 import PublicMenuSharePage from '../pages/restaurant/PublicMenuSharePage'
 import StatsPage from '../pages/restaurant/StatsPage'
 import TablesHomePage from '../pages/restaurant/TablesHomePage'
@@ -31,6 +32,7 @@ export default function AppRouter() {
       <Route path="/kitchen/login" element={<KitchenLoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/menu/:identifier" element={<PublicMenuPage />} />
+      <Route path="/order/:token" element={<TableOrderPage />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route element={<ProtectedRoute />}>
