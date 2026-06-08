@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   cancelReservation,
   createReservation,
@@ -14,11 +14,14 @@ import Button from '../../components/Button'
 import Input from '../../components/Input'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
+import StaffActionToasts, { useStaffToasts } from '../../components/StaffActionToasts'
 import ReservationFormModal from '../../components/reservations/ReservationFormModal'
 import ReservationListPanel from '../../components/reservations/ReservationListPanel'
 import ReservationSettingsPanel from '../../components/reservations/ReservationSettingsPanel'
 import ReservationTableGrid from '../../components/reservations/ReservationTableGrid'
+import ReservationTimeSlotGrid from '../../components/reservations/ReservationTimeSlotGrid'
 import { todayLocalString } from '../../utils/dateHelpers'
+import { buildPageReservationTimeSlots, getReservationTableViewState } from '../../utils/reservationSlotUtils'
 
 type ReservationTab = 'tables' | 'settings'
 
@@ -48,6 +51,7 @@ function tabButtonClass(isActive: boolean): string {
 export default function ReservationsPage() {
   const [activeTab, setActiveTab] = useState<ReservationTab>('tables')
   const [selectedDate, setSelectedDate] = useState(todayLocalString())
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [overview, setOverview] = useState<ReservationDayOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +62,17 @@ export default function ReservationsPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [settings, setSettings] = useState<RestaurantSettings>(defaultSettings)
   const [listOpen, setListOpen] = useState(false)
+  const { toasts, pushToast, dismissToast } = useStaffToasts()
+
+  const durationMinutes = overview?.reservation_duration_minutes ?? settings.reservation_duration_minutes
+
+  const pageTimeSlots = useMemo(() => {
+    if (!overview) {
+      return []
+    }
+
+    return buildPageReservationTimeSlots(selectedDate, overview.tables, durationMinutes)
+  }, [overview, selectedDate, durationMinutes])
 
   const syncSelectedTable = useCallback((data: ReservationDayOverview) => {
     setSelectedTable((current) => {
@@ -106,6 +121,10 @@ export default function ReservationsPage() {
   }, [loadOverview, selectedDate, activeTab])
 
   useEffect(() => {
+    setSelectedTime(null)
+  }, [selectedDate])
+
+  useEffect(() => {
     if (activeTab !== 'settings') {
       return
     }
@@ -127,6 +146,17 @@ export default function ReservationsPage() {
     return () => window.clearInterval(intervalId)
   }, [loadOverview, selectedDate, activeTab])
 
+  const handleSelectTable = (table: ReservationDayTable) => {
+    const viewState = getReservationTableViewState(table, selectedDate, selectedTime, durationMinutes)
+
+    if (!viewState.clickable) {
+      return
+    }
+
+    setSelectedTable(table)
+    setFormError(null)
+  }
+
   const handleCreateReservation = async (payload: {
     customer_name: string
     phone: string
@@ -142,6 +172,9 @@ export default function ReservationsPage() {
     setFormError(null)
 
     try {
+      const tableName = selectedTable.name
+      const reservedTime = payload.reserved_at.slice(11, 16)
+
       await createReservation({
         restaurant_table_id: selectedTable.id,
         customer_name: payload.customer_name,
@@ -149,6 +182,10 @@ export default function ReservationsPage() {
         guest_count: payload.guest_count,
         reserved_at: payload.reserved_at,
       })
+
+      setSelectedTable(null)
+      setFormError(null)
+      pushToast('success', `${tableName} için ${reservedTime} rezervasyonu oluşturuldu.`)
 
       if (payload.reservation_date !== selectedDate) {
         setSelectedDate(payload.reservation_date)
@@ -194,29 +231,22 @@ export default function ReservationsPage() {
 
   const tableOptions = overview?.tables.map((table) => ({ id: table.id, name: table.name })) ?? []
 
+  const availableTableCount = overview
+    ? overview.tables.filter((table) =>
+        getReservationTableViewState(table, selectedDate, selectedTime, durationMinutes).clickable,
+      ).length
+    : 0
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Rezervasyonlar"
-        description="Masaları seçerek rezervasyon oluşturun. Rezervasyon saatine ayarladığınız süre kala masalarda Rezerve görünür."
+        description="Önce gün ve saat seçin, ardından müsait masaya tıklayarak rezervasyon oluşturun."
         actions={
-          activeTab === 'tables' ? (
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
-              <div className="w-full sm:w-44">
-                <Input
-                  label="Gün"
-                  name="reservationDate"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                />
-              </div>
-              {overview && (
-                <Button type="button" variant="secondary" onClick={() => setListOpen(true)}>
-                  Rezervasyon Listesi ({overview.reservations.length})
-                </Button>
-              )}
-            </div>
+          activeTab === 'tables' && overview ? (
+            <Button type="button" variant="secondary" onClick={() => setListOpen(true)}>
+              Rezervasyon Listesi ({overview.reservations.length})
+            </Button>
           ) : undefined
         }
       />
@@ -252,27 +282,71 @@ export default function ReservationsPage() {
           {error && <p className="alert-error">{error}</p>}
 
           {!loading && overview && (
-            <section className="panel-surface p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-6">
+              <section className="panel-surface space-y-5 p-5">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Masalar</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Gün Seçin</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Rezervasyon eklemek için masaya tıklayın.
+                    Gün seçildiğinde o gün hiç rezervasyonu olmayan masalar tıklanabilir olur.
                   </p>
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {overview.tables.filter((table) => table.has_reservations_on_date).length} /{' '}
-                  {overview.tables.length} rezervasyonlu
-                  {selectedDate === todayLocalString() && (
-                    <>
-                      {' '}
-                      · {overview.tables.filter((table) => table.is_actively_reserved).length} rezerve
-                    </>
+                <div className="max-w-xs">
+                  <Input
+                    label="Gün"
+                    name="reservationDate"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                  />
+                </div>
+              </section>
+
+              <section className="panel-surface space-y-5 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">Saat Seçin</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Saat seçildiğinde yalnızca o saatte müsait masalar tıklanabilir olur.
+                    </p>
+                  </div>
+                  {selectedTime && (
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedTime(null)}>
+                      Saat seçimini temizle
+                    </Button>
                   )}
-                </span>
-              </div>
-              <ReservationTableGrid tables={overview.tables} onSelectTable={setSelectedTable} />
-            </section>
+                </div>
+                <ReservationTimeSlotGrid
+                  slots={pageTimeSlots}
+                  durationMinutes={durationMinutes}
+                  selectedTime={selectedTime}
+                  onSelectTime={(time) => setSelectedTime((current) => (current === time ? null : time))}
+                  compact
+                />
+              </section>
+
+              <section className="panel-surface p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">Masalar</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedTime
+                        ? `${selectedTime} saati için müsait masaları seçin.`
+                        : 'Gün boyunca boş masaları seçin veya önce saat filtreleyin.'}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {availableTableCount} / {overview.tables.length} tıklanabilir
+                  </span>
+                </div>
+                <ReservationTableGrid
+                  tables={overview.tables}
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                  durationMinutes={durationMinutes}
+                  onSelectTable={handleSelectTable}
+                />
+              </section>
+            </div>
           )}
         </>
       )}
@@ -290,10 +364,14 @@ export default function ReservationsPage() {
         />
       )}
 
+      <StaffActionToasts toasts={toasts} onDismiss={dismissToast} />
+
       {selectedTable && (
         <ReservationFormModal
           table={selectedTable}
           selectedDate={selectedDate}
+          prefilledTime={selectedTime}
+          durationMinutes={durationMinutes}
           submitting={submitting}
           error={formError}
           cancellingId={cancellingId}

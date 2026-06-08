@@ -6,13 +6,17 @@ import {
   type UpdateReservationPayload,
 } from '../../api/reservations'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { findReservationForSlot } from '../../utils/reservationSlotUtils'
 import Button from '../Button'
 import Input from '../Input'
 import ReservationDetailList from './ReservationDetailList'
+import ReservationTimeSlotGrid from './ReservationTimeSlotGrid'
 
 interface ReservationFormModalProps {
   table: ReservationDayTable
   selectedDate: string
+  prefilledTime?: string | null
+  durationMinutes: number
   submitting: boolean
   error: string | null
   cancellingId: number | null
@@ -32,6 +36,8 @@ interface ReservationFormModalProps {
 export default function ReservationFormModal({
   table,
   selectedDate,
+  prefilledTime = null,
+  durationMinutes,
   submitting,
   error,
   cancellingId,
@@ -45,9 +51,10 @@ export default function ReservationFormModal({
   const [phone, setPhone] = useState('')
   const [guestCount, setGuestCount] = useState('2')
   const [reservationDate, setReservationDate] = useState(selectedDate)
-  const [time, setTime] = useState('19:00')
+  const [selectedTime, setSelectedTime] = useState<string | null>(prefilledTime)
   const [existingReservations, setExistingReservations] = useState(table.reservations)
   const [loadingReservations, setLoadingReservations] = useState(false)
+  const [slotError, setSlotError] = useState<string | null>(null)
 
   useBodyScrollLock(true)
 
@@ -58,6 +65,28 @@ export default function ReservationFormModal({
   useEffect(() => {
     setExistingReservations(table.reservations)
   }, [table.reservations])
+
+  useEffect(() => {
+    setSelectedTime(prefilledTime)
+    setSlotError(null)
+  }, [reservationDate, table.id, prefilledTime])
+
+  useEffect(() => {
+    if (!selectedTime) {
+      return
+    }
+
+    const reserved = findReservationForSlot(
+      reservationDate,
+      selectedTime,
+      existingReservations,
+      durationMinutes,
+    )
+
+    if (reserved) {
+      setSelectedTime(null)
+    }
+  }, [existingReservations, reservationDate, selectedTime, durationMinutes])
 
   useEffect(() => {
     if (reservationDate === selectedDate) {
@@ -97,8 +126,14 @@ export default function ReservationFormModal({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    setSlotError(null)
 
-    const reservedAt = `${reservationDate}T${time}:00`
+    if (!selectedTime) {
+      setSlotError('Lütfen bir saat aralığı seçin.')
+      return
+    }
+
+    const reservedAt = `${reservationDate}T${selectedTime}:00`
 
     await onSubmit({
       customer_name: customerName.trim(),
@@ -116,7 +151,7 @@ export default function ReservationFormModal({
       role="presentation"
     >
       <div
-        className="flex max-h-[min(94dvh,52rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[min(94dvh,52rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -133,24 +168,40 @@ export default function ReservationFormModal({
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <div className="space-y-4">
               <p className="text-sm font-semibold text-slate-900">Yeni Rezervasyon</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Gün"
-                  name="reservationDate"
-                  type="date"
-                  value={reservationDate}
-                  onChange={(event) => setReservationDate(event.target.value)}
-                  required
-                />
-                <Input
-                  label="Saat"
-                  name="time"
-                  type="time"
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
-                  required
-                />
-              </div>
+              <Input
+                label="Gün"
+                name="reservationDate"
+                type="date"
+                value={reservationDate}
+                onChange={(event) => setReservationDate(event.target.value)}
+                required
+              />
+
+              {!prefilledTime && (
+                <div>
+                  <p className="mb-3 text-sm font-medium text-slate-700">Saat Aralığı Seçin</p>
+                  {loadingReservations ? (
+                    <p className="text-sm text-slate-500">Saatler yükleniyor...</p>
+                  ) : (
+                    <ReservationTimeSlotGrid
+                      date={reservationDate}
+                      reservations={existingReservations}
+                      durationMinutes={durationMinutes}
+                      selectedTime={selectedTime}
+                      onSelectTime={setSelectedTime}
+                    />
+                  )}
+                </div>
+              )}
+
+              {selectedTime && (
+                <p className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-900">
+                  Seçilen saat: <span className="font-bold">{selectedTime}</span>
+                </p>
+              )}
+
+              {(slotError || error) && <p className="alert-error">{slotError ?? error}</p>}
+
               <Input
                 label="Ad Soyad"
                 name="customerName"
@@ -182,13 +233,9 @@ export default function ReservationFormModal({
               </div>
             </div>
 
-            {error && <p className="alert-error">{error}</p>}
-
             <div className="border-t border-slate-100 pt-5">
               <p className="mb-3 text-sm font-semibold text-slate-900">Bu Masanın Rezervasyonları</p>
-              {loadingReservations ? (
-                <p className="text-sm text-slate-500">Rezervasyonlar kontrol ediliyor...</p>
-              ) : (
+              {!loadingReservations && (
                 <ReservationDetailList
                   reservations={existingReservations}
                   tables={[{ id: table.id, name: table.name }]}
@@ -207,7 +254,7 @@ export default function ReservationFormModal({
             <Button type="button" variant="secondary" onClick={onClose} disabled={submitting} className="flex-1">
               Vazgeç
             </Button>
-            <Button type="submit" disabled={submitting} className="flex-1">
+            <Button type="submit" disabled={submitting || !selectedTime} className="flex-1">
               {submitting ? 'Kaydediliyor...' : 'Rezervasyon Oluştur'}
             </Button>
           </div>
