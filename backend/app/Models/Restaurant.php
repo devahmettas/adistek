@@ -17,6 +17,8 @@ class Restaurant extends Authenticatable
         'slug',
         'email',
         'password',
+        'reservation_duration_minutes',
+        'reservation_visible_before_minutes',
     ];
 
     protected $hidden = [
@@ -26,6 +28,8 @@ class Restaurant extends Authenticatable
     protected $casts = [
         'created_at' => 'datetime',
         'password' => 'hashed',
+        'reservation_duration_minutes' => 'integer',
+        'reservation_visible_before_minutes' => 'integer',
     ];
 
     public function categories(): HasMany

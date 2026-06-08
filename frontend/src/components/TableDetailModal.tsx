@@ -16,6 +16,7 @@ import Button from './Button'
 import Input from './Input'
 import StaffActionToasts, { useStaffToasts } from './StaffActionToasts'
 import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
+import TableTodayReservationHint from './TableTodayReservationHint'
 import {
   DEFAULT_PAYMENT_METHOD,
   PAYMENT_METHOD_LABELS,
@@ -25,6 +26,7 @@ import {
 import {
   EMPTY_TABLE_BLOCKED_MESSAGE,
   formatOccupiedDuration,
+  getTableDisplayStatus,
   getActiveTableProducts,
   getTableItemCount,
   getTableTotalAmount,
@@ -76,8 +78,9 @@ export default function TableDetailModal({
   onPayBill,
   onPartialPayBill,
 }: TableDetailModalProps) {
-  const status = (table.status || 'empty') as TableStatus
-  const styles = TABLE_STATUS_STYLES[status] ?? TABLE_STATUS_STYLES.empty
+  const operationalStatus = (table.status || 'empty') as TableStatus
+  const displayStatus = getTableDisplayStatus(table)
+  const styles = TABLE_STATUS_STYLES[displayStatus] ?? TABLE_STATUS_STYLES.empty
   const [view, setView] = useState<ViewMode>('main')
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -413,7 +416,10 @@ export default function TableDetailModal({
                   ← Geri
                 </button>
                 <h2 className="truncate text-sm font-bold text-gray-900 sm:text-base">{table.name}</h2>
-                <TableStatusBadge status={status} />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <TableStatusBadge status={displayStatus} />
+                  <TableTodayReservationHint reservations={table.today_reservations ?? []} />
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                 <div className="text-right text-xs leading-tight sm:text-sm">
@@ -444,9 +450,9 @@ export default function TableDetailModal({
                 )}
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold text-gray-900">{table.name}</h2>
-                  <div className="relative">
+                  <div className="relative flex flex-wrap items-center gap-1.5">
                     <TableStatusBadge
-                      status={status}
+                      status={displayStatus}
                       onClick={
                         onChangeStatus
                           ? (event) => {
@@ -456,10 +462,11 @@ export default function TableDetailModal({
                           : undefined
                       }
                     />
+                    <TableTodayReservationHint reservations={table.today_reservations ?? []} />
                     {statusMenuOpen && onChangeStatus && (
                       <TableStatusPicker
                         variant="large"
-                        status={status}
+                        status={operationalStatus}
                         onChange={handleStatusChange}
                         onClose={() => setStatusMenuOpen(false)}
                         blockedStatuses={blockedStatuses}
@@ -529,7 +536,7 @@ export default function TableDetailModal({
                   </Button>
                 </div>
 
-                {onChangeStatus && itemCount > 0 && status !== 'served' && status !== 'empty' && (
+                {onChangeStatus && itemCount > 0 && operationalStatus !== 'served' && operationalStatus !== 'empty' && (
                   <Button
                     type="button"
                     variant="secondary"

@@ -16,6 +16,7 @@ import TableOrderPage from '../pages/TableOrderPage'
 import PublicMenuSharePage from '../pages/restaurant/PublicMenuSharePage'
 import StatsPage from '../pages/restaurant/StatsPage'
 import TablesHomePage from '../pages/restaurant/TablesHomePage'
+import ReservationsPage from '../pages/restaurant/ReservationsPage'
 import TablesManagePage from '../pages/restaurant/TablesManagePage'
 import WaiterDashboardPage from '../pages/WaiterDashboardPage'
 import WaiterLoginPage from '../pages/WaiterLoginPage'
@@ -42,6 +43,7 @@ export default function AppRouter() {
           <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
           <Route path="/dashboard/categories" element={<CategoriesPage />} />
           <Route path="/dashboard/products" element={<ProductsPage />} />
+          <Route path="/dashboard/reservations" element={<ReservationsPage />} />
           <Route path="/dashboard/tables" element={<TablesManagePage />} />
           <Route path="/dashboard/staff" element={<StaffPage />} />
         </Route>

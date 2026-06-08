@@ -1,3 +1,16 @@
+import type { TableStatus } from '../constants/tableStatuses'
+import type { RestaurantTable } from '../api/types'
+
+export function getTableDisplayStatus(table: RestaurantTable): TableStatus {
+  const current = (table.status || 'empty') as TableStatus
+
+  if (table.is_actively_reserved && current === 'empty') {
+    return 'reserved'
+  }
+
+  return current
+}
+
 export function formatOccupiedDuration(occupiedAt: string | null, now = Date.now()): string | null {
   if (!occupiedAt) {
     return null

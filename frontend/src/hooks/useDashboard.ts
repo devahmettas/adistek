@@ -21,6 +21,8 @@ function mergeTableData(
 
   return {
     ...incoming,
+    is_actively_reserved: incoming.is_actively_reserved ?? existing?.is_actively_reserved ?? false,
+    today_reservations: incoming.today_reservations ?? existing?.today_reservations ?? [],
     assigned_waiter_id: incoming.assigned_waiter_id ?? existing?.assigned_waiter_id ?? null,
     assigned_waiter_name: assignedWaiterName,
     assigned_waiter: incoming.assigned_waiter ?? existing?.assigned_waiter ?? null,

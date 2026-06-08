@@ -3,6 +3,8 @@ export interface Restaurant {
   name: string
   slug?: string | null
   email: string
+  reservation_duration_minutes?: number
+  reservation_visible_before_minutes?: number
   created_at: string
 }
 
@@ -35,6 +37,13 @@ export interface Product {
 
 import type { TableStatus } from '../constants/tableStatuses'
 
+export interface TableTodayReservation {
+  id: number
+  reserved_time: string
+  customer_name: string
+  guest_count: number
+}
+
 export interface RestaurantTable {
   id: number
   restaurant_id: number
@@ -52,6 +61,8 @@ export interface RestaurantTable {
   assigned_waiter?: Waiter | null
   total_amount: string
   occupied_minutes: number | null
+  is_actively_reserved?: boolean
+  today_reservations?: TableTodayReservation[]
   created_at: string
   products?: Product[]
 }

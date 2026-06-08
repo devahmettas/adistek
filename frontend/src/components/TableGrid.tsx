@@ -6,6 +6,7 @@ import { TABLE_STATUS_STYLES, type TableStatus } from '../constants/tableStatuse
 import {
   EMPTY_TABLE_BLOCKED_MESSAGE,
   formatOccupiedDuration,
+  getTableDisplayStatus,
   getReadyKitchenItemCount,
   getTableItemCount,
   getTableTotalAmount,
@@ -172,7 +173,8 @@ export default function TableGrid({
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {tables.map((table) => {
-          const status = (table.status || 'empty') as TableStatus
+          const operationalStatus = (table.status || 'empty') as TableStatus
+          const status = getTableDisplayStatus(table)
           const styles = TABLE_STATUS_STYLES[status] ?? TABLE_STATUS_STYLES.empty
           const total = getTableTotalAmount(table.products)
           const duration = formatOccupiedDuration(table.occupied_at ?? null, now)
@@ -210,7 +212,7 @@ export default function TableGrid({
                   />
                   {statusMenuTableId === table.id && onChangeStatus && (
                     <TableStatusPicker
-                      status={status}
+                      status={operationalStatus}
                       onChange={(nextStatus) => handleStatusChange(table.id, nextStatus)}
                       onClose={() => setStatusMenuTableId(null)}
                       blockedStatuses={

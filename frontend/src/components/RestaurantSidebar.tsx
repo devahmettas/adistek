@@ -6,6 +6,7 @@ import { useAuth } from '../store/AuthStore'
 const navItems = [
   { to: '/dashboard', label: 'Masalar', icon: '◫', end: true },
   { to: '/dashboard/stats', label: 'İstatistikler', icon: '▤' },
+  { to: '/dashboard/reservations', label: 'Rezervasyonlar', icon: '◷' },
   { to: '/dashboard/menu', label: 'Müşteri Menüsü', icon: '◎' },
   { to: '/dashboard/categories', label: 'Kategoriler', icon: '▦' },
   { to: '/dashboard/products', label: 'Ürünler', icon: '▣' },

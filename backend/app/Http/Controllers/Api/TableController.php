@@ -15,6 +15,7 @@ use App\Http\Requests\UpdateTableStatusRequest;
 use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Services\KitchenOrderService;
+use App\Services\TableReservationService;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,20 +27,39 @@ class TableController extends Controller
     public function __construct(
         private readonly TableService $service,
         private readonly KitchenOrderService $kitchenOrderService,
+        private readonly TableReservationService $reservationService,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $tables = $this->service->listByRestaurant($this->restaurantId($request));
+        $restaurantId = $this->restaurantId($request);
+        $tables = $this->service->listByRestaurant($restaurantId);
+        $activeReservedTableIds = $this->reservationService->getActiveReservationTableIds($restaurantId);
+        $todayReservationsByTable = $this->reservationService->getTodayReservationsByTable($restaurantId);
 
         return response()->json([
-            'data' => $tables->map(fn (RestaurantTable $table) => $this->formatTable($table)),
+            'data' => $tables->map(
+                fn (RestaurantTable $table) => $this->formatTable(
+                    $table,
+                    $activeReservedTableIds,
+                    $todayReservationsByTable,
+                ),
+            ),
         ]);
     }
 
-    private function formatTable(RestaurantTable $table): array
-    {
+    private function formatTable(
+        RestaurantTable $table,
+        ?array $activeReservedTableIds = null,
+        ?array $todayReservationsByTable = null,
+    ): array {
         $data = $table->toArray();
+        $data['is_actively_reserved'] = $activeReservedTableIds !== null
+            ? in_array($table->id, $activeReservedTableIds, true)
+            : $this->reservationService->isTableActivelyReserved($table->restaurant_id, $table->id);
+        $data['today_reservations'] = $todayReservationsByTable !== null
+            ? ($todayReservationsByTable[$table->id] ?? [])
+            : $this->reservationService->getTodayReservationsForTable($table->restaurant_id, $table->id);
 
         $data['viewing_waiter_name'] = $table->viewing_waiter_name;
         $data['viewing_waiter'] = $table->viewingWaiter

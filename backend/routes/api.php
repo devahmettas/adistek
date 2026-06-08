@@ -8,10 +8,12 @@ use App\Http\Controllers\Api\KitchenOrderController;
 use App\Http\Controllers\Api\KitchenStaffController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\RestaurantSettingsController;
 use App\Http\Controllers\Api\GuestTableOrderController;
 use App\Http\Controllers\Api\PublicMenuController;
 use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\TableController;
+use App\Http\Controllers\Api\TableReservationController;
 use App\Http\Controllers\Api\WaiterAuthController;
 use App\Http\Controllers\Api\WaiterController;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +75,14 @@ Route::middleware(['auth:sanctum', 'restaurant'])->group(function () {
     Route::post('/tables', [TableController::class, 'store']);
     Route::put('/tables/{table}', [TableController::class, 'update']);
     Route::delete('/tables/{table}', [TableController::class, 'destroy']);
+
+    Route::get('/restaurant/settings', [RestaurantSettingsController::class, 'show']);
+    Route::patch('/restaurant/settings', [RestaurantSettingsController::class, 'update']);
+
+    Route::get('/reservations', [TableReservationController::class, 'index']);
+    Route::post('/reservations', [TableReservationController::class, 'store']);
+    Route::put('/reservations/{reservation}', [TableReservationController::class, 'update']);
+    Route::delete('/reservations/{reservation}', [TableReservationController::class, 'destroy']);
 });
 
 Route::middleware(['auth:sanctum', 'waiter'])->prefix('waiter')->group(function () {

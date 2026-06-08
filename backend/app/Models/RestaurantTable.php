@@ -127,4 +127,9 @@ class RestaurantTable extends Model
     {
         return $this->belongsTo(Waiter::class, 'assigned_waiter_id');
     }
+
+    public function reservations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(TableReservation::class, 'restaurant_table_id');
+    }
 }
