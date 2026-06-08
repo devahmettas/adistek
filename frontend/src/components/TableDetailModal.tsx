@@ -23,11 +23,13 @@ import {
   type PaymentMethod,
 } from '../constants/paymentMethods'
 import {
+  EMPTY_TABLE_BLOCKED_MESSAGE,
   formatOccupiedDuration,
   getActiveTableProducts,
   getTableItemCount,
   getTableTotalAmount,
   getTableWaiterName,
+  hasUnpaidTableOrders,
 } from '../utils/tableHelpers'
 
 type ViewMode = 'main' | 'categories' | 'products' | 'bill'
@@ -336,6 +338,12 @@ export default function TableDetailModal({
       return
     }
 
+    if (nextStatus === 'empty' && hasUnpaidTableOrders(table.products)) {
+      setFeedback(EMPTY_TABLE_BLOCKED_MESSAGE)
+      setStatusMenuOpen(false)
+      return
+    }
+
     setSubmitting(true)
     setFeedback(null)
 
@@ -343,11 +351,20 @@ export default function TableDetailModal({
       await onChangeStatus(table.id, nextStatus)
       setStatusMenuOpen(false)
     } catch {
-      setFeedback('Durum güncellenemedi.')
+      setFeedback('Durum güncellenemedi. Ödenmemiş sipariş varsa önce hesabı kapatın.')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const handleBlockedStatus = (_status: TableStatus, message: string) => {
+    setFeedback(message)
+    setStatusMenuOpen(false)
+  }
+
+  const blockedStatuses = hasUnpaidTableOrders(table.products)
+    ? { empty: EMPTY_TABLE_BLOCKED_MESSAGE }
+    : undefined
 
   const goBack = () => {
     if (view === 'products') {
@@ -445,6 +462,8 @@ export default function TableDetailModal({
                         status={status}
                         onChange={handleStatusChange}
                         onClose={() => setStatusMenuOpen(false)}
+                        blockedStatuses={blockedStatuses}
+                        onBlockedStatus={handleBlockedStatus}
                       />
                     )}
                   </div>
@@ -481,7 +500,9 @@ export default function TableDetailModal({
                     className={`rounded-lg px-2 py-1.5 text-xs ${
                       feedback.includes('edilemedi') || feedback.includes('eklenemedi')
                         ? 'bg-red-50 text-red-700'
-                        : 'bg-green-50 text-green-700'
+                        : feedback.includes('ödenmemiş') || feedback.includes('hesabı kapat')
+                          ? 'bg-amber-50 text-amber-900'
+                          : 'bg-green-50 text-green-700'
                     }`}
                   >
                     {feedback}

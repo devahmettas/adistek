@@ -4,11 +4,13 @@ import type { PaymentMethod } from '../constants/paymentMethods'
 import type { PartialPayItem } from '../utils/billHelpers'
 import { TABLE_STATUS_STYLES, type TableStatus } from '../constants/tableStatuses'
 import {
+  EMPTY_TABLE_BLOCKED_MESSAGE,
   formatOccupiedDuration,
   getReadyKitchenItemCount,
   getTableItemCount,
   getTableTotalAmount,
   getTableWaiterName,
+  hasUnpaidTableOrders,
 } from '../utils/tableHelpers'
 import TableDetailModal from './TableDetailModal'
 import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
@@ -118,11 +120,25 @@ export default function TableGrid({
       return
     }
 
+    const table = tables.find((row) => row.id === tableId)
+
+    if (status === 'empty' && table && hasUnpaidTableOrders(table.products)) {
+      window.alert(EMPTY_TABLE_BLOCKED_MESSAGE)
+      setStatusMenuTableId(null)
+      return
+    }
+
     try {
       await onChangeStatus(tableId, status)
+      setStatusMenuTableId(null)
     } catch {
-      window.alert('Masa durumu güncellenemedi.')
+      window.alert('Masa durumu güncellenemedi. Ödenmemiş sipariş varsa önce hesabı kapatın.')
     }
+  }
+
+  const handleBlockedStatus = (_status: TableStatus, message: string) => {
+    window.alert(message)
+    setStatusMenuTableId(null)
   }
 
   useEffect(() => {
@@ -197,6 +213,10 @@ export default function TableGrid({
                       status={status}
                       onChange={(nextStatus) => handleStatusChange(table.id, nextStatus)}
                       onClose={() => setStatusMenuTableId(null)}
+                      blockedStatuses={
+                        itemCount > 0 ? { empty: EMPTY_TABLE_BLOCKED_MESSAGE } : undefined
+                      }
+                      onBlockedStatus={handleBlockedStatus}
                     />
                   )}
                 </div>

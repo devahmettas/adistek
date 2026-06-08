@@ -11,30 +11,31 @@ export default function KitchenMainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:px-6">
           <Link to="/kitchen/dashboard">
-            <BrandLogo subtitle="Mutfak Paneli" size="md" inverted />
+            <BrandLogo subtitle="Mutfak Paneli" size="md" />
           </Link>
-          {kitchenStaff && (
-            <div className="flex items-center gap-3">
-              <span className="hidden rounded-full bg-brand-900/50 px-3 py-1 text-sm font-medium text-brand-200 sm:inline">
+
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 sm:inline-flex">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+              Canlı
+            </span>
+            {kitchenStaff && (
+              <span className="hidden rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-800 md:inline">
                 {kitchenStaff.name}
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleLogout}
-                className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
-              >
-                Çıkış
-              </Button>
-            </div>
-          )}
+            )}
+            <Button variant="secondary" size="sm" onClick={handleLogout}>
+              Çıkış
+            </Button>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 lg:py-8">
+
+      <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:py-8">
         <Outlet />
       </main>
     </div>

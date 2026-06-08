@@ -34,6 +34,9 @@ export function getTableTotalAmount(products?: { price: string; pivot?: { quanti
   )
 }
 
+export const EMPTY_TABLE_BLOCKED_MESSAGE =
+  'Bu masada ödenmemiş sipariş var. Masayı boşaltmak için önce hesabı kapatın.'
+
 export function getTableItemCount(products?: { pivot?: { quantity: number; kitchen_status?: string } }[]): number {
   return getActiveTableProducts(products).reduce(
     (sum, product) => sum + (product.pivot?.quantity ?? 1),
@@ -46,6 +49,12 @@ export function getTableWaiterName(table: {
   assigned_waiter?: { name?: string | null } | null
 }): string | null {
   return table.assigned_waiter_name ?? table.assigned_waiter?.name ?? null
+}
+
+export function hasUnpaidTableOrders(
+  products?: { pivot?: { quantity: number; kitchen_status?: string } }[],
+): boolean {
+  return getTableItemCount(products) > 0
 }
 
 export function getReadyKitchenItemCount(

@@ -95,6 +95,12 @@ class TableService
             ? $table->status
             : TableStatus::tryFrom((string) $table->status);
 
+        if ($newStatus === TableStatus::Empty && $this->repository->activeProductCount($table) > 0) {
+            throw new UnprocessableEntityHttpException(
+                'Bu masada ödenmemiş sipariş var. Masayı boşaltmak için önce hesabı kapatın.',
+            );
+        }
+
         $updates = [
             'status' => $status,
             'occupied_at' => $this->resolveOccupiedAt($newStatus, $table->occupied_at),

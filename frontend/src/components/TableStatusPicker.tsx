@@ -12,6 +12,8 @@ interface TableStatusPickerProps {
   onClose: () => void
   className?: string
   variant?: 'compact' | 'large'
+  blockedStatuses?: Partial<Record<TableStatus, string>>
+  onBlockedStatus?: (status: TableStatus, message: string) => void
 }
 
 const PICKER_VARIANTS = {
@@ -35,6 +37,8 @@ export default function TableStatusPicker({
   onClose,
   className = '',
   variant = 'compact',
+  blockedStatuses,
+  onBlockedStatus,
 }: TableStatusPickerProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const styles = PICKER_VARIANTS[variant]
@@ -58,21 +62,40 @@ export default function TableStatusPicker({
     >
       {TABLE_STATUSES.map((option) => {
         const optionStyles = TABLE_STATUS_STYLES[option]
+        const blockedMessage = blockedStatuses?.[option]
+        const isBlocked = Boolean(blockedMessage)
 
         return (
           <button
             key={option}
             type="button"
+            title={blockedMessage}
             onClick={() => {
+              if (isBlocked) {
+                onBlockedStatus?.(option, blockedMessage!)
+                return
+              }
+
               onChange(option)
               onClose()
             }}
-            className={`flex w-full items-center text-left hover:bg-slate-50 ${styles.item} ${
-              option === status ? `bg-brand-50 ${styles.active}` : ''
+            className={`flex w-full items-center text-left ${styles.item} ${
+              isBlocked
+                ? 'cursor-not-allowed opacity-50'
+                : option === status
+                  ? `bg-brand-50 ${styles.active}`
+                  : 'hover:bg-slate-50'
             }`}
           >
             <span className={`shrink-0 rounded-full ${styles.dot} ${optionStyles.dot}`} />
-            {TABLE_STATUS_LABELS[option]}
+            <span className="min-w-0">
+              <span className="block">{TABLE_STATUS_LABELS[option]}</span>
+              {isBlocked && (
+                <span className="mt-0.5 block text-[10px] font-normal leading-tight text-amber-700">
+                  Önce hesabı kapatın
+                </span>
+              )}
+            </span>
           </button>
         )
       })}
