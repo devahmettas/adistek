@@ -16,7 +16,7 @@ interface TableStatusPickerProps {
 
 const PICKER_VARIANTS = {
   compact: {
-    menu: 'min-w-[10rem] rounded-xl py-1 shadow-lg',
+    menu: 'min-w-[10rem] rounded-xl border border-slate-200 py-1 shadow-panel',
     item: 'gap-2 px-3 py-2 text-sm',
     dot: 'h-2 w-2',
     active: 'font-semibold',
@@ -53,7 +53,7 @@ export default function TableStatusPicker({
   return (
     <div
       ref={menuRef}
-      className={`absolute left-0 top-full z-20 mt-1 border border-gray-200 bg-white ${styles.menu} ${className}`}
+      className={`absolute left-0 top-full z-20 mt-1 bg-white ${styles.menu} ${className}`}
       onClick={(event) => event.stopPropagation()}
     >
       {TABLE_STATUSES.map((option) => {
@@ -67,8 +67,8 @@ export default function TableStatusPicker({
               onChange(option)
               onClose()
             }}
-            className={`flex w-full items-center text-left hover:bg-gray-50 ${styles.item} ${
-              option === status ? `bg-gray-50 ${styles.active}` : ''
+            className={`flex w-full items-center text-left hover:bg-slate-50 ${styles.item} ${
+              option === status ? `bg-brand-50 ${styles.active}` : ''
             }`}
           >
             <span className={`shrink-0 rounded-full ${styles.dot} ${optionStyles.dot}`} />

@@ -22,7 +22,11 @@ class GuestTableOrderController extends Controller
 
     public function store(StoreGuestOrderRequest $request, string $token): JsonResponse
     {
-        $result = $this->service->placeOrder($token, $request->validated('items'));
+        $result = $this->service->placeOrder(
+            $token,
+            $request->validated('session_token'),
+            $request->validated('items'),
+        );
 
         return response()->json([
             'data' => $result,

@@ -1,9 +1,11 @@
 import { FormEvent, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import axios from 'axios'
+import AuthLayout from '../components/AuthLayout'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import LoadingState from '../components/LoadingState'
 import { useAuth } from '../store/AuthStore'
 
 type Mode = 'login' | 'register'
@@ -43,11 +45,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-gray-500">Yükleniyor...</p>
-      </div>
-    )
+    return <LoadingState fullScreen />
   }
 
   if (isAuthenticated) {
@@ -91,100 +89,92 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Menu Yönetimi</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Restoranınıza giriş yapın ve menünüzü yönetin.
-          </p>
-        </div>
-
-        <div className="flex rounded-lg bg-gray-100 p-1">
-          <button
-            type="button"
-            onClick={() => setMode('login')}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
-              mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-            }`}
-          >
-            Giriş
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('register')}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
-              mode === 'register' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-            }`}
-          >
-            Kayıt Ol
-          </button>
-        </div>
-
-        <Card title={mode === 'login' ? 'Giriş Yap' : 'Restoran Kaydı'}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
-              <Input
-                label="Restoran Adı"
-                name="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Örn: Adistek Cafe"
-                required
-              />
-            )}
-            <Input
-              label="E-posta"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="ornek@restoran.com"
-              required
-            />
-            <Input
-              label="Şifre"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-            {mode === 'register' && (
-              <Input
-                label="Şifre Tekrar"
-                name="password_confirmation"
-                type="password"
-                value={passwordConfirmation}
-                onChange={(event) => setPasswordConfirmation(event.target.value)}
-                required
-              />
-            )}
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting
-                ? 'İşleniyor...'
-                : mode === 'login'
-                  ? 'Giriş Yap'
-                  : 'Kayıt Ol'}
-            </Button>
-          </form>
-        </Card>
-
-        <p className="text-center text-sm text-gray-500">
-          <Link to="/waiter/login" className="text-blue-600 hover:text-blue-700">
+    <AuthLayout
+      title="İşletme Girişi"
+      description="Restoranınıza giriş yapın, menü ve masalarınızı tek panelden yönetin."
+      badge="İşletme Sahibi"
+      footer={
+        <>
+          <Link to="/waiter/login" className="link-brand">
             Garson girişi
           </Link>
           {' · '}
-          <Link to="/kitchen/login" className="text-orange-600 hover:text-orange-700">
+          <Link to="/kitchen/login" className="link-brand">
             Mutfak girişi
           </Link>
           {' · '}
-          <Link to="/admin/login" className="text-blue-600 hover:text-blue-700">
-            Süper Admin girişi
+          <Link to="/admin/login" className="link-brand">
+            Süper admin
           </Link>
-        </p>
+        </>
+      }
+    >
+      <div className="flex rounded-xl bg-slate-100 p-1">
+        <button
+          type="button"
+          onClick={() => setMode('login')}
+          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+            mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+          }`}
+        >
+          Giriş
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('register')}
+          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+            mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+          }`}
+        >
+          Kayıt Ol
+        </button>
       </div>
-    </div>
+
+      <Card title={mode === 'login' ? 'Giriş Yap' : 'Restoran Kaydı'}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <Input
+              label="Restoran Adı"
+              name="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Örn: Adistek Cafe"
+              required
+            />
+          )}
+          <Input
+            label="E-posta"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="ornek@restoran.com"
+            required
+          />
+          <Input
+            label="Şifre"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          {mode === 'register' && (
+            <Input
+              label="Şifre Tekrar"
+              name="password_confirmation"
+              type="password"
+              value={passwordConfirmation}
+              onChange={(event) => setPasswordConfirmation(event.target.value)}
+              required
+            />
+          )}
+          {error && <p className="alert-error">{error}</p>}
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? 'İşleniyor...' : mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'}
+          </Button>
+        </form>
+      </Card>
+    </AuthLayout>
   )
 }

@@ -1,7 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+@layer base {
+  body {
+    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply mt-1 max-w-2xl text-sm leading-relaxed text-slate-600;
+  }
+
+  .alert-error {
+    @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
+  }
+
+  .alert-info {
+    @apply rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900;
+  }
+
+  .alert-warning {
+    @apply rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900;
+  }
+
+  .link-brand {
+    @apply font-medium text-brand-700 transition hover:text-brand-800;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+  }
+
+  .panel-surface {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-card;
+  }
 }

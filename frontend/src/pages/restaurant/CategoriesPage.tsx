@@ -3,6 +3,8 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import CategoryList from '../../components/CategoryList'
 import Input from '../../components/Input'
+import LoadingState from '../../components/LoadingState'
+import PageHeader from '../../components/PageHeader'
 import { useDashboardData } from '../../context/DashboardContext'
 
 export default function CategoriesPage() {
@@ -35,17 +37,17 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Kategoriler</h1>
-        <p className="mt-1 text-sm text-gray-600">Menü kategorilerini ekleyin, düzenleyin veya silin.</p>
-      </div>
+      <PageHeader
+        title="Kategoriler"
+        description="Menü kategorilerini ekleyin, düzenleyin veya silin."
+      />
 
-      {loading && <p className="text-sm text-gray-500">Yükleniyor...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <LoadingState />}
+      {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
-          <Card title="Kategori Ekle">
+          <Card title="Kategori Ekle" description="Yeni menü kategorisi oluşturun.">
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 label="Kategori Adı"
@@ -54,14 +56,14 @@ export default function CategoriesPage() {
                 onChange={(event) => setCategoryName(event.target.value)}
                 placeholder="Örn: İçecekler"
               />
-              {categoryError && <p className="text-sm text-red-600">{categoryError}</p>}
+              {categoryError && <p className="alert-error">{categoryError}</p>}
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Kaydediliyor...' : 'Kategori Ekle'}
               </Button>
             </form>
           </Card>
 
-          <Card title="Mevcut Kategoriler">
+          <Card title="Kategori Listesi">
             <CategoryList
               categories={categories}
               products={products}

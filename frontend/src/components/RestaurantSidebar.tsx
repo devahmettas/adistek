@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router-dom'
+import BrandLogo from './BrandLogo'
 import Button from './Button'
 import { useAuth } from '../store/AuthStore'
 
 const navItems = [
-  { to: '/dashboard', label: 'Masalar', end: true },
-  { to: '/dashboard/stats', label: 'İstatistikler' },
-  { to: '/dashboard/menu', label: 'Müşteri Menüsü' },
-  { to: '/dashboard/categories', label: 'Kategoriler' },
-  { to: '/dashboard/products', label: 'Ürünler' },
-  { to: '/dashboard/tables', label: 'Masa Ayarları' },
-  { to: '/dashboard/staff', label: 'Personel' },
+  { to: '/dashboard', label: 'Masalar', icon: '◫', end: true },
+  { to: '/dashboard/stats', label: 'İstatistikler', icon: '▤' },
+  { to: '/dashboard/menu', label: 'Müşteri Menüsü', icon: '◎' },
+  { to: '/dashboard/categories', label: 'Kategoriler', icon: '▦' },
+  { to: '/dashboard/products', label: 'Ürünler', icon: '▣' },
+  { to: '/dashboard/tables', label: 'Masa Ayarları', icon: '⬚' },
+  { to: '/dashboard/staff', label: 'Personel', icon: '◉' },
 ]
 
 interface RestaurantSidebarProps {
@@ -19,10 +20,10 @@ interface RestaurantSidebarProps {
 }
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
-  return `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+  return `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
     isActive
-      ? 'bg-blue-600 text-white'
-      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+      ? 'bg-brand-700 text-white shadow-sm'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
   }`
 }
 
@@ -35,12 +36,9 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className="border-b border-gray-200 px-4 py-5">
+      <div className="border-b border-slate-200 px-4 py-5">
         <NavLink to="/dashboard" onClick={onCloseMobile} className="block">
-          <p className="text-lg font-bold text-gray-900">Menu Yönetimi</p>
-          {restaurant && (
-            <p className="mt-1 truncate text-sm text-gray-500">{restaurant.name}</p>
-          )}
+          <BrandLogo subtitle={restaurant?.name} />
         </NavLink>
       </div>
 
@@ -53,14 +51,15 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
             className={navLinkClass}
             onClick={onCloseMobile}
           >
+            <span className="text-xs opacity-80">{item.icon}</span>
             {item.label}
           </NavLink>
         ))}
       </nav>
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-slate-200 p-4">
         <Button variant="secondary" onClick={handleLogout} className="w-full">
-          Çıkış
+          Çıkış Yap
         </Button>
       </div>
     </div>
@@ -72,15 +71,15 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
         <button
           type="button"
           aria-label="Menüyü kapat"
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
           onClick={onCloseMobile}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 shrink-0 border-r border-gray-200 bg-white transition-all duration-200 ${
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 shrink-0 border-r border-slate-200 bg-white shadow-panel transition-all duration-200 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:border-r-0'}`}
+        } lg:translate-x-0 ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:border-r-0 lg:shadow-none'}`}
       >
         <div
           className={`flex h-screen w-64 flex-col ${

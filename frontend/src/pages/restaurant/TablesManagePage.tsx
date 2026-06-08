@@ -2,6 +2,8 @@ import { FormEvent, useState } from 'react'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import Input from '../../components/Input'
+import LoadingState from '../../components/LoadingState'
+import PageHeader from '../../components/PageHeader'
 import TableList from '../../components/TableList'
 import { useDashboardData } from '../../context/DashboardContext'
 
@@ -34,15 +36,13 @@ export default function TablesManagePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Masa Ayarları</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Restoran masalarını ekleyin, her masa için QR kod oluşturun ve müşterilerin doğrudan sipariş vermesini sağlayın.
-        </p>
-      </div>
+      <PageHeader
+        title="Masa Ayarları"
+        description="Masalarınızı tanımlayın, QR kodlarını oluşturun ve müşteri sipariş akışını yönetin."
+      />
 
-      {loading && <p className="text-sm text-gray-500">Yükleniyor...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <LoadingState />}
+      {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
@@ -55,14 +55,14 @@ export default function TablesManagePage() {
                 onChange={(event) => setTableName(event.target.value)}
                 placeholder="Örn: Masa 1"
               />
-              {tableError && <p className="text-sm text-red-600">{tableError}</p>}
+              {tableError && <p className="alert-error">{tableError}</p>}
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Kaydediliyor...' : 'Masa Ekle'}
               </Button>
             </form>
           </Card>
 
-          <Card title="Kayıtlı Masalar">
+          <Card title="Kayıtlı Masalar" description="Her masa için sabit QR kodu oluşturulur.">
             <TableList tables={tables} onUpdate={editTable} onDelete={removeTable} />
           </Card>
         </>

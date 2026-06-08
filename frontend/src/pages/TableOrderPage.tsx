@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import LoadingState from '../components/LoadingState'
+import PublicPageShell from '../components/PublicPageShell'
 import {
   getTableOrderPage,
   placeGuestOrder,
@@ -40,25 +42,25 @@ function ProductCard({
   onAdd: () => void
 }) {
   return (
-    <article className="rounded-2xl border border-stone-200/80 bg-white/70 p-4 shadow-sm backdrop-blur-sm">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-lg font-semibold text-stone-900">{product.name}</h3>
+          <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
           {product.description && (
-            <p className="mt-1 text-sm leading-relaxed text-stone-600">{product.description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">{product.description}</p>
           )}
-          <p className="mt-2 text-sm font-bold text-amber-900">{formatPrice(product.price)}</p>
+          <p className="mt-2 text-sm font-bold text-brand-800">{formatPrice(product.price)}</p>
         </div>
 
         {canOrder && (
           <button
             type="button"
             onClick={onAdd}
-            className="relative shrink-0 rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-95"
+            className="relative shrink-0 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 active:scale-95"
           >
             Ekle
             {cartQuantity > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-xs font-bold text-white">
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-xs font-bold text-white">
                 {cartQuantity}
               </span>
             )}
@@ -85,8 +87,8 @@ function CategorySection({
   return (
     <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
       <div className="mb-4 flex items-center gap-4">
-        <h2 className="font-display text-2xl font-semibold text-stone-900">{category.name}</h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-amber-300/80 to-transparent" />
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">{category.name}</h2>
+        <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
       </div>
 
       <div className="grid gap-3">
@@ -123,21 +125,21 @@ function AddProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-4">
       <div className="w-full rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl">
-        <div className="border-b border-stone-100 px-5 py-4">
-          <h2 className="font-display text-xl font-semibold text-stone-900">{product.name}</h2>
-          <p className="mt-1 text-sm text-stone-500">{formatPrice(product.price)}</p>
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="text-xl font-semibold text-slate-900">{product.name}</h2>
+          <p className="mt-1 text-sm text-slate-500">{formatPrice(product.price)}</p>
         </div>
 
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label htmlFor="add-quantity" className="mb-2 block text-sm font-medium text-stone-700">
+            <label htmlFor="add-quantity" className="mb-2 block text-sm font-medium text-slate-700">
               Adet
             </label>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-700"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700"
               >
                 −
               </button>
@@ -145,7 +147,7 @@ function AddProductModal({
               <button
                 type="button"
                 onClick={() => setQuantity((value) => Math.min(99, value + 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-700 text-white"
               >
                 +
               </button>
@@ -153,8 +155,8 @@ function AddProductModal({
           </div>
 
           <div>
-            <label htmlFor="add-note" className="mb-2 block text-sm font-medium text-stone-700">
-              Sipariş notu <span className="font-normal text-stone-400">(isteğe bağlı)</span>
+            <label htmlFor="add-note" className="mb-2 block text-sm font-medium text-slate-700">
+              Sipariş notu <span className="font-normal text-slate-400">(isteğe bağlı)</span>
             </label>
             <textarea
               id="add-note"
@@ -163,17 +165,17 @@ function AddProductModal({
               placeholder="Örn: Az pişmiş, sos ayrı, buzlu olmasın..."
               rows={3}
               maxLength={255}
-              className="w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-800 outline-none ring-amber-200 focus:border-amber-300 focus:ring-2"
+              className="input-field resize-none"
             />
           </div>
         </div>
 
-        <div className="flex gap-3 border-t border-stone-100 px-5 py-4">
+        <div className="flex gap-3 border-t border-slate-100 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex-1 rounded-2xl border border-stone-200 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+            className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             Vazgeç
           </button>
@@ -181,7 +183,7 @@ function AddProductModal({
             type="button"
             onClick={() => onConfirm(quantity, note)}
             disabled={submitting}
-            className="flex-1 rounded-2xl bg-stone-900 py-3 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-60"
+            className="flex-1 rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
           >
             Sepete Ekle
           </button>
@@ -207,18 +209,16 @@ function OrderSuccessModal({ onClose }: { onClose: () => void }) {
           </svg>
         </div>
 
-        <h2 className="font-display mt-5 text-2xl font-bold text-stone-900">
-          Siparişiniz alındı!
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-stone-600">
+        <h2 className="mt-5 text-2xl font-bold text-slate-900">Siparişiniz alındı!</h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">
           Ürünleriniz hazırlanıyor. Kısa süre içinde masanıza getirilecektir.
         </p>
-        <p className="mt-2 text-xs text-stone-400">Afiyet olsun</p>
+        <p className="mt-2 text-xs text-slate-400">Afiyet olsun</p>
 
         <button
           type="button"
           onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+          className="mt-6 w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800"
         >
           Menüye Dön
         </button>
@@ -230,6 +230,7 @@ function OrderSuccessModal({ onClose }: { onClose: () => void }) {
 export default function TableOrderPage() {
   const { token } = useParams<{ token: string }>()
   const [page, setPage] = useState<TableOrderPage | null>(null)
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -240,26 +241,47 @@ export default function TableOrderPage() {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
 
-  useEffect(() => {
+  const loadPage = async (options?: { silent?: boolean }) => {
     if (!token) {
       return
     }
 
-    setLoading(true)
-    setError(null)
+    if (!options?.silent) {
+      setLoading(true)
+      setError(null)
+    }
 
-    getTableOrderPage(token)
-      .then((data) => {
-        setPage(data)
-        setActiveCategoryId(data.categories[0]?.id ?? null)
-      })
-      .catch(() => {
+    try {
+      const data = await getTableOrderPage(token)
+      setPage(data)
+      setSessionToken(data.session_token)
+      setActiveCategoryId((current) => current ?? data.categories[0]?.id ?? null)
+    } catch {
+      if (!options?.silent) {
         setError('Masa veya menü bulunamadı.')
-      })
-      .finally(() => {
+      }
+    } finally {
+      if (!options?.silent) {
         setLoading(false)
-      })
+      }
+    }
+  }
+
+  useEffect(() => {
+    void loadPage()
   }, [token])
+
+  useEffect(() => {
+    if (!token || !page || page.can_order) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadPage({ silent: true })
+    }, 10000)
+
+    return () => window.clearInterval(intervalId)
+  }, [token, page?.can_order])
 
   useEffect(() => {
     if (!page || page.categories.length === 0) {
@@ -356,7 +378,7 @@ export default function TableOrderPage() {
   }
 
   const handleSubmitOrder = async () => {
-    if (!token || cart.length === 0 || submitting) {
+    if (!token || !sessionToken || cart.length === 0 || submitting) {
       return
     }
 
@@ -366,6 +388,7 @@ export default function TableOrderPage() {
     try {
       await placeGuestOrder(
         token,
+        sessionToken,
         cart.map((item) => ({
           product_id: item.productId,
           quantity: item.quantity,
@@ -376,25 +399,22 @@ export default function TableOrderPage() {
       setCartOpen(false)
       setOrderSuccessOpen(true)
     } catch {
-      setError('Sipariş gönderilemedi. Lütfen tekrar deneyin.')
+      setError('Sipariş gönderilemedi. Oturum sona ermiş olabilir; sayfayı yenileyip tekrar deneyin.')
+      void loadPage({ silent: true })
     } finally {
       setSubmitting(false)
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f2ea]">
-        <p className="text-sm text-stone-500">Menü yükleniyor...</p>
-      </div>
-    )
+    return <LoadingState fullScreen label="Menü yükleniyor..." />
   }
 
   if (error && !page) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f2ea] px-4">
-        <div className="rounded-2xl bg-white px-6 py-8 text-center shadow-sm">
-          <p className="text-lg font-semibold text-stone-800">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="panel-surface max-w-sm px-6 py-8 text-center">
+          <p className="text-lg font-semibold text-slate-800">{error}</p>
         </div>
       </div>
     )
@@ -405,70 +425,28 @@ export default function TableOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f2ea] pb-28 text-stone-900">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:wght@500;600;700&display=swap"
-      />
-
-      <header className="relative overflow-hidden border-b border-amber-100 bg-[#fffaf3] px-4 pb-8 pt-10 sm:px-6">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.18),transparent_45%)]" />
-        <div className="relative mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-700/80">
-            {page.table.name}
-          </p>
-          <h1 className="font-display mt-2 text-3xl font-bold text-stone-900 sm:text-4xl">
-            {page.restaurant.name}
-          </h1>
-          <p className="mt-2 text-sm text-stone-600">
-            Menüden seçin, not ekleyin ve siparişinizi mutfağa gönderin.
-          </p>
-        </div>
-      </header>
-
-      {!page.can_order && (
-        <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-6">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Bu masa rezerve edilmiş. Sipariş vermek için garsonunuzdan yardım isteyebilirsiniz.
+    <div className={`min-h-screen bg-slate-50 text-slate-900 ${page.can_order && cartItemCount > 0 ? 'pb-28' : ''}`}>
+      <PublicPageShell
+        eyebrow={page.table.name}
+        title={page.restaurant.name}
+        description="Menüden seçin, not ekleyin ve siparişinizi mutfağa gönderin."
+        categories={page.categories}
+        activeCategoryId={activeCategoryId}
+        onCategoryClick={scrollToCategory}
+        hideFooter
+      >
+        {!page.can_order && (
+          <div className="alert-warning mb-6">
+            Sipariş verebilmek için garsonunuzun masayı aktif etmesi gerekiyor. Menüyü
+            inceleyebilirsiniz; masa açıldığında sipariş butonları otomatik olarak görünür.
           </div>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-6">
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        </div>
-      )}
+        {error && <div className="alert-error mb-6">{error}</div>}
 
-      {page.categories.length > 0 && (
-        <div className="sticky top-0 z-20 border-b border-amber-100/80 bg-[#fffaf3]/95 backdrop-blur-md">
-          <div className="mx-auto max-w-3xl overflow-x-auto px-4 py-3 sm:px-6">
-            <div className="flex gap-2">
-              {page.categories.map((category) => (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => scrollToCategory(category.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
-                    activeCategoryId === category.id
-                      ? 'bg-stone-900 text-white shadow-sm'
-                      : 'bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-amber-50'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
         {page.categories.length === 0 ? (
-          <div className="rounded-2xl bg-white/80 p-8 text-center shadow-sm">
-            <p className="text-stone-600">Henüz menüde görüntülenecek ürün yok.</p>
+          <div className="panel-surface p-8 text-center">
+            <p className="text-slate-600">Henüz menüde görüntülenecek ürün yok.</p>
           </div>
         ) : (
           <div className="space-y-10">
@@ -487,7 +465,7 @@ export default function TableOrderPage() {
             ))}
           </div>
         )}
-      </main>
+      </PublicPageShell>
 
       {addingProduct && (
         <AddProductModal
@@ -504,17 +482,17 @@ export default function TableOrderPage() {
 
       {page.can_order && cartItemCount > 0 && (
         <>
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-100 bg-[#fffaf3]/95 backdrop-blur-md">
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-md">
             <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
               <button
                 type="button"
                 onClick={() => setCartOpen(true)}
-                className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-stone-200"
+                className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
               >
-                <span className="text-sm font-medium text-stone-700">
+                <span className="text-sm font-medium text-slate-700">
                   Sepet ({cartItemCount} ürün)
                 </span>
-                <span className="text-sm font-bold text-stone-900">
+                <span className="text-sm font-bold text-slate-900">
                   {formatPrice(cartTotal.toFixed(2))}
                 </span>
               </button>
@@ -522,7 +500,7 @@ export default function TableOrderPage() {
                 type="button"
                 onClick={handleSubmitOrder}
                 disabled={submitting}
-                className="shrink-0 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-60"
+                className="shrink-0 rounded-2xl bg-brand-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
               >
                 {submitting ? 'Gönderiliyor...' : 'Sipariş Ver'}
               </button>
@@ -532,30 +510,30 @@ export default function TableOrderPage() {
           {cartOpen && (
             <div className="fixed inset-0 z-40 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-4">
               <div className="max-h-[80vh] w-full overflow-hidden rounded-t-3xl bg-white sm:max-w-lg sm:rounded-3xl">
-                <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
-                  <h2 className="font-display text-xl font-semibold text-stone-900">Sepetiniz</h2>
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                  <h2 className="text-xl font-semibold text-slate-900">Sepetiniz</h2>
                   <button
                     type="button"
                     onClick={() => setCartOpen(false)}
-                    className="rounded-lg px-3 py-1 text-sm text-stone-500 hover:bg-stone-50"
+                    className="rounded-lg px-3 py-1 text-sm text-slate-500 hover:bg-slate-50"
                   >
                     Kapat
                   </button>
                 </div>
 
-                <ul className="max-h-[50vh] divide-y divide-stone-100 overflow-y-auto px-5">
+                <ul className="max-h-[50vh] divide-y divide-slate-100 overflow-y-auto px-5">
                   {cart.map((item) => (
                     <li key={item.cartId} className="py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-stone-900">{item.name}</p>
-                          <p className="text-sm text-stone-500">{formatPrice(item.price)}</p>
+                          <p className="font-medium text-slate-900">{item.name}</p>
+                          <p className="text-sm text-slate-500">{formatPrice(item.price)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.cartId, -1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-stone-700"
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700"
                           >
                             −
                           </button>
@@ -565,7 +543,7 @@ export default function TableOrderPage() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.cartId, 1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-white"
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-white"
                           >
                             +
                           </button>
@@ -577,16 +555,16 @@ export default function TableOrderPage() {
                         placeholder="Sipariş notu ekle..."
                         rows={2}
                         maxLength={255}
-                        className="mt-3 w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-700 outline-none ring-amber-200 focus:border-amber-300 focus:ring-2"
+                        className="input-field mt-3 resize-none text-xs"
                       />
                     </li>
                   ))}
                 </ul>
 
-                <div className="border-t border-stone-100 px-5 py-4">
+                <div className="border-t border-slate-100 px-5 py-4">
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="text-sm text-stone-600">Toplam</span>
-                    <span className="text-lg font-bold text-stone-900">
+                    <span className="text-sm text-slate-600">Toplam</span>
+                    <span className="text-lg font-bold text-slate-900">
                       {formatPrice(cartTotal.toFixed(2))}
                     </span>
                   </div>
@@ -594,7 +572,7 @@ export default function TableOrderPage() {
                     type="button"
                     onClick={handleSubmitOrder}
                     disabled={submitting}
-                    className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-60"
+                    className="w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
                   >
                     {submitting ? 'Sipariş gönderiliyor...' : 'Sipariş Ver'}
                   </button>
@@ -605,14 +583,6 @@ export default function TableOrderPage() {
         </>
       )}
 
-      <style>{`
-        .font-display {
-          font-family: 'Playfair Display', Georgia, serif;
-        }
-        body {
-          font-family: 'DM Sans', system-ui, sans-serif;
-        }
-      `}</style>
     </div>
   )
 }

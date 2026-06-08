@@ -91,11 +91,21 @@ class TableService
         }
 
         $newStatus = TableStatus::from($status);
+        $currentStatus = $table->status instanceof TableStatus
+            ? $table->status
+            : TableStatus::tryFrom((string) $table->status);
 
-        $updated = $this->repository->update($table, [
+        $updates = [
             'status' => $status,
             'occupied_at' => $this->resolveOccupiedAt($newStatus, $table->occupied_at),
-        ]);
+            'guest_order_token' => $this->resolveGuestOrderToken(
+                $newStatus,
+                $currentStatus,
+                $table->guest_order_token,
+            ),
+        ];
+
+        $updated = $this->repository->update($table, $updates);
 
         if ($newStatus === TableStatus::Served) {
             $this->repository->acknowledgeActiveKitchenItems($table);
@@ -220,6 +230,7 @@ class TableService
         return $this->repository->update($table, [
             'status' => TableStatus::Empty->value,
             'occupied_at' => null,
+            'guest_order_token' => null,
             'viewing_waiter_id' => null,
             'viewing_waiter_at' => null,
             'assigned_waiter_id' => null,
@@ -288,6 +299,7 @@ class TableService
             return $this->repository->update($table, [
                 'status' => TableStatus::Empty->value,
                 'occupied_at' => null,
+                'guest_order_token' => null,
                 'viewing_waiter_id' => null,
                 'viewing_waiter_at' => null,
                 'assigned_waiter_id' => null,
@@ -338,6 +350,28 @@ class TableService
         }
 
         return null;
+    }
+
+    private function resolveGuestOrderToken(
+        TableStatus $newStatus,
+        ?TableStatus $currentStatus,
+        ?string $currentToken,
+    ): ?string {
+        if (in_array($newStatus, [TableStatus::Empty, TableStatus::Reserved], true)) {
+            return null;
+        }
+
+        if (! in_array($newStatus, self::ACTIVE_STATUSES, true)) {
+            return $currentToken;
+        }
+
+        $wasInactive = in_array($currentStatus, [TableStatus::Empty, TableStatus::Reserved, null], true);
+
+        if ($wasInactive || $currentToken === null) {
+            return (string) Str::uuid();
+        }
+
+        return $currentToken;
     }
 
     private function isExtraKitchenOrder(RestaurantTable $table): bool

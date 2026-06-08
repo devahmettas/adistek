@@ -1,3 +1,5 @@
+import Button from '../../components/Button'
+import PageHeader from '../../components/PageHeader'
 import { useAuth } from '../../store/AuthStore'
 
 export default function PublicMenuSharePage() {
@@ -24,50 +26,50 @@ export default function PublicMenuSharePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Müşteri Menüsü</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Müşterileriniz bu linkten kategorileri ve ürünleri görebilir. Giriş gerekmez.
-        </p>
-      </div>
+      <PageHeader
+        title="Müşteri Menüsü"
+        description="Müşterileriniz bu linkten menünüzü görüntüleyebilir. Giriş gerekmez."
+      />
 
-      <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6">
-        <p className="text-sm font-medium text-amber-900">Menü linki</p>
-        {menuUrl ? (
-          <>
-            <p className="mt-2 break-all rounded-xl bg-white px-4 py-3 text-sm text-gray-800 ring-1 ring-amber-100">
-              {menuUrl}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <a
-                href={menuPath ?? '#'}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
-              >
-                Menüyü Önizle
-              </a>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="inline-flex rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50"
-              >
-                Linki Kopyala
-              </button>
-            </div>
-          </>
-        ) : (
-          <p className="mt-2 text-sm text-gray-500">Restoran bilgisi yüklenemedi.</p>
-        )}
-      </div>
+      <div className="panel-surface overflow-hidden">
+        <div className="border-b border-brand-100 bg-gradient-to-br from-brand-50 to-white px-6 py-5">
+          <p className="text-sm font-semibold text-brand-900">Menü linki</p>
+          {menuUrl ? (
+            <>
+              <p className="mt-2 break-all rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800">
+                {menuUrl}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <a href={menuPath ?? '#'} target="_blank" rel="noreferrer">
+                  <Button>Menüyü Önizle</Button>
+                </a>
+                <Button type="button" variant="secondary" onClick={copyLink}>
+                  Linki Kopyala
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-slate-500">Restoran bilgisi yüklenemedi.</p>
+          )}
+        </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-600">
-        <p className="font-medium text-gray-900">Menüde görünenler</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Yalnızca aktif ürünler listelenir</li>
-          <li>Ürünü olmayan kategoriler gizlenir</li>
-          <li>Fiyat ve açıklamalar müşteriye açık şekilde gösterilir</li>
-        </ul>
+        <div className="px-6 py-5 text-sm text-slate-600">
+          <p className="font-semibold text-slate-900">Menüde görünenler</p>
+          <ul className="mt-3 space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
+              Yalnızca aktif ürünler listelenir
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
+              Ürünü olmayan kategoriler gizlenir
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
+              Fiyat ve açıklamalar müşteriye açık şekilde gösterilir
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   )

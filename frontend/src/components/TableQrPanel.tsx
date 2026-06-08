@@ -22,43 +22,35 @@ export default function TableQrPanel({ table }: TableQrPanelProps) {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50/60 p-4">
+    <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-amber-900">QR Sipariş</p>
-        <Button type="button" variant="secondary" onClick={() => setExpanded((value) => !value)}>
+        <p className="text-sm font-semibold text-brand-900">QR Sipariş</p>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setExpanded((value) => !value)}>
           {expanded ? 'Gizle' : 'QR Göster'}
         </Button>
       </div>
 
       {expanded && (
         <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-          <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-amber-100">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-card">
             <QRCodeSVG value={orderUrl} size={160} level="M" includeMargin />
           </div>
 
           <div className="min-w-0 flex-1 space-y-3">
-            <p className="text-xs text-stone-600">
-              Müşteriler bu QR kodu okutarak menüyü görür ve siparişlerini doğrudan mutfağa iletir.
+            <p className="text-xs leading-relaxed text-slate-600">
+              Müşteriler bu QR kodu okutarak menüyü görür. Sipariş verebilmeleri için önce masayı
+              aktif (dolu) duruma getirmeniz gerekir.
             </p>
-            <p className="break-all rounded-lg bg-white px-3 py-2 text-xs text-stone-700 ring-1 ring-amber-100">
+            <p className="break-all rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
               {orderUrl}
             </p>
             <div className="flex flex-wrap gap-2">
-              <a
-                href={`/order/${table.qr_token}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-lg bg-stone-900 px-3 py-2 text-xs font-medium text-white hover:bg-stone-800"
-              >
-                Sayfayı Aç
+              <a href={`/order/${table.qr_token}`} target="_blank" rel="noreferrer">
+                <Button size="sm">Sayfayı Aç</Button>
               </a>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="inline-flex rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-800 hover:bg-stone-50"
-              >
+              <Button type="button" variant="secondary" size="sm" onClick={copyLink}>
                 Linki Kopyala
-              </button>
+              </Button>
             </div>
           </div>
         </div>

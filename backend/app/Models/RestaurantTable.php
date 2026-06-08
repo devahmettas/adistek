@@ -18,12 +18,17 @@ class RestaurantTable extends Model
         'restaurant_id',
         'name',
         'qr_token',
+        'guest_order_token',
         'status',
         'occupied_at',
         'viewing_waiter_id',
         'viewing_waiter_at',
         'assigned_waiter_id',
         'assigned_at',
+    ];
+
+    protected $hidden = [
+        'guest_order_token',
     ];
 
     protected $appends = [

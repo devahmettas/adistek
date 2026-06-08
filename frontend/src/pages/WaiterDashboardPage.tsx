@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
 import TableGrid from '../components/TableGrid'
 import WaiterReadyNotificationToasts from '../components/WaiterReadyNotificationToasts'
 import useWaiterDashboard from '../hooks/useWaiterDashboard'
@@ -66,21 +68,14 @@ export default function WaiterDashboardPage() {
       />
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {waiter?.restaurant?.name ?? 'Restoran'}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Garson: <span className="font-medium text-gray-900">{waiter?.name}</span>
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            Mutfak siparişi hazır olunca sesli bildirim alırsınız.
-          </p>
-        </div>
+        <PageHeader
+          title={waiter?.restaurant?.name ?? 'Restoran'}
+          description={`Garson: ${waiter?.name ?? '—'} · Mutfak siparişi hazır olunca sesli bildirim alırsınız.`}
+        />
 
         {needsSoundUnlock && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-sm text-amber-900">
+          <div className="alert-warning">
+            <p className="text-sm">
               Tarayıcı bildirim sesini engelliyor olabilir. Sesi etkinleştirmek için aşağıdaki
               butona tıklayın.
             </p>
@@ -90,8 +85,8 @@ export default function WaiterDashboardPage() {
           </div>
         )}
 
-        {loading && <p className="text-sm text-gray-500">Yükleniyor...</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {loading && <LoadingState />}
+        {error && <p className="alert-error">{error}</p>}
 
         {!loading && (
           <Card title="Masalar">
@@ -106,7 +101,9 @@ export default function WaiterDashboardPage() {
               onCancelProduct={cancelTableProduct}
               onChangeStatus={changeTableStatus}
               onRequestBill={requestTableBill}
-              onPayBill={payTableBill}
+              onPayBill={async (tableId, paymentMethod) => {
+                await payTableBill(tableId, paymentMethod)
+              }}
               onPartialPayBill={partialPayTableBill}
               onClaimView={claimView}
               onAcknowledgeKitchen={acknowledgeKitchen}

@@ -10,6 +10,14 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class GuestTableOrderService
 {
+    private const ACTIVE_STATUSES = [
+        TableStatus::Occupied,
+        TableStatus::WaitingOrder,
+        TableStatus::Ordered,
+        TableStatus::Served,
+        TableStatus::BillRequested,
+    ];
+
     public function __construct(
         private readonly TableRepository $tableRepository,
         private readonly PublicMenuService $publicMenuService,
@@ -23,6 +31,7 @@ class GuestTableOrderService
 
         $identifier = $table->restaurant->slug ?? (string) $table->restaurant_id;
         $menu = $this->publicMenuService->getMenu($identifier);
+        $canOrder = $this->canOrder($table);
 
         return [
             'table' => [
@@ -31,16 +40,21 @@ class GuestTableOrderService
             ],
             'restaurant' => $menu['restaurant'],
             'categories' => $menu['categories'],
-            'can_order' => $this->canOrder($table),
+            'can_order' => $canOrder,
+            'session_token' => $canOrder ? $table->guest_order_token : null,
         ];
     }
 
-    public function placeOrder(string $token, array $items): array
+    public function placeOrder(string $token, string $sessionToken, array $items): array
     {
         $table = $this->findTableByToken($token);
 
         if (! $this->canOrder($table)) {
-            throw new UnprocessableEntityHttpException('Bu masadan şu an sipariş verilemiyor.');
+            throw new UnprocessableEntityHttpException('Bu masadan şu an sipariş verilemiyor. Garsonunuzun masayı aktif etmesini bekleyin.');
+        }
+
+        if (! hash_equals((string) $table->guest_order_token, $sessionToken)) {
+            throw new UnprocessableEntityHttpException('Oturum geçersiz. Sayfayı yenileyip tekrar deneyin.');
         }
 
         foreach ($items as $item) {
@@ -77,12 +91,10 @@ class GuestTableOrderService
             ? $table->status
             : TableStatus::tryFrom((string) $table->status);
 
-        if ($status === null) {
-            return true;
+        if ($status === null || ! in_array($status, self::ACTIVE_STATUSES, true)) {
+            return false;
         }
 
-        // Yalnızca rezerve masalar kapalıdır. Teslim edilmiş veya hesap istenmiş
-        // masalardan da müşteri ek sipariş verebilir.
-        return $status !== TableStatus::Reserved;
+        return $table->guest_order_token !== null;
     }
 }

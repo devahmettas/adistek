@@ -81,9 +81,9 @@ export default function TableList({ tables, onUpdate, onDelete }: TableListProps
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="alert-error">{error}</p>}
 
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-slate-100">
         {tables.map((table) => {
           const isEditing = editingId === table.id
           const isEmpty = table.status === 'empty'
@@ -115,8 +115,8 @@ export default function TableList({ tables, onUpdate, onDelete }: TableListProps
               ) : (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-gray-900">{table.name}</p>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="font-semibold text-slate-900">{table.name}</p>
+                    <p className="mt-1 text-sm text-slate-500">
                       Durum: {TABLE_STATUS_LABELS[table.status] ?? table.status}
                     </p>
                   </div>
@@ -150,7 +150,7 @@ export default function TableList({ tables, onUpdate, onDelete }: TableListProps
         })}
       </ul>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-slate-500">
         Yalnızca boş masalar silinebilir. Dolu masayı silmeden önce hesabı kapatın.
       </p>
     </div>

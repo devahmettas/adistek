@@ -32,7 +32,7 @@ export default function HourlyLineChart({ items, formatMoney }: HourlyLineChartP
   const hasRevenue = series.some((point) => point.revenue > 0)
 
   if (!hasRevenue) {
-    return <p className="text-sm text-gray-500">Bu gün için saatlik veri yok.</p>
+    return <p className="text-sm text-slate-500">Bu gün için saatlik veri yok.</p>
   }
 
   const width = 800
@@ -71,8 +71,8 @@ export default function HourlyLineChart({ items, formatMoney }: HourlyLineChartP
         >
           <defs>
             <linearGradient id="hourlyAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="#0d9488" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#0d9488" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -90,7 +90,7 @@ export default function HourlyLineChart({ items, formatMoney }: HourlyLineChartP
                 x={padding.left - 10}
                 y={tick.y + 4}
                 textAnchor="end"
-                className="fill-gray-400 text-[11px]"
+                className="fill-slate-400 text-[11px]"
               >
                 {Math.round(tick.value).toLocaleString('tr-TR')} ₺
               </text>
@@ -128,7 +128,7 @@ export default function HourlyLineChart({ items, formatMoney }: HourlyLineChartP
                 x={x}
                 y={height - 10}
                 textAnchor="middle"
-                className="fill-gray-500 text-[11px]"
+                className="fill-slate-500 text-[11px]"
               >
                 {String(hour).padStart(2, '0')}:00
               </text>
@@ -143,7 +143,7 @@ export default function HourlyLineChart({ items, formatMoney }: HourlyLineChartP
           .map((point) => (
             <span
               key={point.hour}
-              className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800"
+              className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800"
             >
               {point.label}: {formatMoney(point.revenue)}
             </span>

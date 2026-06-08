@@ -2,6 +2,8 @@ import { FormEvent, useState } from 'react'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import Input from '../../components/Input'
+import LoadingState from '../../components/LoadingState'
+import PageHeader from '../../components/PageHeader'
 import ProductList from '../../components/ProductList'
 import Select from '../../components/Select'
 import Textarea from '../../components/Textarea'
@@ -67,17 +69,14 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Ürünler</h1>
-        <p className="mt-1 text-sm text-gray-600">Menü ürünlerini ekleyin ve yönetin.</p>
-      </div>
+      <PageHeader title="Ürünler" description="Menü ürünlerini ekleyin, fiyatlandırın ve yönetin." />
 
-      {loading && <p className="text-sm text-gray-500">Yükleniyor...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <LoadingState />}
+      {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
-          <Card title="Ürün Ekle">
+          <Card title="Ürün Ekle" description="Aktif ürünler müşteri menüsünde görünür.">
             <form onSubmit={handleSubmit} className="space-y-4">
               <Select
                 label="Kategori"
@@ -117,7 +116,7 @@ export default function ProductsPage() {
                 onChange={(event) => setProductDescription(event.target.value)}
                 placeholder="Opsiyonel açıklama"
               />
-              {productError && <p className="text-sm text-red-600">{productError}</p>}
+              {productError && <p className="alert-error">{productError}</p>}
               <Button type="submit" disabled={submitting || categories.length === 0}>
                 {submitting ? 'Kaydediliyor...' : 'Ürün Ekle'}
               </Button>

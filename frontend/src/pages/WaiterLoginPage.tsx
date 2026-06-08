@@ -1,8 +1,10 @@
 import { FormEvent, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import AuthLayout from '../components/AuthLayout'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import LoadingState from '../components/LoadingState'
 import { useWaiterAuth } from '../store/WaiterAuthStore'
 
 export default function WaiterLoginPage() {
@@ -13,11 +15,7 @@ export default function WaiterLoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-gray-500">Yükleniyor...</p>
-      </div>
-    )
+    return <LoadingState fullScreen />
   }
 
   if (isAuthenticated) {
@@ -39,49 +37,47 @@ export default function WaiterLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Garson Girişi</h1>
-          <p className="mt-1 text-sm text-gray-600">Masaları görüntüleyin ve sipariş alın.</p>
-        </div>
-
-        <Card title="Giriş Yap">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="E-posta"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="garson@restoran.com"
-              required
-            />
-            <Input
-              label="Şifre"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? 'Giriş yapılıyor...' : 'Garson Girişi'}
-            </Button>
-          </form>
-        </Card>
-
-        <p className="text-center text-sm text-gray-500">
-          <Link to="/login" className="text-blue-600 hover:text-blue-700">
-            Restoran yönetici girişi
+    <AuthLayout
+      title="Garson Girişi"
+      description="Masaları görüntüleyin, sipariş alın ve servis sürecini yönetin."
+      badge="Garson"
+      footer={
+        <>
+          <Link to="/login" className="link-brand">
+            İşletme girişi
           </Link>
           {' · '}
-          <Link to="/kitchen/login" className="text-orange-600 hover:text-orange-700">
+          <Link to="/kitchen/login" className="link-brand">
             Mutfak girişi
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <Card title="Giriş Yap">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="E-posta"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="garson@restoran.com"
+            required
+          />
+          <Input
+            label="Şifre"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          {error && <p className="alert-error">{error}</p>}
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? 'Giriş yapılıyor...' : 'Garson Girişi'}
+          </Button>
+        </form>
+      </Card>
+    </AuthLayout>
   )
 }

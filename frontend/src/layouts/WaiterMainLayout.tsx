@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import BrandLogo from '../components/BrandLogo'
 import Button from '../components/Button'
 import { useWaiterAuth } from '../store/WaiterAuthStore'
 
@@ -10,23 +11,25 @@ export default function WaiterMainLayout() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link to="/waiter/dashboard" className="text-xl font-bold text-gray-900">
-            Garson Paneli
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+          <Link to="/waiter/dashboard">
+            <BrandLogo subtitle="Garson Paneli" size="md" />
           </Link>
           {waiter && (
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-gray-600 sm:inline">{waiter.name}</span>
-              <Button variant="secondary" onClick={handleLogout}>
+              <span className="hidden rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800 sm:inline">
+                {waiter.name}
+              </span>
+              <Button variant="secondary" size="sm" onClick={handleLogout}>
                 Çıkış
               </Button>
             </div>
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-6 lg:py-8">
         <Outlet />
       </main>
     </div>

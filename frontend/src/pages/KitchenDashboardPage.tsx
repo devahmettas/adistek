@@ -3,9 +3,12 @@ import { getKitchenOrders, dismissKitchenCancelled, markKitchenOrderReady } from
 import type { KitchenOrder } from '../api/types'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
 import KitchenNotificationToasts from '../components/KitchenNotificationToasts'
 import { useKitchenOrderNotifications } from '../hooks/useKitchenOrderNotifications'
 import { useKitchenAuth } from '../store/KitchenAuthStore'
+import { unlockKitchenNotificationSound } from '../utils/kitchenNotificationSound'
 
 export default function KitchenDashboardPage() {
   const { kitchenStaff } = useKitchenAuth()
@@ -119,29 +122,26 @@ export default function KitchenDashboardPage() {
       />
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            {kitchenStaff?.restaurant?.name ?? 'Mutfak'}
-          </h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Bekleyen siparişler otomatik yenilenir. Yeni siparişlerde sesli bildirim çalar.
-          </p>
-        </div>
+        <PageHeader
+          dark
+          title={kitchenStaff?.restaurant?.name ?? 'Mutfak'}
+          description="Bekleyen siparişler otomatik yenilenir. Yeni siparişlerde sesli bildirim çalar."
+        />
 
         {needsSoundUnlock && (
-          <div className="rounded-2xl border border-amber-500/40 bg-amber-950/40 px-4 py-3">
-            <p className="text-sm text-amber-100">
+          <div className="rounded-2xl border border-brand-500/30 bg-brand-950/30 px-4 py-3">
+            <p className="text-sm text-brand-100">
               Tarayıcı bildirim sesini engelliyor olabilir. Sesi etkinleştirmek için aşağıdaki
               butona tıklayın.
             </p>
-            <Button type="button" onClick={enableSound} className="mt-3 bg-amber-600 hover:bg-amber-700">
+            <Button type="button" onClick={enableSound} className="mt-3">
               Bildirim Sesini Aç
             </Button>
           </div>
         )}
 
-        {loading && <p className="text-sm text-gray-400">Siparişler yükleniyor...</p>}
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {loading && <LoadingState dark />}
+        {error && <p className="rounded-xl border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-300">{error}</p>}
 
         {!loading && orders.length === 0 && (
           <Card title="Bekleyen Sipariş Yok">
@@ -153,11 +153,11 @@ export default function KitchenDashboardPage() {
           {orders.map((order) => (
             <div
               key={order.table_id}
-              className="rounded-2xl border-2 border-orange-500/40 bg-gray-900 p-5 shadow-lg"
+              className="rounded-2xl border border-brand-500/30 bg-slate-900 p-5 shadow-panel"
             >
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-bold text-orange-400">{order.table_name}</h2>
-                <span className="rounded-full bg-orange-500/20 px-3 py-1 text-xs font-semibold text-orange-300">
+                <h2 className="text-2xl font-bold text-brand-300">{order.table_name}</h2>
+                <span className="rounded-full bg-brand-500/20 px-3 py-1 text-xs font-semibold text-brand-200">
                   {order.items.length} kalem
                 </span>
               </div>

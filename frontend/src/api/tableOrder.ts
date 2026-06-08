@@ -21,6 +21,7 @@ export interface TableOrderPage {
   }
   categories: PublicMenuCategory[]
   can_order: boolean
+  session_token: string | null
 }
 
 export interface GuestOrderItem {
@@ -42,11 +43,12 @@ export const getTableOrderPage = async (token: string): Promise<TableOrderPage> 
 
 export const placeGuestOrder = async (
   token: string,
+  sessionToken: string,
   items: GuestOrderItem[],
 ): Promise<GuestOrderResult> => {
   const { data } = await publicClient.post<{ data: GuestOrderResult; message: string }>(
     `/public/table/${token}/order`,
-    { items },
+    { session_token: sessionToken, items },
   )
   return data.data
 }
