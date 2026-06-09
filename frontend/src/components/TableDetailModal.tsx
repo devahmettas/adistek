@@ -13,7 +13,8 @@ import {
   type PartialPayItem,
 } from '../utils/billHelpers'
 import Button from './Button'
-import Input from './Input'
+import StaffProductAddPanel from './StaffProductAddPanel'
+import StaffProductPickerCard from './StaffProductPickerCard'
 import StaffActionToasts, { useStaffToasts } from './StaffActionToasts'
 import TableStatusPicker, { TableStatusBadge } from './TableStatusPicker'
 import TableTodayReservationHint from './TableTodayReservationHint'
@@ -648,7 +649,13 @@ export default function TableDetailModal({
           )}
 
           {!isBillView && view !== 'main' && (
-            <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-8 sm:py-5">
+            <div
+              className={`min-h-0 flex-1 px-3 py-2 sm:px-6 sm:py-4 lg:overflow-y-auto ${
+                view === 'products' && addingProduct
+                  ? 'flex justify-center overflow-hidden lg:overflow-y-auto'
+                  : 'overflow-y-auto'
+              }`}
+            >
           {view === 'categories' && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-800">Kategori Seçin</h3>
@@ -687,84 +694,25 @@ export default function TableDetailModal({
           )}
 
           {view === 'products' && selectedCategory && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-800">{selectedCategory.name}</h3>
+            <div
+              className={`${addingProduct ? 'w-full max-w-[19rem] sm:max-w-xl lg:max-w-5xl xl:max-w-6xl' : 'space-y-3'}`}
+            >
+              {!addingProduct && (
+                <h3 className="text-sm font-semibold text-gray-800">{selectedCategory.name}</h3>
+              )}
 
               {addingProduct ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-base font-bold text-gray-900">{addingProduct.name}</p>
-                  <p className="mt-1 text-sm font-bold text-blue-700">
-                    {Number(addingProduct.price).toFixed(2)} ₺
-                  </p>
-
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <p className="mb-2 text-xs font-medium text-gray-700">Adet</p>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          disabled={addQuantity <= 1}
-                          onClick={() => setAddQuantity((value) => Math.max(1, value - 1))}
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-lg font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                        >
-                          −
-                        </button>
-                        <span className="min-w-[2rem] text-center text-lg font-bold text-gray-900">
-                          {addQuantity}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={addQuantity >= 99}
-                          onClick={() => setAddQuantity((value) => Math.min(99, value + 1))}
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-lg font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    <Input
-                      label="Not (opsiyonel)"
-                      name="addNote"
-                      value={addNote}
-                      onChange={(event) => setAddNote(event.target.value)}
-                      placeholder="Örn: badem sütlü, buzsuz"
-                      className="px-3 py-2 text-sm"
-                    />
-
-                    {feedback && (
-                      <p
-                        className={`rounded-lg px-2 py-1.5 text-xs ${
-                          feedback.includes('eklenemedi')
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-green-50 text-green-700'
-                        }`}
-                      >
-                        {feedback}
-                      </p>
-                    )}
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={resetAddForm}
-                        disabled={submitting}
-                        className="h-10 flex-1 rounded-xl text-sm"
-                      >
-                        İptal
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleAddProduct}
-                        disabled={submitting}
-                        className="h-10 flex-1 rounded-xl text-sm"
-                      >
-                        {submitting ? 'Ekleniyor...' : 'Masaya Ekle'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <StaffProductAddPanel
+                  product={addingProduct}
+                  quantity={addQuantity}
+                  note={addNote}
+                  submitting={submitting}
+                  feedback={feedback}
+                  onQuantityChange={setAddQuantity}
+                  onNoteChange={setAddNote}
+                  onCancel={resetAddForm}
+                  onConfirm={handleAddProduct}
+                />
               ) : (
                 <>
                   {feedback && (
@@ -775,11 +723,11 @@ export default function TableDetailModal({
                   {categoryProducts.length === 0 ? (
                     <p className="text-sm text-gray-500">Bu kategoride aktif ürün yok.</p>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                       {categoryProducts.map((product) => (
-                        <button
+                        <StaffProductPickerCard
                           key={product.id}
-                          type="button"
+                          product={product}
                           disabled={submitting}
                           onClick={() => {
                             setAddingProduct(product)
@@ -787,15 +735,7 @@ export default function TableDetailModal({
                             setAddNote('')
                             setFeedback(null)
                           }}
-                          className="flex min-h-[4rem] flex-col justify-between rounded-xl border border-emerald-100 bg-emerald-50 p-2.5 text-left transition hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-60"
-                        >
-                          <span className="text-xs font-bold leading-tight text-gray-900 sm:text-sm">
-                            {product.name}
-                          </span>
-                          <span className="text-sm font-bold text-blue-700">
-                            {Number(product.price).toFixed(2)} ₺
-                          </span>
-                        </button>
+                        />
                       ))}
                     </div>
                   )}
