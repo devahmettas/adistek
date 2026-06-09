@@ -1,0 +1,66 @@
+{
+  "language": {
+    "gateTitle": "Choose Language",
+    "gateSubtitle": "Select a language to view the menu",
+    "switchLabel": "Language"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "menuLoading": "Loading menu...",
+    "menuNotFound": "Menu not found.",
+    "tableNotFound": "Table or menu not found.",
+    "noProducts": "No products available on the menu yet.",
+    "menuEyebrow": "Menu",
+    "footerPoweredBy": "Powered by Adistek",
+    "footerBonAppetit": "Enjoy your meal · Adistek",
+    "kcal": "kcal",
+    "calories": "Calories",
+    "allergens": "Allergens",
+    "quantity": "Quantity",
+    "total": "Total"
+  },
+  "hero": {
+    "digitalMenu": "Digital Menu",
+    "fallbackDescription": "Discover flavors and choose safely with allergen and calorie information.",
+    "prevSlide": "Previous slide",
+    "nextSlide": "Next slide",
+    "slide": "Slide {{number}}"
+  },
+  "order": {
+    "description": "Browse the menu, add notes, and send your order to the kitchen.",
+    "inactiveWarning": "Your waiter needs to activate the table before you can order. You can browse the menu; order buttons will appear automatically when the table is open.",
+    "add": "Add",
+    "addToCart": "Add to Cart",
+    "cart": "Cart ({{count}} items)",
+    "yourCart": "Your Cart",
+    "placeOrder": "Place Order",
+    "submitting": "Sending...",
+    "submittingOrder": "Sending order...",
+    "orderNote": "Order note (optional)",
+    "orderNotePlaceholder": "E.g. medium rare, sauce on the side, no ice...",
+    "cartNotePlaceholder": "Add order note...",
+    "orderError": "Order could not be sent. Your session may have expired; refresh the page and try again.",
+    "successTitle": "Order received!",
+    "successMessage": "Your items are being prepared and will be brought to your table shortly.",
+    "bonAppetit": "Enjoy your meal",
+    "backToMenu": "Back to Menu"
+  },
+  "allergens": {
+    "gluten": { "label": "Gluten", "short": "Gluten" },
+    "crustaceans": { "label": "Crustaceans", "short": "Shellfish" },
+    "eggs": { "label": "Eggs", "short": "Eggs" },
+    "fish": { "label": "Fish", "short": "Fish" },
+    "peanuts": { "label": "Peanuts", "short": "Peanuts" },
+    "soy": { "label": "Soy", "short": "Soy" },
+    "dairy": { "label": "Milk", "short": "Milk" },
+    "nuts": { "label": "Tree Nuts", "short": "Nuts" },
+    "celery": { "label": "Celery", "short": "Celery" },
+    "mustard": { "label": "Mustard", "short": "Mustard" },
+    "sesame": { "label": "Sesame", "short": "Sesame" },
+    "sulfites": { "label": "Sulphites", "short": "Sulphites" },
+    "lupin": { "label": "Lupin", "short": "Lupin" },
+    "mollusks": { "label": "Molluscs", "short": "Molluscs" }
+  }
+}

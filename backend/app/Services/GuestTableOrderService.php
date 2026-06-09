@@ -24,13 +24,13 @@ class GuestTableOrderService
         private readonly TableService $tableService,
     ) {}
 
-    public function getTableOrderPage(string $token): array
+    public function getTableOrderPage(string $token, ?string $lang = null): array
     {
         $table = $this->findTableByToken($token);
         $table->load('restaurant');
 
         $identifier = $table->restaurant->slug ?? (string) $table->restaurant_id;
-        $menu = $this->publicMenuService->getMenu($identifier);
+        $menu = $this->publicMenuService->getMenu($identifier, $lang);
         $canOrder = $this->canOrder($table);
 
         return [

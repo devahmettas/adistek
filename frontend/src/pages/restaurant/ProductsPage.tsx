@@ -91,7 +91,7 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Ürünler"
-        description="Menü ürünlerini görseller, kalori ve alerjen bilgileriyle yönetin."
+        description="Ürünleri Türkçe girin. QR menüde seçilen dile göre otomatik çevrilir."
       />
 
       {loading && <LoadingState />}

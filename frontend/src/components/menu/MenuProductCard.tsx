@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PublicMenuProduct } from '../../api/publicMenu'
+import { getMenuLanguage } from '../../i18n'
+import { formatMenuPrice } from '../../utils/formatMenuPrice'
 import AllergenBadges from './AllergenBadges'
 import CalorieBadge from './CalorieBadge'
 import MenuProductImage from './MenuProductImage'
@@ -11,11 +14,9 @@ interface MenuProductCardProps {
   onClick?: () => void
 }
 
-function formatPrice(price: string): string {
-  return `${Number(price).toFixed(2)} ₺`
-}
-
 export default function MenuProductCard({ product, index = 0, action, onClick }: MenuProductCardProps) {
+  const { i18n } = useTranslation()
+  const language = getMenuLanguage() ?? (i18n.language as 'tr')
   const Wrapper = onClick ? 'button' : 'article'
 
   return (
@@ -49,7 +50,7 @@ export default function MenuProductCard({ product, index = 0, action, onClick }:
               )}
             </div>
             <p className="shrink-0 rounded-2xl bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-800">
-              {formatPrice(product.price)}
+              {formatMenuPrice(product.price, language)}
             </p>
           </div>
 

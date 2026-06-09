@@ -1,0 +1,66 @@
+{
+  "language": {
+    "gateTitle": "Dil Seçin",
+    "gateSubtitle": "Menüyü görüntülemek için bir dil seçin",
+    "switchLabel": "Dil"
+  },
+  "common": {
+    "close": "Kapat",
+    "cancel": "Vazgeç",
+    "loading": "Yükleniyor...",
+    "menuLoading": "Menü yükleniyor...",
+    "menuNotFound": "Menü bulunamadı.",
+    "tableNotFound": "Masa veya menü bulunamadı.",
+    "noProducts": "Henüz menüde görüntülenecek ürün yok.",
+    "menuEyebrow": "Menü",
+    "footerPoweredBy": "Adistek ile sunulmaktadır",
+    "footerBonAppetit": "Afiyet olsun · Adistek",
+    "kcal": "kcal",
+    "calories": "Kalori",
+    "allergens": "Alerjen",
+    "quantity": "Adet",
+    "total": "Toplam"
+  },
+  "hero": {
+    "digitalMenu": "Dijital Menü",
+    "fallbackDescription": "Lezzetleri keşfedin, alerjen ve kalori bilgileriyle güvenle seçim yapın.",
+    "prevSlide": "Önceki slayt",
+    "nextSlide": "Sonraki slayt",
+    "slide": "Slayt {{number}}"
+  },
+  "order": {
+    "description": "Menüden seçin, not ekleyin ve siparişinizi mutfağa gönderin.",
+    "inactiveWarning": "Sipariş verebilmek için garsonunuzun masayı aktif etmesi gerekiyor. Menüyü inceleyebilirsiniz; masa açıldığında sipariş butonları otomatik olarak görünür.",
+    "add": "Ekle",
+    "addToCart": "Sepete Ekle",
+    "cart": "Sepet ({{count}} ürün)",
+    "yourCart": "Sepetiniz",
+    "placeOrder": "Sipariş Ver",
+    "submitting": "Gönderiliyor...",
+    "submittingOrder": "Sipariş gönderiliyor...",
+    "orderNote": "Sipariş notu (isteğe bağlı)",
+    "orderNotePlaceholder": "Örn: Az pişmiş, sos ayrı, buzlu olmasın...",
+    "cartNotePlaceholder": "Sipariş notu ekle...",
+    "orderError": "Sipariş gönderilemedi. Oturum sona ermiş olabilir; sayfayı yenileyip tekrar deneyin.",
+    "successTitle": "Siparişiniz alındı!",
+    "successMessage": "Ürünleriniz hazırlanıyor. Kısa süre içinde masanıza getirilecektir.",
+    "bonAppetit": "Afiyet olsun",
+    "backToMenu": "Menüye Dön"
+  },
+  "allergens": {
+    "gluten": { "label": "Gluten", "short": "Gluten" },
+    "crustaceans": { "label": "Kabuklu Deniz Ürünleri", "short": "Kabuklu" },
+    "eggs": { "label": "Yumurta", "short": "Yumurta" },
+    "fish": { "label": "Balık", "short": "Balık" },
+    "peanuts": { "label": "Fıstık", "short": "Fıstık" },
+    "soy": { "label": "Soya", "short": "Soya" },
+    "dairy": { "label": "Süt", "short": "Süt" },
+    "nuts": { "label": "Kuruyemiş", "short": "Kuruyemiş" },
+    "celery": { "label": "Kereviz", "short": "Kereviz" },
+    "mustard": { "label": "Hardal", "short": "Hardal" },
+    "sesame": { "label": "Susam", "short": "Susam" },
+    "sulfites": { "label": "Sülfit", "short": "Sülfit" },
+    "lupin": { "label": "Acı Bakla", "short": "Acı Bakla" },
+    "mollusks": { "label": "Yumuşakçalar", "short": "Yumuşakça" }
+  }
+}

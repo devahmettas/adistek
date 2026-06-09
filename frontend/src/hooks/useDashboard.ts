@@ -126,14 +126,14 @@ export default function useDashboard() {
     return () => window.clearInterval(interval)
   }, [fetchData])
 
-  const addCategory = async (name: string, image_path?: string | null) => {
-    await createCategory({ name, image_path })
+  const addCategory = async (payload: import('../api/categories').CategoryPayload) => {
+    await createCategory(payload)
     await fetchData(true)
   }
 
   const editCategory = async (
     categoryId: number,
-    payload: { name: string; image_path?: string | null },
+    payload: import('../api/categories').CategoryPayload,
   ) => {
     const updatedCategory = await updateCategory(categoryId, payload)
     setCategories((prev) =>
@@ -194,6 +194,9 @@ export default function useDashboard() {
       name: product.name,
       price: Number(product.price),
       description: product.description,
+      image_path: product.image_path,
+      calories: product.calories,
+      allergens: product.allergens,
       is_active: !product.is_active,
     })
     await fetchData(true)

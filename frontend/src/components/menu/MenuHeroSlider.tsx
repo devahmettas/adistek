@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PublicMenuSlide } from '../../api/publicMenu'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 
@@ -8,6 +9,7 @@ interface MenuHeroSliderProps {
 }
 
 export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSliderProps) {
+  const { t } = useTranslation()
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
 
@@ -38,10 +40,12 @@ export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSlide
       <div className="menu-hero-fallback relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 px-6 py-12 text-white shadow-panel">
         <div className="menu-hero-glow pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
         <div className="menu-hero-glow pointer-events-none absolute -bottom-8 left-8 h-32 w-32 rounded-full bg-brand-300/20 blur-2xl" />
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-100">Dijital Menü</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-100">
+          {t('hero.digitalMenu')}
+        </p>
         <h2 className="mt-3 text-3xl font-bold tracking-tight">{restaurantName}</h2>
         <p className="mt-3 max-w-md text-sm leading-relaxed text-brand-100">
-          Lezzetleri keşfedin, alerjen ve kalori bilgileriyle güvenle seçim yapın.
+          {t('hero.fallbackDescription')}
         </p>
       </div>
     )
@@ -111,7 +115,7 @@ export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSlide
         <>
           <button
             type="button"
-            aria-label="Önceki slayt"
+            aria-label={t('hero.prevSlide')}
             onClick={() => goTo(activeIndex - 1)}
             className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50"
           >
@@ -119,7 +123,7 @@ export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSlide
           </button>
           <button
             type="button"
-            aria-label="Sonraki slayt"
+            aria-label={t('hero.nextSlide')}
             onClick={() => goTo(activeIndex + 1)}
             className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50"
           >
@@ -131,7 +135,7 @@ export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSlide
               <button
                 key={slide.id}
                 type="button"
-                aria-label={`Slayt ${index + 1}`}
+                aria-label={t('hero.slide', { number: index + 1 })}
                 onClick={() => goTo(index)}
                 className={`h-2 rounded-full transition-all ${
                   index === activeIndex ? 'w-6 bg-white' : 'w-2 bg-white/50'

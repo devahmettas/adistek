@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
 import MenuProductCard from '../components/menu/MenuProductCard'
 import { getPublicMenu, type PublicMenu, type PublicMenuCategory } from '../api/publicMenu'
+import { getMenuLanguage, type MenuLanguage } from '../i18n'
 import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
 
 function CategorySection({
@@ -42,6 +44,8 @@ function CategorySection({
 }
 
 export default function PublicMenuPage() {
+  const { t, i18n } = useTranslation()
+  const language = (getMenuLanguage() ?? i18n.language) as MenuLanguage
   const { identifier } = useParams<{ identifier: string }>()
   const [menu, setMenu] = useState<PublicMenu | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,18 +61,18 @@ export default function PublicMenuPage() {
     setLoading(true)
     setError(null)
 
-    getPublicMenu(identifier)
+    getPublicMenu(identifier, language)
       .then((data) => {
         setMenu(data)
         setActiveCategoryId(data.categories[0]?.id ?? null)
       })
       .catch(() => {
-        setError('Menü bulunamadı.')
+        setError(t('common.menuNotFound'))
       })
       .finally(() => {
         setLoading(false)
       })
-  }, [identifier])
+  }, [identifier, language, t])
 
   useEffect(() => {
     if (!menu || menu.categories.length === 0) {
@@ -107,14 +111,14 @@ export default function PublicMenuPage() {
   }
 
   if (loading) {
-    return <LoadingState fullScreen label="Menü yükleniyor..." />
+    return <LoadingState fullScreen label={t('common.menuLoading')} />
   }
 
   if (error || !menu) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="panel-surface max-w-sm px-6 py-8 text-center">
-          <p className="text-lg font-semibold text-slate-800">{error ?? 'Menü bulunamadı.'}</p>
+          <p className="text-lg font-semibold text-slate-800">{error ?? t('common.menuNotFound')}</p>
         </div>
       </div>
     )
@@ -122,7 +126,7 @@ export default function PublicMenuPage() {
 
   return (
     <PublicPageShell
-      eyebrow="Menü"
+      eyebrow={t('common.menuEyebrow')}
       title={menu.restaurant.name}
       menuSettings={menu.menu_settings}
       slides={menu.slides}
@@ -131,13 +135,13 @@ export default function PublicMenuPage() {
       onCategoryClick={scrollToCategory}
       footer={
         <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
-          Afiyet olsun · Adistek
+          {t('common.footerBonAppetit')}
         </footer>
       }
     >
       {menu.categories.length === 0 ? (
         <div className="panel-surface p-8 text-center">
-          <p className="text-slate-600">Henüz menüde görüntülenecek ürün yok.</p>
+          <p className="text-slate-600">{t('common.noProducts')}</p>
         </div>
       ) : (
         <div className="space-y-10">

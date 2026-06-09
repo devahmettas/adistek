@@ -377,7 +377,7 @@ export default function ProductList({
               className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4"
             >
               <Input
-                label="Ürün Adı"
+                label="Ürün Adı (Türkçe)"
                 name={`mobileEditName-${product.id}`}
                 value={editName}
                 onChange={(event) => setEditName(event.target.value)}
@@ -412,7 +412,7 @@ export default function ProductList({
                 ]}
               />
               <Textarea
-                label="Açıklama"
+                label="Açıklama (Türkçe)"
                 name={`mobileEditDescription-${product.id}`}
                 rows={2}
                 value={editDescription}

@@ -11,6 +11,7 @@ import LoginPage from '../pages/LoginPage'
 import CategoriesPage from '../pages/restaurant/CategoriesPage'
 import ProductsPage from '../pages/restaurant/ProductsPage'
 import StaffPage from '../pages/restaurant/StaffPage'
+import PublicMenuLayout from '../layouts/PublicMenuLayout'
 import PublicMenuPage from '../pages/PublicMenuPage'
 import TableOrderPage from '../pages/TableOrderPage'
 import PublicMenuSharePage from '../pages/restaurant/PublicMenuSharePage'
@@ -32,8 +33,10 @@ export default function AppRouter() {
       <Route path="/waiter/login" element={<WaiterLoginPage />} />
       <Route path="/kitchen/login" element={<KitchenLoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/menu/:identifier" element={<PublicMenuPage />} />
-      <Route path="/order/:token" element={<TableOrderPage />} />
+      <Route element={<PublicMenuLayout />}>
+        <Route path="/menu/:identifier" element={<PublicMenuPage />} />
+        <Route path="/order/:token" element={<TableOrderPage />} />
+      </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route element={<ProtectedRoute />}>

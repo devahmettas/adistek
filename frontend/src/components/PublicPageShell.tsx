@@ -1,5 +1,7 @@
 import { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PublicMenuSettings, PublicMenuSlide } from '../api/publicMenu'
+import LanguageSwitcher from './menu/LanguageSwitcher'
 import MenuHeroSlider from './menu/MenuHeroSlider'
 
 interface PublicPageShellProps {
@@ -29,6 +31,7 @@ export default function PublicPageShell({
   footer,
   hideFooter = false,
 }: PublicPageShellProps) {
+  const { t } = useTranslation()
   const tagline = menuSettings?.tagline
   const welcomeText = menuSettings?.welcome_text ?? description
 
@@ -36,8 +39,11 @@ export default function PublicPageShell({
     <div className="min-h-screen bg-[#f7f8fb] text-slate-900">
       <header className="relative overflow-hidden border-b border-slate-200/80 bg-white">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.04),transparent_40%)]" />
+        <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+          <LanguageSwitcher />
+        </div>
         <div className="relative mx-auto max-w-3xl px-4 pb-6 pt-6 sm:px-6 sm:pt-8">
-          <div className="mb-5">
+          <div className="mb-5 pr-24 sm:pr-28">
             {eyebrow && (
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700">
                 {eyebrow}
@@ -88,7 +94,7 @@ export default function PublicPageShell({
       {!hideFooter &&
         (footer === undefined ? (
           <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
-            Adistek ile sunulmaktadır
+            {t('common.footerPoweredBy')}
           </footer>
         ) : (
           footer

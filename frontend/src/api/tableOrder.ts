@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { MenuLanguage } from '../i18n'
 import type { PublicMenuCategory, PublicMenuSettings, PublicMenuSlide } from './publicMenu'
 
 const publicClient = axios.create({
@@ -38,8 +39,13 @@ export interface GuestOrderResult {
   item_count: number
 }
 
-export const getTableOrderPage = async (token: string): Promise<TableOrderPage> => {
-  const { data } = await publicClient.get<{ data: TableOrderPage }>(`/public/table/${token}`)
+export const getTableOrderPage = async (
+  token: string,
+  lang?: MenuLanguage,
+): Promise<TableOrderPage> => {
+  const { data } = await publicClient.get<{ data: TableOrderPage }>(`/public/table/${token}`, {
+    params: lang ? { lang } : undefined,
+  })
   return data.data
 }
 

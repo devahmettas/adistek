@@ -16,8 +16,10 @@ class Product extends Model
         'restaurant_id',
         'category_id',
         'name',
+        'name_translations',
         'price',
         'description',
+        'description_translations',
         'image_path',
         'calories',
         'allergens',
@@ -26,6 +28,8 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'name_translations' => 'array',
+        'description_translations' => 'array',
         'calories' => 'integer',
         'allergens' => 'array',
         'is_active' => 'boolean',

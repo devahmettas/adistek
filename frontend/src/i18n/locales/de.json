@@ -1,0 +1,66 @@
+{
+  "language": {
+    "gateTitle": "Sprache wählen",
+    "gateSubtitle": "Wählen Sie eine Sprache, um die Speisekarte anzuzeigen",
+    "switchLabel": "Sprache"
+  },
+  "common": {
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "loading": "Wird geladen...",
+    "menuLoading": "Speisekarte wird geladen...",
+    "menuNotFound": "Speisekarte nicht gefunden.",
+    "tableNotFound": "Tisch oder Speisekarte nicht gefunden.",
+    "noProducts": "Noch keine Produkte auf der Speisekarte.",
+    "menuEyebrow": "Speisekarte",
+    "footerPoweredBy": "Bereitgestellt von Adistek",
+    "footerBonAppetit": "Guten Appetit · Adistek",
+    "kcal": "kcal",
+    "calories": "Kalorien",
+    "allergens": "Allergene",
+    "quantity": "Menge",
+    "total": "Gesamt"
+  },
+  "hero": {
+    "digitalMenu": "Digitale Speisekarte",
+    "fallbackDescription": "Entdecken Sie Geschmacksrichtungen und wählen Sie sicher mit Allergen- und Kalorieninformationen.",
+    "prevSlide": "Vorherige Folie",
+    "nextSlide": "Nächste Folie",
+    "slide": "Folie {{number}}"
+  },
+  "order": {
+    "description": "Wählen Sie aus der Speisekarte, fügen Sie Notizen hinzu und senden Sie Ihre Bestellung an die Küche.",
+    "inactiveWarning": "Ihr Kellner muss den Tisch aktivieren, bevor Sie bestellen können. Sie können die Speisekarte durchsuchen; Bestellbuttons erscheinen automatisch, wenn der Tisch geöffnet ist.",
+    "add": "Hinzufügen",
+    "addToCart": "In den Warenkorb",
+    "cart": "Warenkorb ({{count}} Artikel)",
+    "yourCart": "Ihr Warenkorb",
+    "placeOrder": "Bestellen",
+    "submitting": "Wird gesendet...",
+    "submittingOrder": "Bestellung wird gesendet...",
+    "orderNote": "Bestellnotiz (optional)",
+    "orderNotePlaceholder": "Z.B. medium, Soße separat, ohne Eis...",
+    "cartNotePlaceholder": "Bestellnotiz hinzufügen...",
+    "orderError": "Bestellung konnte nicht gesendet werden. Ihre Sitzung ist möglicherweise abgelaufen; laden Sie die Seite neu und versuchen Sie es erneut.",
+    "successTitle": "Bestellung erhalten!",
+    "successMessage": "Ihre Artikel werden zubereitet und in Kürze an Ihren Tisch gebracht.",
+    "bonAppetit": "Guten Appetit",
+    "backToMenu": "Zurück zur Speisekarte"
+  },
+  "allergens": {
+    "gluten": { "label": "Gluten", "short": "Gluten" },
+    "crustaceans": { "label": "Krebstiere", "short": "Krebstiere" },
+    "eggs": { "label": "Eier", "short": "Eier" },
+    "fish": { "label": "Fisch", "short": "Fisch" },
+    "peanuts": { "label": "Erdnüsse", "short": "Erdnüsse" },
+    "soy": { "label": "Soja", "short": "Soja" },
+    "dairy": { "label": "Milch", "short": "Milch" },
+    "nuts": { "label": "Schalenfrüchte", "short": "Nüsse" },
+    "celery": { "label": "Sellerie", "short": "Sellerie" },
+    "mustard": { "label": "Senf", "short": "Senf" },
+    "sesame": { "label": "Sesam", "short": "Sesam" },
+    "sulfites": { "label": "Sulfite", "short": "Sulfite" },
+    "lupin": { "label": "Lupinen", "short": "Lupinen" },
+    "mollusks": { "label": "Weichtiere", "short": "Weichtiere" }
+  }
+}

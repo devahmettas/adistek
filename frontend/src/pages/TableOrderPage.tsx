@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
@@ -10,6 +11,8 @@ import {
   type TableOrderPage,
 } from '../api/tableOrder'
 import type { PublicMenuCategory, PublicMenuProduct } from '../api/publicMenu'
+import { getMenuLanguage, type MenuLanguage } from '../i18n'
+import { formatMenuPrice } from '../utils/formatMenuPrice'
 import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
 
 interface CartItem {
@@ -19,10 +22,6 @@ interface CartItem {
   price: string
   quantity: number
   note: string
-}
-
-function formatPrice(price: string): string {
-  return `${Number(price).toFixed(2)} ₺`
 }
 
 function normalizeNote(note: string): string {
@@ -46,6 +45,7 @@ function CategorySection({
   onAdd: (product: PublicMenuProduct) => void
   sectionRef: (element: HTMLElement | null) => void
 }) {
+  const { t } = useTranslation()
   const categoryImageUrl = resolveMenuAssetUrl(category.image_url, category.image_path)
 
   return (
@@ -84,7 +84,7 @@ function CategorySection({
                     }}
                     className="relative rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 active:scale-95"
                   >
-                    Ekle
+                    {t('order.add')}
                     {cartQuantity > 0 && (
                       <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-xs font-bold text-white">
                         {cartQuantity}
@@ -102,6 +102,8 @@ function CategorySection({
 }
 
 function OrderSuccessModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-sm rounded-3xl bg-white p-8 text-center shadow-2xl">
@@ -117,18 +119,16 @@ function OrderSuccessModal({ onClose }: { onClose: () => void }) {
           </svg>
         </div>
 
-        <h2 className="mt-5 text-2xl font-bold text-slate-900">Siparişiniz alındı!</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600">
-          Ürünleriniz hazırlanıyor. Kısa süre içinde masanıza getirilecektir.
-        </p>
-        <p className="mt-2 text-xs text-slate-400">Afiyet olsun</p>
+        <h2 className="mt-5 text-2xl font-bold text-slate-900">{t('order.successTitle')}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">{t('order.successMessage')}</p>
+        <p className="mt-2 text-xs text-slate-400">{t('order.bonAppetit')}</p>
 
         <button
           type="button"
           onClick={onClose}
           className="mt-6 w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800"
         >
-          Menüye Dön
+          {t('order.backToMenu')}
         </button>
       </div>
     </div>
@@ -136,6 +136,8 @@ function OrderSuccessModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function TableOrderPage() {
+  const { t, i18n } = useTranslation()
+  const language = (getMenuLanguage() ?? i18n.language) as MenuLanguage
   const { token } = useParams<{ token: string }>()
   const [page, setPage] = useState<TableOrderPage | null>(null)
   const [sessionToken, setSessionToken] = useState<string | null>(null)
@@ -166,7 +168,7 @@ export default function TableOrderPage() {
       setActiveCategoryId((current) => current ?? data.categories[0]?.id ?? null)
     } catch {
       if (!options?.silent) {
-        setError('Masa veya menü bulunamadı.')
+        setError(t('common.tableNotFound'))
       }
     } finally {
       if (!options?.silent) {
@@ -177,7 +179,7 @@ export default function TableOrderPage() {
 
   useEffect(() => {
     void loadPage()
-  }, [token])
+  }, [token, language])
 
   useEffect(() => {
     if (!token || !page || page.can_order) {
@@ -307,7 +309,7 @@ export default function TableOrderPage() {
       setCartOpen(false)
       setOrderSuccessOpen(true)
     } catch {
-      setError('Sipariş gönderilemedi. Oturum sona ermiş olabilir; sayfayı yenileyip tekrar deneyin.')
+      setError(t('order.orderError'))
       void loadPage({ silent: true })
     } finally {
       setSubmitting(false)
@@ -315,7 +317,7 @@ export default function TableOrderPage() {
   }
 
   if (loading) {
-    return <LoadingState fullScreen label="Menü yükleniyor..." />
+    return <LoadingState fullScreen label={t('common.menuLoading')} />
   }
 
   if (error && !page) {
@@ -337,7 +339,7 @@ export default function TableOrderPage() {
       <PublicPageShell
         eyebrow={page.table.name}
         title={page.restaurant.name}
-        description="Menüden seçin, not ekleyin ve siparişinizi mutfağa gönderin."
+        description={t('order.description')}
         menuSettings={page.menu_settings}
         slides={page.slides}
         categories={page.categories}
@@ -347,8 +349,7 @@ export default function TableOrderPage() {
       >
         {!page.can_order && (
           <div className="alert-warning mb-6">
-            Sipariş verebilmek için garsonunuzun masayı aktif etmesi gerekiyor. Menüyü
-            inceleyebilirsiniz; masa açıldığında sipariş butonları otomatik olarak görünür.
+            {t('order.inactiveWarning')}
           </div>
         )}
 
@@ -356,7 +357,7 @@ export default function TableOrderPage() {
 
         {page.categories.length === 0 ? (
           <div className="panel-surface p-8 text-center">
-            <p className="text-slate-600">Henüz menüde görüntülenecek ürün yok.</p>
+            <p className="text-slate-600">{t('common.noProducts')}</p>
           </div>
         ) : (
           <div className="space-y-10">
@@ -400,10 +401,10 @@ export default function TableOrderPage() {
                 className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
               >
                 <span className="text-sm font-medium text-slate-700">
-                  Sepet ({cartItemCount} ürün)
+                  {t('order.cart', { count: cartItemCount })}
                 </span>
                 <span className="text-sm font-bold text-slate-900">
-                  {formatPrice(cartTotal.toFixed(2))}
+                  {formatMenuPrice(cartTotal.toFixed(2), language)}
                 </span>
               </button>
               <button
@@ -412,7 +413,7 @@ export default function TableOrderPage() {
                 disabled={submitting}
                 className="shrink-0 rounded-2xl bg-brand-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
               >
-                {submitting ? 'Gönderiliyor...' : 'Sipariş Ver'}
+                {submitting ? t('order.submitting') : t('order.placeOrder')}
               </button>
             </div>
           </div>
@@ -421,13 +422,13 @@ export default function TableOrderPage() {
             <div className="fixed inset-0 z-40 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-4">
               <div className="max-h-[80vh] w-full overflow-hidden rounded-t-3xl bg-white sm:max-w-lg sm:rounded-3xl">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-xl font-semibold text-slate-900">Sepetiniz</h2>
+                  <h2 className="text-xl font-semibold text-slate-900">{t('order.yourCart')}</h2>
                   <button
                     type="button"
                     onClick={() => setCartOpen(false)}
                     className="rounded-lg px-3 py-1 text-sm text-slate-500 hover:bg-slate-50"
                   >
-                    Kapat
+                    {t('common.close')}
                   </button>
                 </div>
 
@@ -437,7 +438,9 @@ export default function TableOrderPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-slate-900">{item.name}</p>
-                          <p className="text-sm text-slate-500">{formatPrice(item.price)}</p>
+                          <p className="text-sm text-slate-500">
+                            {formatMenuPrice(item.price, language)}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -462,7 +465,7 @@ export default function TableOrderPage() {
                       <textarea
                         value={item.note}
                         onChange={(event) => updateNote(item.cartId, event.target.value)}
-                        placeholder="Sipariş notu ekle..."
+                        placeholder={t('order.cartNotePlaceholder')}
                         rows={2}
                         maxLength={255}
                         className="input-field mt-3 resize-none text-xs"
@@ -473,9 +476,9 @@ export default function TableOrderPage() {
 
                 <div className="border-t border-slate-100 px-5 py-4">
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Toplam</span>
+                    <span className="text-sm text-slate-600">{t('common.total')}</span>
                     <span className="text-lg font-bold text-slate-900">
-                      {formatPrice(cartTotal.toFixed(2))}
+                      {formatMenuPrice(cartTotal.toFixed(2), language)}
                     </span>
                   </div>
                   <button
@@ -484,7 +487,7 @@ export default function TableOrderPage() {
                     disabled={submitting}
                     className="w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
                   >
-                    {submitting ? 'Sipariş gönderiliyor...' : 'Sipariş Ver'}
+                    {submitting ? t('order.submittingOrder') : t('order.placeOrder')}
                   </button>
                 </div>
               </div>

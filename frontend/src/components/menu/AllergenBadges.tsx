@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ALLERGEN_MAP } from '../../constants/allergens'
 import type { AllergenKey } from '../../constants/allergens'
 import AllergenIcon from './AllergenIcon'
@@ -8,6 +9,8 @@ interface AllergenBadgesProps {
 }
 
 export default function AllergenBadges({ allergens, compact = false }: AllergenBadgesProps) {
+  const { t } = useTranslation()
+
   if (!allergens.length) {
     return null
   }
@@ -20,14 +23,17 @@ export default function AllergenBadges({ allergens, compact = false }: AllergenB
           return null
         }
 
+        const label = t(`allergens.${key}.label`)
+        const shortLabel = t(`allergens.${key}.short`)
+
         return (
           <span
             key={key}
-            title={definition.label}
+            title={label}
             className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${definition.color}`}
           >
             <AllergenIcon allergen={key} className="h-3.5 w-3.5" />
-            {compact ? definition.shortLabel : definition.label}
+            {compact ? shortLabel : label}
           </span>
         )
       })}

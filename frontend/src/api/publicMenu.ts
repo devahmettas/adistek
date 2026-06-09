@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { AllergenKey } from '../constants/allergens'
+import type { MenuLanguage } from '../i18n'
 
 const publicClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -53,7 +54,12 @@ export interface PublicMenu {
   categories: PublicMenuCategory[]
 }
 
-export const getPublicMenu = async (identifier: string): Promise<PublicMenu> => {
-  const { data } = await publicClient.get<{ data: PublicMenu }>(`/public/menu/${identifier}`)
+export const getPublicMenu = async (
+  identifier: string,
+  lang?: MenuLanguage,
+): Promise<PublicMenu> => {
+  const { data } = await publicClient.get<{ data: PublicMenu }>(`/public/menu/${identifier}`, {
+    params: lang ? { lang } : undefined,
+  })
   return data.data
 }

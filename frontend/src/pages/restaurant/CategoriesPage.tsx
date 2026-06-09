@@ -29,7 +29,10 @@ export default function CategoriesPage() {
     setSubmitting(true)
 
     try {
-      await addCategory(categoryName.trim(), categoryImagePath)
+      await addCategory({
+        name: categoryName.trim(),
+        image_path: categoryImagePath,
+      })
       setCategoryName('')
       setCategoryImagePath(null)
       setCategoryImageUrl(null)
@@ -44,7 +47,7 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kategoriler"
-        description="Menü kategorilerini ekleyin, düzenleyin veya silin."
+        description="Kategorileri Türkçe girin. QR menüde seçilen dile göre otomatik çevrilir."
       />
 
       {loading && <LoadingState />}

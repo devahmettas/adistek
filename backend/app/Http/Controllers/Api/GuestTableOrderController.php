@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreGuestOrderRequest;
 use App\Services\GuestTableOrderService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GuestTableOrderController extends Controller
 {
@@ -13,10 +14,10 @@ class GuestTableOrderController extends Controller
         private readonly GuestTableOrderService $service,
     ) {}
 
-    public function show(string $token): JsonResponse
+    public function show(Request $request, string $token): JsonResponse
     {
         return response()->json([
-            'data' => $this->service->getTableOrderPage($token),
+            'data' => $this->service->getTableOrderPage($token, $request->query('lang')),
         ]);
     }
 

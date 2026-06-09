@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Restaurant;
 use App\Repositories\MenuSlideRepository;
+use App\Support\LocalizedText;
 use App\Support\MenuAssetUrl;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -13,10 +14,12 @@ class PublicMenuService
 {
     public function __construct(
         private readonly MenuSlideRepository $slideRepository,
+        private readonly MenuTranslationService $translationService,
     ) {}
 
-    public function getMenu(string $identifier): array
+    public function getMenu(string $identifier, ?string $lang = null): array
     {
+        $lang = LocalizedText::normalizeLang($lang);
         $restaurant = $this->findRestaurant($identifier);
 
         if (! $restaurant) {
@@ -35,8 +38,50 @@ class PublicMenuService
             ->get()
             ->groupBy('category_id');
 
+        $slides = $this->slideRepository->getActiveByRestaurant($restaurant->id);
+
+        $textsToTranslate = [];
+
+        if ($lang !== 'tr') {
+            set_time_limit(90);
+
+            foreach ($categories as $category) {
+                $textsToTranslate[] = $category->name;
+            }
+
+            foreach ($products->flatten() as $product) {
+                $textsToTranslate[] = $product->name;
+
+                if ($product->description) {
+                    $textsToTranslate[] = $product->description;
+                }
+            }
+
+            if ($restaurant->menu_tagline) {
+                $textsToTranslate[] = $restaurant->menu_tagline;
+            }
+
+            if ($restaurant->menu_welcome_text) {
+                $textsToTranslate[] = $restaurant->menu_welcome_text;
+            }
+
+            foreach ($slides as $slide) {
+                $textsToTranslate[] = $slide->title;
+
+                if ($slide->subtitle) {
+                    $textsToTranslate[] = $slide->subtitle;
+                }
+            }
+        }
+
+        $translations = $lang === 'tr'
+            ? []
+            : $this->translationService->translateMany($textsToTranslate, $lang);
+
+        $translate = fn (?string $text): ?string => $this->resolveText($text, $lang, $translations);
+
         $menuCategories = $categories
-            ->map(function (Category $category) use ($products) {
+            ->map(function (Category $category) use ($products, $translate) {
                 $categoryProducts = $products->get($category->id, collect());
 
                 if ($categoryProducts->isEmpty()) {
@@ -45,23 +90,22 @@ class PublicMenuService
 
                 return [
                     'id' => $category->id,
-                    'name' => $category->name,
+                    'name' => $translate($category->name),
                     'image_path' => $category->image_path,
                     'image_url' => MenuAssetUrl::resolve($category->image_path),
                     'products' => $categoryProducts
-                        ->map(fn (Product $product) => $this->formatProduct($product))
+                        ->map(fn (Product $product) => $this->formatProduct($product, $translate))
                         ->values(),
                 ];
             })
             ->filter()
             ->values();
 
-        $slides = $this->slideRepository
-            ->getActiveByRestaurant($restaurant->id)
+        $formattedSlides = $slides
             ->map(fn ($slide) => [
                 'id' => $slide->id,
-                'title' => $slide->title,
-                'subtitle' => $slide->subtitle,
+                'title' => $translate($slide->title),
+                'subtitle' => $translate($slide->subtitle),
                 'image_path' => $slide->image_path,
                 'image_url' => $slide->image_url,
                 'link_url' => $slide->link_url,
@@ -75,26 +119,52 @@ class PublicMenuService
                 'slug' => $restaurant->slug,
             ],
             'menu_settings' => [
-                'tagline' => $restaurant->menu_tagline,
-                'welcome_text' => $restaurant->menu_welcome_text,
+                'tagline' => $translate($restaurant->menu_tagline),
+                'welcome_text' => $translate($restaurant->menu_welcome_text),
             ],
-            'slides' => $slides,
+            'slides' => $formattedSlides,
             'categories' => $menuCategories,
+            'language' => $lang,
         ];
     }
 
-    public function formatProduct(Product $product): array
+    /**
+     * @param  callable(?string): ?string  $translate
+     */
+    public function formatProduct(Product $product, callable $translate): array
     {
         return [
             'id' => $product->id,
-            'name' => $product->name,
-            'description' => $product->description,
+            'name' => $translate($product->name),
+            'description' => $translate($product->description),
             'price' => number_format((float) $product->price, 2, '.', ''),
             'image_path' => $product->image_path,
             'image_url' => MenuAssetUrl::resolve($product->image_path),
             'calories' => $product->calories,
             'allergens' => $product->allergens ?? [],
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $translations
+     */
+    private function resolveText(?string $text, string $lang, array $translations): ?string
+    {
+        if ($text === null) {
+            return null;
+        }
+
+        $text = trim($text);
+
+        if ($text === '') {
+            return null;
+        }
+
+        if ($lang === 'tr') {
+            return $text;
+        }
+
+        return $translations[$text] ?? $text;
     }
 
     private function findRestaurant(string $identifier): ?Restaurant

@@ -15,10 +15,12 @@ class Category extends Model
     protected $fillable = [
         'restaurant_id',
         'name',
+        'name_translations',
         'image_path',
     ];
 
     protected $casts = [
+        'name_translations' => 'array',
         'created_at' => 'datetime',
     ];
 
