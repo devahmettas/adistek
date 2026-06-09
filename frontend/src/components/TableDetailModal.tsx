@@ -36,6 +36,35 @@ import {
 
 type ViewMode = 'main' | 'categories' | 'products' | 'bill'
 
+function ModalBackButton({
+  onClick,
+  className = '',
+}: {
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Önceki sayfaya dön"
+      className={`inline-flex h-11 items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 text-sm font-semibold text-blue-800 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[0.98] ${className}`}
+    >
+      <svg
+        className="h-5 w-5 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Geri
+    </button>
+  )
+}
+
 interface TableDetailModalProps {
   table: RestaurantTable
   categories: Category[]
@@ -408,13 +437,7 @@ export default function TableDetailModal({
           {isBillView ? (
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={goBack}
-                  className="shrink-0 text-xs font-medium text-blue-700 hover:text-blue-800 sm:text-sm"
-                >
-                  ← Geri
-                </button>
+                <ModalBackButton onClick={goBack} className="h-9 shrink-0 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm" />
                 <h2 className="truncate text-sm font-bold text-gray-900 sm:text-base">{table.name}</h2>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <TableStatusBadge status={displayStatus} />
@@ -438,52 +461,46 @@ export default function TableDetailModal({
             </div>
           ) : (
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                {view !== 'main' && (
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    className="mb-1 text-xs font-medium text-blue-700 hover:text-blue-800"
-                  >
-                    ← Geri
-                  </button>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold text-gray-900">{table.name}</h2>
-                  <div className="relative flex flex-wrap items-center gap-1.5">
-                    <TableStatusBadge
-                      status={displayStatus}
-                      onClick={
-                        onChangeStatus
-                          ? (event) => {
-                              event.stopPropagation()
-                              setStatusMenuOpen((open) => !open)
-                            }
-                          : undefined
-                      }
-                    />
-                    <TableTodayReservationHint reservations={table.today_reservations ?? []} />
-                    {statusMenuOpen && onChangeStatus && (
-                      <TableStatusPicker
-                        variant="large"
-                        status={operationalStatus}
-                        onChange={handleStatusChange}
-                        onClose={() => setStatusMenuOpen(false)}
-                        blockedStatuses={blockedStatuses}
-                        onBlockedStatus={handleBlockedStatus}
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                {view !== 'main' && <ModalBackButton onClick={goBack} className="shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-bold text-gray-900">{table.name}</h2>
+                    <div className="relative flex flex-wrap items-center gap-1.5">
+                      <TableStatusBadge
+                        status={displayStatus}
+                        onClick={
+                          onChangeStatus
+                            ? (event) => {
+                                event.stopPropagation()
+                                setStatusMenuOpen((open) => !open)
+                              }
+                            : undefined
+                        }
                       />
-                    )}
+                      <TableTodayReservationHint reservations={table.today_reservations ?? []} />
+                      {statusMenuOpen && onChangeStatus && (
+                        <TableStatusPicker
+                          variant="large"
+                          status={operationalStatus}
+                          onChange={handleStatusChange}
+                          onClose={() => setStatusMenuOpen(false)}
+                          blockedStatuses={blockedStatuses}
+                          onBlockedStatus={handleBlockedStatus}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-                {waiterName && (
-                  <p className="mt-0.5 truncate text-xs font-medium text-indigo-700">
-                    Garson: {waiterName}
-                  </p>
-                )}
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600">
-                  <span className="font-bold text-blue-700">{total.toFixed(2)} ₺</span>
-                  <span>{itemCount} ürün</span>
-                  <span>{duration ?? 'Boş'}</span>
+                  {waiterName && (
+                    <p className="mt-0.5 truncate text-xs font-medium text-indigo-700">
+                      Garson: {waiterName}
+                    </p>
+                  )}
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600">
+                    <span className="font-bold text-blue-700">{total.toFixed(2)} ₺</span>
+                    <span>{itemCount} ürün</span>
+                    <span>{duration ?? 'Boş'}</span>
+                  </div>
                 </div>
               </div>
               <button
