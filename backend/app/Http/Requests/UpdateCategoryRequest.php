@@ -15,6 +15,7 @@ class UpdateCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'image_path' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

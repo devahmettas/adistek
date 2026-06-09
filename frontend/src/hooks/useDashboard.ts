@@ -126,20 +126,23 @@ export default function useDashboard() {
     return () => window.clearInterval(interval)
   }, [fetchData])
 
-  const addCategory = async (name: string) => {
-    await createCategory(name)
+  const addCategory = async (name: string, image_path?: string | null) => {
+    await createCategory({ name, image_path })
     await fetchData(true)
   }
 
-  const editCategory = async (categoryId: number, name: string) => {
-    const updatedCategory = await updateCategory(categoryId, name)
+  const editCategory = async (
+    categoryId: number,
+    payload: { name: string; image_path?: string | null },
+  ) => {
+    const updatedCategory = await updateCategory(categoryId, payload)
     setCategories((prev) =>
       prev.map((category) => (category.id === categoryId ? updatedCategory : category)),
     )
     setProducts((prev) =>
       prev.map((product) =>
         product.category_id === categoryId && product.category
-          ? { ...product, category: { ...product.category, name: updatedCategory.name } }
+          ? { ...product, category: { ...product.category, ...updatedCategory } }
           : product,
       ),
     )

@@ -12,6 +12,8 @@ export interface Category {
   id: number
   restaurant_id: number
   name: string
+  image_path?: string | null
+  image_url?: string | null
   created_at: string
 }
 

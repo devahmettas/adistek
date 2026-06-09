@@ -46,6 +46,8 @@ class PublicMenuService
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
+                    'image_path' => $category->image_path,
+                    'image_url' => MenuAssetUrl::resolve($category->image_path),
                     'products' => $categoryProducts
                         ->map(fn (Product $product) => $this->formatProduct($product))
                         ->values(),

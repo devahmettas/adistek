@@ -16,7 +16,7 @@ class MenuUploadService
 
     public function upload(int $restaurantId, UploadedFile $file, string $context): array
     {
-        if (! in_array($context, ['product', 'slide'], true)) {
+        if (! in_array($context, ['product', 'slide', 'category'], true)) {
             throw new UnprocessableEntityHttpException('Geçersiz yükleme türü.');
         }
 
@@ -30,7 +30,12 @@ class MenuUploadService
 
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
         $filename = Str::uuid().'.'.$extension;
-        $directory = "menu/{$restaurantId}/{$context}s";
+        $directoryNames = [
+            'product' => 'products',
+            'slide' => 'slides',
+            'category' => 'categories',
+        ];
+        $directory = "menu/{$restaurantId}/{$directoryNames[$context]}";
         $path = $file->storeAs($directory, $filename, 'public');
 
         return [

@@ -15,7 +15,7 @@ class UploadMenuImageRequest extends FormRequest
     {
         return [
             'image' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
-            'context' => ['required', 'in:product,slide'],
+            'context' => ['required', 'in:product,slide,category'],
         ];
     }
 }

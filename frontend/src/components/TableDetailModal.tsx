@@ -13,6 +13,7 @@ import {
   type PartialPayItem,
 } from '../utils/billHelpers'
 import Button from './Button'
+import StaffCategoryPickerCard from './StaffCategoryPickerCard'
 import StaffProductAddPanel from './StaffProductAddPanel'
 import StaffProductPickerCard from './StaffProductPickerCard'
 import StaffActionToasts, { useStaffToasts } from './StaffActionToasts'
@@ -662,16 +663,17 @@ export default function TableDetailModal({
               {categories.length === 0 ? (
                 <p className="text-sm text-gray-500">Önce kategori ekleyin.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {categories.map((category) => {
                     const count = activeProducts.filter(
                       (product) => product.category_id === category.id,
                     ).length
 
                     return (
-                      <button
+                      <StaffCategoryPickerCard
                         key={category.id}
-                        type="button"
+                        category={category}
+                        productCount={count}
                         disabled={count === 0}
                         onClick={() => {
                           setSelectedCategory(category)
@@ -679,13 +681,7 @@ export default function TableDetailModal({
                           resetAddForm()
                           setFeedback(null)
                         }}
-                        className="flex min-h-[4.5rem] flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50 p-2 text-center transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <span className="text-xs font-bold leading-tight text-gray-900 sm:text-sm">
-                          {category.name}
-                        </span>
-                        <span className="mt-1 text-[10px] text-gray-600 sm:text-xs">{count} ürün</span>
-                      </button>
+                      />
                     )
                   })}
                 </div>

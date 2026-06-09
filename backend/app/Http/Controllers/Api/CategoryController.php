@@ -33,6 +33,7 @@ class CategoryController extends Controller
         $category = $this->service->create([
             'restaurant_id' => $request->user()->id,
             'name' => $request->validated('name'),
+            'image_path' => $request->validated('image_path'),
         ]);
 
         return response()->json([

@@ -4,6 +4,7 @@ import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
 import MenuProductCard from '../components/menu/MenuProductCard'
 import { getPublicMenu, type PublicMenu, type PublicMenuCategory } from '../api/publicMenu'
+import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
 
 function CategorySection({
   category,
@@ -12,9 +13,18 @@ function CategorySection({
   category: PublicMenuCategory
   sectionRef: (element: HTMLElement | null) => void
 }) {
+  const categoryImageUrl = resolveMenuAssetUrl(category.image_url, category.image_path)
+
   return (
     <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
       <div className="mb-5 flex items-center gap-4">
+        {categoryImageUrl && (
+          <img
+            src={categoryImageUrl}
+            alt={category.name}
+            className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover shadow-sm"
+          />
+        )}
         <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{category.name}</h2>
         <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">

@@ -14,6 +14,7 @@ class CategoryService
     public function __construct(
         private readonly CategoryRepository $repository,
         private readonly RestaurantRepository $restaurantRepository,
+        private readonly MenuUploadService $uploadService,
     ) {}
 
     public function listByRestaurant(int $restaurantId): Collection
@@ -38,8 +39,13 @@ class CategoryService
             throw new NotFoundHttpException('Kategori bulunamadı.');
         }
 
+        if (array_key_exists('image_path', $data) && $data['image_path'] !== $category->image_path) {
+            $this->uploadService->delete($category->image_path);
+        }
+
         return $this->repository->update($category, [
             'name' => $data['name'],
+            'image_path' => $data['image_path'] ?? $category->image_path,
         ]);
     }
 
@@ -55,6 +61,7 @@ class CategoryService
             throw new UnprocessableEntityHttpException('Ürün bulunan kategori silinemez.');
         }
 
+        $this->uploadService->delete($category->image_path);
         $this->repository->delete($category);
     }
 

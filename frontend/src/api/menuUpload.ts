@@ -8,7 +8,7 @@ export interface MenuUploadResult {
 
 export const uploadMenuImage = async (
   file: File,
-  context: 'product' | 'slide',
+  context: 'product' | 'slide' | 'category',
 ): Promise<MenuUploadResult> => {
   const formData = new FormData()
   formData.append('image', file)

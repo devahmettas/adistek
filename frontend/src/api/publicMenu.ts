@@ -23,6 +23,8 @@ export interface PublicMenuProduct {
 export interface PublicMenuCategory {
   id: number
   name: string
+  image_path: string | null
+  image_url: string | null
   products: PublicMenuProduct[]
 }
 

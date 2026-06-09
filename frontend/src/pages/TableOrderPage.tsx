@@ -10,6 +10,7 @@ import {
   type TableOrderPage,
 } from '../api/tableOrder'
 import type { PublicMenuCategory, PublicMenuProduct } from '../api/publicMenu'
+import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
 
 interface CartItem {
   cartId: string
@@ -45,9 +46,18 @@ function CategorySection({
   onAdd: (product: PublicMenuProduct) => void
   sectionRef: (element: HTMLElement | null) => void
 }) {
+  const categoryImageUrl = resolveMenuAssetUrl(category.image_url, category.image_path)
+
   return (
     <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
       <div className="mb-4 flex items-center gap-4">
+        {categoryImageUrl && (
+          <img
+            src={categoryImageUrl}
+            alt={category.name}
+            className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover shadow-sm"
+          />
+        )}
         <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{category.name}</h2>
         <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
       </div>

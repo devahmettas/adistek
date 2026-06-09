@@ -5,7 +5,7 @@ import Button from './Button'
 
 interface ImageUploadFieldProps {
   label: string
-  context: 'product' | 'slide'
+  context: 'product' | 'slide' | 'category'
   imageUrl?: string | null
   imagePath?: string | null
   onChange: (payload: { path: string | null; url: string | null }) => void

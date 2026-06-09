@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import CategoryList from '../../components/CategoryList'
+import ImageUploadField from '../../components/ImageUploadField'
 import Input from '../../components/Input'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
@@ -11,6 +12,8 @@ export default function CategoriesPage() {
   const { categories, products, loading, error, addCategory, editCategory, removeCategory } =
     useDashboardData()
   const [categoryName, setCategoryName] = useState('')
+  const [categoryImagePath, setCategoryImagePath] = useState<string | null>(null)
+  const [categoryImageUrl, setCategoryImageUrl] = useState<string | null>(null)
   const [categoryError, setCategoryError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -26,8 +29,10 @@ export default function CategoriesPage() {
     setSubmitting(true)
 
     try {
-      await addCategory(categoryName.trim())
+      await addCategory(categoryName.trim(), categoryImagePath)
       setCategoryName('')
+      setCategoryImagePath(null)
+      setCategoryImageUrl(null)
     } catch {
       setCategoryError('Kategori eklenemedi.')
     } finally {
@@ -55,6 +60,16 @@ export default function CategoriesPage() {
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
                 placeholder="Örn: İçecekler"
+              />
+              <ImageUploadField
+                label="Kategori Görseli"
+                context="category"
+                imagePath={categoryImagePath}
+                imageUrl={categoryImageUrl}
+                onChange={({ path, url }) => {
+                  setCategoryImagePath(path)
+                  setCategoryImageUrl(url)
+                }}
               />
               {categoryError && <p className="alert-error">{categoryError}</p>}
               <Button type="submit" disabled={submitting}>
