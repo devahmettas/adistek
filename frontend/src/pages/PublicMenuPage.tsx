@@ -52,17 +52,24 @@ export default function PublicMenuPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
+  const hasMenuRef = useRef(false)
 
   useEffect(() => {
     if (!identifier) {
       return
     }
 
-    setLoading(true)
+    const showLoadingOverlay = !hasMenuRef.current || language !== 'tr'
+
+    if (showLoadingOverlay) {
+      setLoading(true)
+    }
+
     setError(null)
 
     getPublicMenu(identifier, language)
       .then((data) => {
+        hasMenuRef.current = true
         setMenu(data)
         setActiveCategoryId(data.categories[0]?.id ?? null)
       })
@@ -70,7 +77,9 @@ export default function PublicMenuPage() {
         setError(t('common.menuNotFound'))
       })
       .finally(() => {
-        setLoading(false)
+        if (showLoadingOverlay) {
+          setLoading(false)
+        }
       })
   }, [identifier, language, t])
 

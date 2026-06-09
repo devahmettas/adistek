@@ -162,7 +162,7 @@ export default function TableOrderPage() {
     }
 
     try {
-      const data = await getTableOrderPage(token)
+      const data = await getTableOrderPage(token, language)
       setPage(data)
       setSessionToken(data.session_token)
       setActiveCategoryId((current) => current ?? data.categories[0]?.id ?? null)
@@ -178,7 +178,7 @@ export default function TableOrderPage() {
   }
 
   useEffect(() => {
-    void loadPage()
+    void loadPage({ silent: page !== null && language === 'tr' })
   }, [token, language])
 
   useEffect(() => {

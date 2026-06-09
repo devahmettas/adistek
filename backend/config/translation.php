@@ -7,7 +7,7 @@ return [
 
     'cache_ttl' => (int) env('MENU_TRANSLATION_CACHE_TTL', 60 * 60 * 24 * 7),
 
-    'request_timeout' => (int) env('MENU_TRANSLATION_TIMEOUT', 6),
+    'request_timeout' => (int) env('MENU_TRANSLATION_TIMEOUT', 10),
 
     'verify_ssl' => env('MENU_TRANSLATION_VERIFY_SSL', env('APP_ENV', 'production') === 'production'),
 

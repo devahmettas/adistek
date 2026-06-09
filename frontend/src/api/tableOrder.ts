@@ -44,7 +44,7 @@ export const getTableOrderPage = async (
   lang?: MenuLanguage,
 ): Promise<TableOrderPage> => {
   const { data } = await publicClient.get<{ data: TableOrderPage }>(`/public/table/${token}`, {
-    params: lang ? { lang } : undefined,
+    params: lang && lang !== 'tr' ? { lang } : undefined,
   })
   return data.data
 }

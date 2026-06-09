@@ -256,7 +256,8 @@ class MenuTranslationService
 
     private function httpClient(): PendingRequest
     {
-        $client = Http::timeout(config('translation.request_timeout'));
+        $client = Http::timeout(config('translation.request_timeout'))
+            ->retry(2, 250, throw: false);
 
         if (! config('translation.verify_ssl')) {
             $client = $client->withoutVerifying();

@@ -59,7 +59,7 @@ export const getPublicMenu = async (
   lang?: MenuLanguage,
 ): Promise<PublicMenu> => {
   const { data } = await publicClient.get<{ data: PublicMenu }>(`/public/menu/${identifier}`, {
-    params: lang ? { lang } : undefined,
+    params: lang && lang !== 'tr' ? { lang } : undefined,
   })
   return data.data
 }
