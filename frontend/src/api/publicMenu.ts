@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { AllergenKey } from '../constants/allergens'
 
 const publicClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -13,6 +14,10 @@ export interface PublicMenuProduct {
   name: string
   description: string | null
   price: string
+  image_path: string | null
+  image_url: string | null
+  calories: number | null
+  allergens: AllergenKey[]
 }
 
 export interface PublicMenuCategory {
@@ -21,12 +26,28 @@ export interface PublicMenuCategory {
   products: PublicMenuProduct[]
 }
 
+export interface PublicMenuSlide {
+  id: number
+  title: string
+  subtitle: string | null
+  image_path: string | null
+  image_url: string | null
+  link_url: string | null
+}
+
+export interface PublicMenuSettings {
+  tagline: string | null
+  welcome_text: string | null
+}
+
 export interface PublicMenu {
   restaurant: {
     id: number
     name: string
     slug: string | null
   }
+  menu_settings: PublicMenuSettings
+  slides: PublicMenuSlide[]
   categories: PublicMenuCategory[]
 }
 

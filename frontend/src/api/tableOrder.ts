@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { PublicMenuCategory } from './publicMenu'
+import type { PublicMenuCategory, PublicMenuSettings, PublicMenuSlide } from './publicMenu'
 
 const publicClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -19,6 +19,8 @@ export interface TableOrderPage {
     name: string
     slug: string | null
   }
+  menu_settings: PublicMenuSettings
+  slides: PublicMenuSlide[]
   categories: PublicMenuCategory[]
   can_order: boolean
   session_token: string | null

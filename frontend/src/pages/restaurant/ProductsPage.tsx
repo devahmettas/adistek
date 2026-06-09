@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import type { AllergenKey } from '../../constants/allergens'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import Input from '../../components/Input'
@@ -7,6 +8,8 @@ import PageHeader from '../../components/PageHeader'
 import ProductList from '../../components/ProductList'
 import Select from '../../components/Select'
 import Textarea from '../../components/Textarea'
+import AllergenPicker from '../../components/AllergenPicker'
+import ImageUploadField from '../../components/ImageUploadField'
 import { useDashboardData } from '../../context/DashboardContext'
 
 export default function ProductsPage() {
@@ -24,6 +27,10 @@ export default function ProductsPage() {
   const [productName, setProductName] = useState('')
   const [productPrice, setProductPrice] = useState('')
   const [productDescription, setProductDescription] = useState('')
+  const [productCalories, setProductCalories] = useState('')
+  const [productAllergens, setProductAllergens] = useState<AllergenKey[]>([])
+  const [productImagePath, setProductImagePath] = useState<string | null>(null)
+  const [productImageUrl, setProductImageUrl] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState('')
   const [productError, setProductError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -48,6 +55,12 @@ export default function ProductsPage() {
       return
     }
 
+    const calories = productCalories.trim() === '' ? null : Number(productCalories)
+    if (calories != null && (Number.isNaN(calories) || calories < 0)) {
+      setProductError('Geçerli bir kalori değeri girin.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -56,10 +69,17 @@ export default function ProductsPage() {
         name: productName.trim(),
         price,
         description: productDescription.trim() || undefined,
+        image_path: productImagePath,
+        calories,
+        allergens: productAllergens,
       })
       setProductName('')
       setProductPrice('')
       setProductDescription('')
+      setProductCalories('')
+      setProductAllergens([])
+      setProductImagePath(null)
+      setProductImageUrl(null)
     } catch {
       setProductError('Ürün eklenemedi.')
     } finally {
@@ -69,14 +89,20 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Ürünler" description="Menü ürünlerini ekleyin, fiyatlandırın ve yönetin." />
+      <PageHeader
+        title="Ürünler"
+        description="Menü ürünlerini görseller, kalori ve alerjen bilgileriyle yönetin."
+      />
 
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
-          <Card title="Ürün Ekle" description="Aktif ürünler müşteri menüsünde görünür.">
+          <Card
+            title="Ürün Ekle"
+            description="Aktif ürünler müşteri menüsünde görsel kartlar olarak listelenir."
+          >
             <form onSubmit={handleSubmit} className="space-y-4">
               <Select
                 label="Kategori"
@@ -116,6 +142,26 @@ export default function ProductsPage() {
                 onChange={(event) => setProductDescription(event.target.value)}
                 placeholder="Opsiyonel açıklama"
               />
+              <Input
+                label="Kalori (kcal)"
+                name="productCalories"
+                type="number"
+                min="0"
+                value={productCalories}
+                onChange={(event) => setProductCalories(event.target.value)}
+                placeholder="Örn: 320"
+              />
+              <ImageUploadField
+                label="Ürün Görseli"
+                context="product"
+                imagePath={productImagePath}
+                imageUrl={productImageUrl}
+                onChange={({ path, url }) => {
+                  setProductImagePath(path)
+                  setProductImageUrl(url)
+                }}
+              />
+              <AllergenPicker value={productAllergens} onChange={setProductAllergens} />
               {productError && <p className="alert-error">{productError}</p>}
               <Button type="submit" disabled={submitting || categories.length === 0}>
                 {submitting ? 'Kaydediliyor...' : 'Ürün Ekle'}

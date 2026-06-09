@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Repositories\CategoryRepository;
 use App\Repositories\ProductRepository;
 use App\Repositories\RestaurantRepository;
+use App\Services\MenuUploadService;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -16,6 +17,7 @@ class ProductService
         private readonly ProductRepository $repository,
         private readonly RestaurantRepository $restaurantRepository,
         private readonly CategoryRepository $categoryRepository,
+        private readonly MenuUploadService $uploadService,
     ) {}
 
     public function listByRestaurant(int $restaurantId): Collection
@@ -51,12 +53,21 @@ class ProductService
         $product = $this->findForRestaurant($restaurantId, $productId);
         $this->ensureCategoryBelongsToRestaurant($data['category_id'], $restaurantId);
 
+        if (array_key_exists('image_path', $data) && $data['image_path'] !== $product->image_path) {
+            $this->uploadService->delete($product->image_path);
+        }
+
+        if (array_key_exists('allergens', $data) && $data['allergens'] === null) {
+            $data['allergens'] = [];
+        }
+
         return $this->repository->update($product, $data);
     }
 
     public function delete(int $restaurantId, int $productId): void
     {
         $product = $this->findForRestaurant($restaurantId, $productId);
+        $this->uploadService->delete($product->image_path);
         $this->repository->delete($product);
     }
 

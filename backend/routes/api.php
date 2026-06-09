@@ -10,6 +10,9 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\RestaurantSettingsController;
 use App\Http\Controllers\Api\GuestTableOrderController;
+use App\Http\Controllers\Api\MenuSettingsController;
+use App\Http\Controllers\Api\MenuSlideController;
+use App\Http\Controllers\Api\MenuUploadController;
 use App\Http\Controllers\Api\PublicMenuController;
 use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\TableController;
@@ -78,6 +81,16 @@ Route::middleware(['auth:sanctum', 'restaurant'])->group(function () {
 
     Route::get('/restaurant/settings', [RestaurantSettingsController::class, 'show']);
     Route::patch('/restaurant/settings', [RestaurantSettingsController::class, 'update']);
+
+    Route::get('/restaurant/menu-settings', [MenuSettingsController::class, 'show']);
+    Route::patch('/restaurant/menu-settings', [MenuSettingsController::class, 'update']);
+
+    Route::get('/menu-slides', [MenuSlideController::class, 'index']);
+    Route::post('/menu-slides', [MenuSlideController::class, 'store']);
+    Route::put('/menu-slides/{menuSlide}', [MenuSlideController::class, 'update']);
+    Route::delete('/menu-slides/{menuSlide}', [MenuSlideController::class, 'destroy']);
+
+    Route::post('/menu/uploads', [MenuUploadController::class, 'store']);
 
     Route::get('/reservations', [TableReservationController::class, 'index']);
     Route::post('/reservations', [TableReservationController::class, 'store']);

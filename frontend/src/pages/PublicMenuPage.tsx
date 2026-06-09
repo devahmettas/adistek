@@ -2,11 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
+import MenuProductCard from '../components/menu/MenuProductCard'
 import { getPublicMenu, type PublicMenu, type PublicMenuCategory } from '../api/publicMenu'
-
-function formatPrice(price: string): string {
-  return `${Number(price).toFixed(2)} ₺`
-}
 
 function CategorySection({
   category,
@@ -18,28 +15,16 @@ function CategorySection({
   return (
     <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
       <div className="mb-5 flex items-center gap-4">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">{category.name}</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{category.name}</h2>
         <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+          {category.products.length}
+        </span>
       </div>
 
-      <div className="grid gap-3">
-        {category.products.map((product) => (
-          <article
-            key={product.id}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition hover:border-brand-200 hover:shadow-panel"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
-                {product.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{product.description}</p>
-                )}
-              </div>
-              <p className="shrink-0 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-800">
-                {formatPrice(product.price)}
-              </p>
-            </div>
-          </article>
+      <div className="grid gap-4">
+        {category.products.map((product, index) => (
+          <MenuProductCard key={product.id} product={product} index={index} />
         ))}
       </div>
     </section>
@@ -129,7 +114,8 @@ export default function PublicMenuPage() {
     <PublicPageShell
       eyebrow="Menü"
       title={menu.restaurant.name}
-      description="Kategorilere göz atın, ürünleri inceleyin."
+      menuSettings={menu.menu_settings}
+      slides={menu.slides}
       categories={menu.categories}
       activeCategoryId={activeCategoryId}
       onCategoryClick={scrollToCategory}
@@ -146,7 +132,7 @@ export default function PublicMenuPage() {
       ) : (
         <div className="space-y-10">
           {menu.categories.map((category) => (
-            <div key={category.id} data-category-id={category.id}>
+            <div key={category.id} data-category-id={category.id} className="menu-section-reveal">
               <CategorySection
                 category={category}
                 sectionRef={(element) => {

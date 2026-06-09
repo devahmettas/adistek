@@ -1,15 +1,42 @@
+import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
+import Card from '../../components/Card'
+import Input from '../../components/Input'
+import MenuSlidesManager from '../../components/MenuSlidesManager'
 import PageHeader from '../../components/PageHeader'
+import Textarea from '../../components/Textarea'
+import { getMenuSettings, updateMenuSettings } from '../../api/menuSettings'
 import { useAuth } from '../../store/AuthStore'
 
 export default function PublicMenuSharePage() {
   const { restaurant } = useAuth()
+  const [tagline, setTagline] = useState('')
+  const [welcomeText, setWelcomeText] = useState('')
+  const [settingsLoading, setSettingsLoading] = useState(true)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+  const [settingsMessage, setSettingsMessage] = useState<string | null>(null)
+
   const menuPath = restaurant?.slug
     ? `/menu/${restaurant.slug}`
     : restaurant?.id
       ? `/menu/${restaurant.id}`
       : null
   const menuUrl = menuPath ? `${window.location.origin}${menuPath}` : null
+
+  useEffect(() => {
+    getMenuSettings()
+      .then((settings) => {
+        setTagline(settings.menu_tagline ?? '')
+        setWelcomeText(settings.menu_welcome_text ?? '')
+      })
+      .catch(() => {
+        setSettingsError('Menü ayarları yüklenemedi.')
+      })
+      .finally(() => {
+        setSettingsLoading(false)
+      })
+  }, [])
 
   const copyLink = async () => {
     if (!menuUrl) {
@@ -24,11 +51,30 @@ export default function PublicMenuSharePage() {
     }
   }
 
+  const handleSettingsSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    setSettingsSaving(true)
+    setSettingsError(null)
+    setSettingsMessage(null)
+
+    try {
+      await updateMenuSettings({
+        menu_tagline: tagline.trim() || null,
+        menu_welcome_text: welcomeText.trim() || null,
+      })
+      setSettingsMessage('Menü görünüm ayarları kaydedildi.')
+    } catch {
+      setSettingsError('Menü ayarları kaydedilemedi.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Müşteri Menüsü"
-        description="Müşterileriniz bu linkten menünüzü görüntüleyebilir. Giriş gerekmez."
+        description="QR menü görünümünü, slaytları ve paylaşım linkini buradan yönetin."
       />
 
       <div className="panel-surface overflow-hidden">
@@ -58,19 +104,58 @@ export default function PublicMenuSharePage() {
           <ul className="mt-3 space-y-2">
             <li className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
+              Üst slayt alanı, ürün görselleri, kalori ve alerjen ikonları
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
               Yalnızca aktif ürünler listelenir
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
               Ürünü olmayan kategoriler gizlenir
             </li>
-            <li className="flex items-start gap-2">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
-              Fiyat ve açıklamalar müşteriye açık şekilde gösterilir
-            </li>
           </ul>
         </div>
       </div>
+
+      <Card
+        title="Menü Görünüm Ayarları"
+        description="Müşteri menüsündeki başlık altı metinleri özelleştirin."
+      >
+        {settingsLoading ? (
+          <p className="text-sm text-slate-500">Ayarlar yükleniyor...</p>
+        ) : (
+          <form onSubmit={handleSettingsSubmit} className="space-y-4">
+            <Input
+              label="Kısa Slogan"
+              name="menuTagline"
+              value={tagline}
+              onChange={(event) => setTagline(event.target.value)}
+              placeholder="Örn: Taze malzemeler, özenli sunum"
+            />
+            <Textarea
+              label="Karşılama Metni"
+              name="menuWelcomeText"
+              rows={3}
+              value={welcomeText}
+              onChange={(event) => setWelcomeText(event.target.value)}
+              placeholder="Müşterilerinize kısa bir hoş geldiniz mesajı yazın."
+            />
+            {settingsError && <p className="text-sm text-red-600">{settingsError}</p>}
+            {settingsMessage && <p className="text-sm text-emerald-700">{settingsMessage}</p>}
+            <Button type="submit" disabled={settingsSaving}>
+              {settingsSaving ? 'Kaydediliyor...' : 'Görünüm Ayarlarını Kaydet'}
+            </Button>
+          </form>
+        )}
+      </Card>
+
+      <Card
+        title="Menü Slaytları"
+        description="QR menü üstünde dönen kampanya ve vitrin görsellerini yönetin."
+      >
+        <MenuSlidesManager />
+      </Card>
     </div>
   )
 }

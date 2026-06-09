@@ -1,8 +1,14 @@
 import { FormEvent, useState } from 'react'
+import type { AllergenKey } from '../constants/allergens'
 import Button from './Button'
 import Input from './Input'
 import Select from './Select'
 import Textarea from './Textarea'
+import AllergenPicker from './AllergenPicker'
+import ImageUploadField from './ImageUploadField'
+import AllergenBadges from './menu/AllergenBadges'
+import CalorieBadge from './menu/CalorieBadge'
+import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
 import type { Category, Product } from '../api/types'
 
 interface ProductListProps {
@@ -15,6 +21,9 @@ interface ProductListProps {
       name: string
       price: number
       description?: string | null
+      image_path?: string | null
+      calories?: number | null
+      allergens?: AllergenKey[]
       is_active: boolean
     },
   ) => Promise<void>
@@ -37,6 +46,10 @@ export default function ProductList({
   const [editCategoryId, setEditCategoryId] = useState('')
   const [editPrice, setEditPrice] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editCalories, setEditCalories] = useState('')
+  const [editAllergens, setEditAllergens] = useState<AllergenKey[]>([])
+  const [editImagePath, setEditImagePath] = useState<string | null>(null)
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
   const [editIsActive, setEditIsActive] = useState(true)
   const [editError, setEditError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -48,6 +61,10 @@ export default function ProductList({
     setEditCategoryId(String(product.category_id))
     setEditPrice(String(product.price))
     setEditDescription(product.description || '')
+    setEditCalories(product.calories != null ? String(product.calories) : '')
+    setEditAllergens(product.allergens ?? [])
+    setEditImagePath(product.image_path)
+    setEditImageUrl(product.image_url)
     setEditIsActive(product.is_active)
     setEditError(null)
   }
@@ -80,11 +97,21 @@ export default function ProductList({
     setSubmitting(true)
 
     try {
+      const calories = editCalories.trim() === '' ? null : Number(editCalories)
+
+      if (calories != null && (Number.isNaN(calories) || calories < 0)) {
+        setEditError('Geçerli bir kalori değeri girin.')
+        return
+      }
+
       await onUpdate(productId, {
         category_id: Number(editCategoryId),
         name: editName.trim(),
         price,
         description: editDescription.trim() || null,
+        image_path: editImagePath,
+        calories,
+        allergens: editAllergens,
         is_active: editIsActive,
       })
       setEditingId(null)
@@ -220,6 +247,29 @@ export default function ProductList({
                           onChange={(event) => setEditDescription(event.target.value)}
                         />
                       </div>
+                      <Input
+                        label="Kalori (kcal)"
+                        name={`editCalories-${product.id}`}
+                        type="number"
+                        min="0"
+                        value={editCalories}
+                        onChange={(event) => setEditCalories(event.target.value)}
+                      />
+                      <div className="md:col-span-2">
+                        <ImageUploadField
+                          label="Ürün Görseli"
+                          context="product"
+                          imagePath={editImagePath}
+                          imageUrl={editImageUrl}
+                          onChange={({ path, url }) => {
+                            setEditImagePath(path)
+                            setEditImageUrl(url)
+                          }}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <AllergenPicker value={editAllergens} onChange={setEditAllergens} />
+                      </div>
                       {editError && (
                         <p className="text-sm text-red-600 md:col-span-2">{editError}</p>
                       )}
@@ -237,10 +287,33 @@ export default function ProductList({
               ) : (
                 <tr key={product.id} className="border-b border-gray-100 last:border-0">
                   <td className="px-3 py-3">
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    {product.description && (
-                      <p className="mt-1 text-xs text-gray-500">{product.description}</p>
-                    )}
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                        {resolveMenuAssetUrl(product.image_url, product.image_path) ? (
+                          <img
+                            src={resolveMenuAssetUrl(product.image_url, product.image_path)!}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[10px] text-slate-400">
+                            Görsel yok
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{product.name}</p>
+                        {product.description && (
+                          <p className="mt-1 text-xs text-gray-500">{product.description}</p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {product.calories != null && product.calories > 0 && (
+                            <CalorieBadge calories={product.calories} compact />
+                          )}
+                        </div>
+                        <AllergenBadges allergens={product.allergens ?? []} compact />
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-gray-600">
                     {product.category?.name || '-'}
@@ -345,6 +418,25 @@ export default function ProductList({
                 value={editDescription}
                 onChange={(event) => setEditDescription(event.target.value)}
               />
+              <Input
+                label="Kalori (kcal)"
+                name={`mobileEditCalories-${product.id}`}
+                type="number"
+                min="0"
+                value={editCalories}
+                onChange={(event) => setEditCalories(event.target.value)}
+              />
+              <ImageUploadField
+                label="Ürün Görseli"
+                context="product"
+                imagePath={editImagePath}
+                imageUrl={editImageUrl}
+                onChange={({ path, url }) => {
+                  setEditImagePath(path)
+                  setEditImageUrl(url)
+                }}
+              />
+              <AllergenPicker value={editAllergens} onChange={setEditAllergens} />
               {editError && <p className="text-sm text-red-600">{editError}</p>}
               <div className="flex gap-2">
                 <Button type="submit" disabled={submitting}>
@@ -361,11 +453,26 @@ export default function ProductList({
               className="rounded-lg border border-gray-100 bg-gray-50 p-4"
             >
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-medium text-gray-900">{product.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    {product.category?.name || 'Kategori yok'}
-                  </p>
+                <div className="flex gap-3">
+                  <div className="h-14 w-14 overflow-hidden rounded-lg bg-slate-100">
+                    {resolveMenuAssetUrl(product.image_url, product.image_path) ? (
+                      <img
+                        src={resolveMenuAssetUrl(product.image_url, product.image_path)!}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] text-slate-400">
+                        Görsel yok
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">{product.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {product.category?.name || 'Kategori yok'}
+                    </p>
+                  </div>
                 </div>
                 <span
                   className={`rounded-full px-2 py-1 text-xs font-medium ${
@@ -383,6 +490,12 @@ export default function ProductList({
               {product.description && (
                 <p className="mt-1 text-sm text-gray-600">{product.description}</p>
               )}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {product.calories != null && product.calories > 0 && (
+                  <CalorieBadge calories={product.calories} compact />
+                )}
+              </div>
+              <AllergenBadges allergens={product.allergens ?? []} compact />
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   type="button"

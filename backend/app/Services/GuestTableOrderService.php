@@ -39,6 +39,8 @@ class GuestTableOrderService
                 'name' => $table->name,
             ],
             'restaurant' => $menu['restaurant'],
+            'menu_settings' => $menu['menu_settings'],
+            'slides' => $menu['slides'],
             'categories' => $menu['categories'],
             'can_order' => $canOrder,
             'session_token' => $canOrder ? $table->guest_order_token : null,

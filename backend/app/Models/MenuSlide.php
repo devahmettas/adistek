@@ -6,28 +6,23 @@ use App\Support\MenuAssetUrl;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Product extends Model
+class MenuSlide extends Model
 {
     public $timestamps = false;
 
     protected $fillable = [
         'restaurant_id',
-        'category_id',
-        'name',
-        'price',
-        'description',
+        'title',
+        'subtitle',
         'image_path',
-        'calories',
-        'allergens',
+        'link_url',
+        'sort_order',
         'is_active',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'calories' => 'integer',
-        'allergens' => 'array',
+        'sort_order' => 'integer',
         'is_active' => 'boolean',
         'created_at' => 'datetime',
     ];
@@ -44,16 +39,5 @@ class Product extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
-    }
-
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-
-    public function tables(): BelongsToMany
-    {
-        return $this->belongsToMany(RestaurantTable::class, 'product_restaurant_table')
-            ->withPivot('created_at');
     }
 }

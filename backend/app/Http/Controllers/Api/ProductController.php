@@ -45,6 +45,9 @@ class ProductController extends Controller
             'name' => $request->validated('name'),
             'price' => $request->validated('price'),
             'description' => $request->validated('description'),
+            'image_path' => $request->validated('image_path'),
+            'calories' => $request->validated('calories'),
+            'allergens' => $request->validated('allergens') ?? [],
             'is_active' => $request->validated('is_active') ?? true,
         ]);
 

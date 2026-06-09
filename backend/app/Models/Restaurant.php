@@ -17,6 +17,8 @@ class Restaurant extends Authenticatable
         'slug',
         'email',
         'password',
+        'menu_tagline',
+        'menu_welcome_text',
         'reservation_duration_minutes',
         'reservation_visible_before_minutes',
     ];
@@ -55,5 +57,10 @@ class Restaurant extends Authenticatable
     public function kitchenStaff(): HasMany
     {
         return $this->hasMany(KitchenStaff::class);
+    }
+
+    public function menuSlides(): HasMany
+    {
+        return $this->hasMany(MenuSlide::class);
     }
 }

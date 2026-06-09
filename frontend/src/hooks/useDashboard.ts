@@ -15,20 +15,36 @@ function mergeTableData(
   const assignedWaiterName =
     incoming.assigned_waiter_name ??
     incoming.assigned_waiter?.name ??
-    existing?.assigned_waiter_name ??
-    existing?.assigned_waiter?.name ??
+    (incoming.assigned_waiter_id != null
+      ? existing?.assigned_waiter_name ?? existing?.assigned_waiter?.name
+      : null) ??
+    null
+
+  const viewingWaiterName =
+    incoming.viewing_waiter_name ??
+    incoming.viewing_waiter?.name ??
+    (incoming.viewing_waiter_id != null
+      ? existing?.viewing_waiter_name ?? existing?.viewing_waiter?.name
+      : null) ??
     null
 
   return {
     ...incoming,
     is_actively_reserved: incoming.is_actively_reserved ?? existing?.is_actively_reserved ?? false,
     today_reservations: incoming.today_reservations ?? existing?.today_reservations ?? [],
-    assigned_waiter_id: incoming.assigned_waiter_id ?? existing?.assigned_waiter_id ?? null,
+    assigned_waiter_id: incoming.assigned_waiter_id,
     assigned_waiter_name: assignedWaiterName,
-    assigned_waiter: incoming.assigned_waiter ?? existing?.assigned_waiter ?? null,
-    viewing_waiter_id: incoming.viewing_waiter_id ?? existing?.viewing_waiter_id ?? null,
-    viewing_waiter_name: incoming.viewing_waiter_name ?? existing?.viewing_waiter_name ?? null,
-    viewing_waiter: incoming.viewing_waiter ?? existing?.viewing_waiter ?? null,
+    assigned_waiter:
+      incoming.assigned_waiter_id != null
+        ? incoming.assigned_waiter ?? existing?.assigned_waiter ?? null
+        : null,
+    assigned_at: incoming.assigned_at,
+    viewing_waiter_id: incoming.viewing_waiter_id,
+    viewing_waiter_name: viewingWaiterName,
+    viewing_waiter:
+      incoming.viewing_waiter_id != null
+        ? incoming.viewing_waiter ?? existing?.viewing_waiter ?? null
+        : null,
   }
 }
 
@@ -139,6 +155,9 @@ export default function useDashboard() {
     name: string
     price: number
     description?: string
+    image_path?: string | null
+    calories?: number | null
+    allergens?: import('../constants/allergens').AllergenKey[]
   }) => {
     await createProduct(payload)
     await fetchData(true)
@@ -151,6 +170,9 @@ export default function useDashboard() {
       name: string
       price: number
       description?: string | null
+      image_path?: string | null
+      calories?: number | null
+      allergens?: import('../constants/allergens').AllergenKey[]
       is_active: boolean
     },
   ) => {

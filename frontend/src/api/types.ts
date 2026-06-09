@@ -15,6 +15,8 @@ export interface Category {
   created_at: string
 }
 
+import type { AllergenKey } from '../constants/allergens'
+
 export interface Product {
   id: number
   restaurant_id: number
@@ -22,6 +24,10 @@ export interface Product {
   name: string
   price: string
   description: string | null
+  image_path: string | null
+  image_url: string | null
+  calories: number | null
+  allergens: AllergenKey[]
   is_active: boolean
   created_at: string
   category?: Category

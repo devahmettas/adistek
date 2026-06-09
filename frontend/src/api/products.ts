@@ -1,4 +1,5 @@
 import type { AxiosInstance } from 'axios'
+import type { AllergenKey } from '../constants/allergens'
 import apiClient from './client'
 import type { ApiResponse, Product } from './types'
 
@@ -17,6 +18,9 @@ export const createProduct = async (payload: {
   name: string
   price: number
   description?: string
+  image_path?: string | null
+  calories?: number | null
+  allergens?: AllergenKey[]
   is_active?: boolean
 }): Promise<Product> => {
   const { data } = await apiClient.post<ApiResponse<Product>>('/products', payload)
@@ -30,6 +34,9 @@ export const updateProduct = async (
     name: string
     price: number
     description?: string | null
+    image_path?: string | null
+    calories?: number | null
+    allergens?: AllergenKey[]
     is_active: boolean
   },
 ): Promise<Product> => {
