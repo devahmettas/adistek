@@ -32,7 +32,7 @@ function escapeHtml(value: string): string {
 function formatDateTime(date: Date): string {
   return date.toLocaleString('tr-TR', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
@@ -41,20 +41,21 @@ function formatDateTime(date: Date): string {
 
 function buildTicketHtml(ticket: KitchenTicket): string {
   const printedAt = ticket.printedAt ?? new Date()
+  const totalQty = ticket.items.reduce((sum, item) => sum + item.quantity, 0)
   const restaurantLine = ticket.restaurantName
     ? `<p class="restaurant">${escapeHtml(ticket.restaurantName)}</p>`
     : ''
 
   const itemRows = ticket.items
-    .map((item) => {
+    .map((item, index) => {
       const noteLine = item.note
-        ? `<div class="note">↳ Not: ${escapeHtml(item.note)}</div>`
+        ? `<div class="note"><span class="note-label">Not</span>${escapeHtml(item.note)}</div>`
         : ''
 
       return `
-        <div class="item">
+        <div class="item${index < ticket.items.length - 1 ? ' item-border' : ''}">
           <div class="item-row">
-            <span class="qty">${item.quantity}x</span>
+            <span class="qty">${item.quantity}×</span>
             <span class="name">${escapeHtml(item.productName)}</span>
           </div>
           ${noteLine}
@@ -81,130 +82,174 @@ function buildTicketHtml(ticket: KitchenTicket): string {
     body {
       width: 80mm;
       margin: 0;
-      padding: 4mm 3mm;
+      padding: 5mm 4mm 6mm;
       color: #000;
-      font-family: "Courier New", Courier, monospace;
-      font-size: 13px;
-      line-height: 1.35;
+      font-family: Arial, Helvetica, sans-serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
-    .center {
+    .header {
       text-align: center;
+      padding-bottom: 3mm;
+      border-bottom: 2px solid #000;
     }
 
     .restaurant {
-      margin: 0 0 2mm;
+      margin: 0;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
 
     .title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      margin: 2mm 0 0;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #333;
     }
 
-    .subtitle {
-      margin: 1mm 0 0;
-      font-size: 10px;
-      letter-spacing: 0.12em;
+    .table-block {
+      margin: 4mm 0;
+      padding: 3.5mm 2mm;
+      border: 2.5px solid #000;
+      border-radius: 2mm;
+      text-align: center;
+    }
+
+    .table-label {
+      margin: 0;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
     }
 
-    .divider {
-      margin: 3mm 0;
-      border-top: 1px dashed #000;
-    }
-
-    .divider-bold {
-      margin: 3mm 0;
-      border-top: 2px solid #000;
-    }
-
-    .meta {
-      margin: 0;
-      font-size: 12px;
-    }
-
-    .meta strong {
-      font-size: 18px;
+    .table-name {
+      margin: 1.5mm 0 0;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.1;
       letter-spacing: 0.02em;
     }
 
     .datetime {
-      margin: 1.5mm 0 0;
-      font-size: 11px;
+      margin: 0 0 4mm;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: #444;
+    }
+
+    .items-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2mm;
+      padding-bottom: 1.5mm;
+      border-bottom: 1px solid #000;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
     }
 
     .item {
-      margin-bottom: 2.5mm;
+      padding: 3mm 0;
+    }
+
+    .item-border {
+      border-bottom: 1px dashed #888;
     }
 
     .item-row {
       display: flex;
-      gap: 2mm;
+      gap: 3mm;
       align-items: flex-start;
     }
 
     .qty {
-      min-width: 7mm;
-      font-size: 15px;
-      font-weight: 700;
+      flex-shrink: 0;
+      min-width: 9mm;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
     }
 
     .name {
       flex: 1;
-      font-size: 14px;
+      padding-top: 1px;
+      font-size: 15px;
       font-weight: 700;
+      line-height: 1.25;
       word-break: break-word;
     }
 
     .note {
-      margin: 1mm 0 0 9mm;
+      display: flex;
+      gap: 2mm;
+      margin: 2mm 0 0 12mm;
+      padding: 1.5mm 2mm;
+      border-left: 2px solid #000;
       font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .note-label {
+      flex-shrink: 0;
+      font-size: 9px;
       font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .footer {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
+      margin-top: 4mm;
+      padding-top: 3mm;
+      border-top: 2px solid #000;
+      text-align: center;
     }
 
-    .count {
-      margin: 1mm 0 0;
-      font-size: 10px;
+    .summary {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .summary strong {
+      font-size: 13px;
+      font-weight: 800;
     }
   </style>
 </head>
 <body>
-  <div class="center">
+  <header class="header">
     ${restaurantLine}
-    <h1 class="title">MUTFAK ADİSYONU</h1>
-    <p class="subtitle">Yeni Sipariş</p>
+    <h1 class="title">Mutfak Adisyonu</h1>
+  </header>
+
+  <div class="table-block">
+    <p class="table-label">Masa</p>
+    <p class="table-name">${escapeHtml(ticket.tableName)}</p>
   </div>
 
-  <div class="divider-bold"></div>
-
-  <p class="meta">Masa: <strong>${escapeHtml(ticket.tableName)}</strong></p>
   <p class="datetime">${escapeHtml(formatDateTime(printedAt))}</p>
 
-  <div class="divider"></div>
+  <div class="items-header">
+    <span>Sipariş</span>
+    <span>${ticket.items.length} kalem</span>
+  </div>
 
   ${itemRows}
 
-  <div class="divider-bold"></div>
-
-  <div class="center">
-    <p class="footer">HAZIRLANACAK</p>
-    <p class="count">${ticket.items.length} kalem · ${ticket.items.reduce((sum, item) => sum + item.quantity, 0)} adet</p>
-  </div>
+  <footer class="footer">
+    <p class="summary">
+      Toplam <strong>${totalQty}</strong> adet
+    </p>
+  </footer>
 </body>
 </html>`
 }
