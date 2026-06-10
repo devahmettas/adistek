@@ -6,11 +6,16 @@ import ImageUploadField from '../../components/ImageUploadField'
 import Input from '../../components/Input'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
+import PageSubNav from '../../components/PageSubNav'
 import { useDashboardData } from '../../context/DashboardContext'
+
+type CategoriesTab = 'list' | 'add'
 
 export default function CategoriesPage() {
   const { categories, products, loading, error, addCategory, editCategory, removeCategory } =
     useDashboardData()
+
+  const [activeTab, setActiveTab] = useState<CategoriesTab>('list')
   const [categoryName, setCategoryName] = useState('')
   const [categoryImagePath, setCategoryImagePath] = useState<string | null>(null)
   const [categoryImageUrl, setCategoryImageUrl] = useState<string | null>(null)
@@ -36,6 +41,7 @@ export default function CategoriesPage() {
       setCategoryName('')
       setCategoryImagePath(null)
       setCategoryImageUrl(null)
+      setActiveTab('list')
     } catch {
       setCategoryError('Kategori eklenemedi.')
     } finally {
@@ -50,46 +56,55 @@ export default function CategoriesPage() {
         description="Kategorileri Türkçe girin. QR menüde seçilen dile göre otomatik çevrilir."
       />
 
+      <PageSubNav
+        items={[
+          { id: 'list', label: 'Kategori Listesi' },
+          { id: 'add', label: 'Kategori Ekleme' },
+        ]}
+        activeId={activeTab}
+        onChange={(id) => setActiveTab(id as CategoriesTab)}
+      />
+
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
 
-      {!loading && (
-        <>
-          <Card title="Kategori Ekle" description="Yeni menü kategorisi oluşturun.">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Kategori Adı"
-                name="categoryName"
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
-                placeholder="Örn: İçecekler"
-              />
-              <ImageUploadField
-                label="Kategori Görseli"
-                context="category"
-                imagePath={categoryImagePath}
-                imageUrl={categoryImageUrl}
-                onChange={({ path, url }) => {
-                  setCategoryImagePath(path)
-                  setCategoryImageUrl(url)
-                }}
-              />
-              {categoryError && <p className="alert-error">{categoryError}</p>}
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Kaydediliyor...' : 'Kategori Ekle'}
-              </Button>
-            </form>
-          </Card>
+      {!loading && activeTab === 'list' && (
+        <Card title="Kategori Listesi">
+          <CategoryList
+            categories={categories}
+            products={products}
+            onUpdate={editCategory}
+            onDelete={removeCategory}
+          />
+        </Card>
+      )}
 
-          <Card title="Kategori Listesi">
-            <CategoryList
-              categories={categories}
-              products={products}
-              onUpdate={editCategory}
-              onDelete={removeCategory}
+      {!loading && activeTab === 'add' && (
+        <Card title="Kategori Ekleme" description="Yeni menü kategorisi oluşturun.">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Kategori Adı"
+              name="categoryName"
+              value={categoryName}
+              onChange={(event) => setCategoryName(event.target.value)}
+              placeholder="Örn: İçecekler"
             />
-          </Card>
-        </>
+            <ImageUploadField
+              label="Kategori Görseli"
+              context="category"
+              imagePath={categoryImagePath}
+              imageUrl={categoryImageUrl}
+              onChange={({ path, url }) => {
+                setCategoryImagePath(path)
+                setCategoryImageUrl(url)
+              }}
+            />
+            {categoryError && <p className="alert-error">{categoryError}</p>}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Kaydediliyor...' : 'Kategori Ekle'}
+            </Button>
+          </form>
+        </Card>
       )}
     </div>
   )
