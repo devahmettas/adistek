@@ -2,6 +2,9 @@ export interface Restaurant {
   id: number
   name: string
   slug?: string | null
+  contact_person?: string | null
+  phone?: string | null
+  address?: string | null
   email: string
   reservation_duration_minutes?: number
   reservation_visible_before_minutes?: number

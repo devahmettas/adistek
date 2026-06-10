@@ -4,6 +4,8 @@ import MainLayout from '../layouts/MainLayout'
 import KitchenMainLayout from '../layouts/KitchenMainLayout'
 import WaiterMainLayout from '../layouts/WaiterMainLayout'
 import AdminLoginPage from '../pages/AdminLoginPage'
+import AdminRestaurantCreatePage from '../pages/AdminRestaurantCreatePage'
+import AdminRestaurantDetailPage from '../pages/AdminRestaurantDetailPage'
 import AdminRestaurantsPage from '../pages/AdminRestaurantsPage'
 import KitchenDashboardPage from '../pages/KitchenDashboardPage'
 import KitchenLoginPage from '../pages/KitchenLoginPage'
@@ -67,6 +69,8 @@ export default function AppRouter() {
       <Route element={<AdminProtectedRoute />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
+          <Route path="/admin/restaurants/new" element={<AdminRestaurantCreatePage />} />
+          <Route path="/admin/restaurants/:id" element={<AdminRestaurantDetailPage />} />
         </Route>
       </Route>
 

@@ -31,4 +31,18 @@ class RestaurantRepository
     {
         return Restaurant::find($id);
     }
+
+    public function findWithStats(int $id): ?Restaurant
+    {
+        return Restaurant::query()
+            ->withCount(['categories', 'products', 'tables'])
+            ->find($id);
+    }
+
+    public function update(Restaurant $restaurant, array $data): Restaurant
+    {
+        $restaurant->update($data);
+
+        return $restaurant->refresh();
+    }
 }

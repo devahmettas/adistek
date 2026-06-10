@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getAdminRestaurants } from '../api/adminAuth'
+import { createAdminRestaurant, getAdminRestaurants, type CreateAdminRestaurantPayload } from '../api/adminAuth'
 import type { RestaurantListItem } from '../api/types'
 
 export default function useAdminRestaurants() {
@@ -25,10 +25,17 @@ export default function useAdminRestaurants() {
     fetchRestaurants()
   }, [fetchRestaurants])
 
+  const addRestaurant = useCallback(async (payload: CreateAdminRestaurantPayload) => {
+    const restaurant = await createAdminRestaurant(payload)
+    setRestaurants((current) => [restaurant, ...current])
+    return restaurant
+  }, [])
+
   return {
     restaurants,
     loading,
     error,
     refresh: fetchRestaurants,
+    addRestaurant,
   }
 }

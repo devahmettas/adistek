@@ -115,4 +115,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/auth/me', [AdminAuthController::class, 'me']);
     Route::post('/auth/logout', [AdminAuthController::class, 'logout']);
     Route::get('/restaurants', [AdminRestaurantController::class, 'index']);
+    Route::post('/restaurants', [AdminRestaurantController::class, 'store']);
+    Route::get('/restaurants/{restaurant}', [AdminRestaurantController::class, 'show']);
+    Route::put('/restaurants/{restaurant}', [AdminRestaurantController::class, 'update']);
 });

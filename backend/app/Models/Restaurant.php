@@ -15,6 +15,9 @@ class Restaurant extends Authenticatable
     protected $fillable = [
         'name',
         'slug',
+        'contact_person',
+        'phone',
+        'address',
         'email',
         'password',
         'menu_tagline',
