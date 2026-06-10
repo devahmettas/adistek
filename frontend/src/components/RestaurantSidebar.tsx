@@ -1,18 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import BrandLogo from './BrandLogo'
 import Button from './Button'
+import {
+  RESTAURANT_NAV_ITEMS,
+  canAccessRestaurantNavItem,
+} from '../constants/restaurantFeatures'
 import { useAuth } from '../store/AuthStore'
-
-const navItems = [
-  { to: '/dashboard', label: 'Masalar', icon: '◫', end: true },
-  { to: '/dashboard/stats', label: 'İstatistikler', icon: '▤' },
-  { to: '/dashboard/reservations', label: 'Rezervasyonlar', icon: '◷' },
-  { to: '/dashboard/menu', label: 'Müşteri Menüsü', icon: '◎' },
-  { to: '/dashboard/categories', label: 'Kategoriler', icon: '▦' },
-  { to: '/dashboard/products', label: 'Ürünler', icon: '▣' },
-  { to: '/dashboard/tables', label: 'Masa Ayarları', icon: '⬚' },
-  { to: '/dashboard/staff', label: 'Personel', icon: '◉' },
-]
 
 interface RestaurantSidebarProps {
   open: boolean
@@ -30,6 +23,9 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
 
 export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: RestaurantSidebarProps) {
   const { restaurant, logout } = useAuth()
+  const visibleNavItems = RESTAURANT_NAV_ITEMS.filter((item) =>
+    canAccessRestaurantNavItem(restaurant, item),
+  )
 
   const handleLogout = async () => {
     await logout()
@@ -38,13 +34,13 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="border-b border-slate-200 px-4 py-5">
-        <NavLink to="/dashboard" onClick={onCloseMobile} className="block">
+        <NavLink to={visibleNavItems[0]?.to ?? '/dashboard'} onClick={onCloseMobile} className="block">
           <BrandLogo subtitle={restaurant?.name} />
         </NavLink>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

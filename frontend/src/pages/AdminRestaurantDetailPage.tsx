@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getAdminRestaurant, updateAdminRestaurant } from '../api/adminAuth'
+import { getAdminRestaurant, updateAdminRestaurant, updateAdminRestaurantFeatures } from '../api/adminAuth'
 import type { RestaurantListItem } from '../api/types'
+import AdminRestaurantFeatureSettings from '../components/admin/AdminRestaurantFeatureSettings'
 import LoadingState from '../components/LoadingState'
 import { displayAdminValue, getApiErrorMessage } from '../utils/adminDashboard'
 
@@ -350,6 +351,14 @@ export default function AdminRestaurantDetailPage() {
           )}
         </dl>
       </section>
+
+      <AdminRestaurantFeatureSettings
+        restaurant={restaurant}
+        onUpdate={async (payload) => {
+          const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
+          setRestaurant(updated)
+        }}
+      />
     </div>
   )
 }

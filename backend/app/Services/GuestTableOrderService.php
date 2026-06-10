@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\TableStatus;
 use App\Models\RestaurantTable;
 use App\Repositories\TableRepository;
+use App\Support\RestaurantFeatures;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
@@ -29,8 +30,12 @@ class GuestTableOrderService
         $table = $this->findTableByToken($token);
         $table->load('restaurant');
 
+        if (! RestaurantFeatures::isEnabled($table->restaurant, RestaurantFeatures::ORDER_TRACKING)) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
+
         $identifier = $table->restaurant->slug ?? (string) $table->restaurant_id;
-        $menu = $this->publicMenuService->getMenu($identifier, $lang);
+        $menu = $this->publicMenuService->getMenu($identifier, $lang, false);
         $canOrder = $this->canOrder($table);
 
         return [
@@ -50,6 +55,11 @@ class GuestTableOrderService
     public function placeOrder(string $token, string $sessionToken, array $items): array
     {
         $table = $this->findTableByToken($token);
+        $table->load('restaurant');
+
+        if (! RestaurantFeatures::isEnabled($table->restaurant, RestaurantFeatures::ORDER_TRACKING)) {
+            throw new NotFoundHttpException('Masa bulunamadı.');
+        }
 
         if (! $this->canOrder($table)) {
             throw new UnprocessableEntityHttpException('Bu masadan şu an sipariş verilemiyor. Garsonunuzun masayı aktif etmesini bekleyin.');

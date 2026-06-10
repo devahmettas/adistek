@@ -6,6 +6,9 @@ export interface Restaurant {
   phone?: string | null
   address?: string | null
   email: string
+  feature_order_tracking?: boolean
+  feature_qr_menu?: boolean
+  feature_reservations?: boolean
   reservation_duration_minutes?: number
   reservation_visible_before_minutes?: number
   created_at: string

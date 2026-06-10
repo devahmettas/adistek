@@ -26,6 +26,7 @@ import WaiterLoginPage from '../pages/WaiterLoginPage'
 import AdminProtectedRoute from './AdminProtectedRoute'
 import KitchenProtectedRoute from './KitchenProtectedRoute'
 import ProtectedRoute from './ProtectedRoute'
+import RestaurantFeatureRoute from './RestaurantFeatureRoute'
 import WaiterProtectedRoute from './WaiterProtectedRoute'
 
 export default function AppRouter() {
@@ -43,14 +44,16 @@ export default function AppRouter() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<TablesHomePage />} />
-          <Route path="/dashboard/stats" element={<StatsPage />} />
-          <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
-          <Route path="/dashboard/categories" element={<CategoriesPage />} />
-          <Route path="/dashboard/products" element={<ProductsPage />} />
-          <Route path="/dashboard/reservations" element={<ReservationsPage />} />
-          <Route path="/dashboard/tables" element={<TablesManagePage />} />
-          <Route path="/dashboard/staff" element={<StaffPage />} />
+          <Route element={<RestaurantFeatureRoute />}>
+            <Route path="/dashboard" element={<TablesHomePage />} />
+            <Route path="/dashboard/stats" element={<StatsPage />} />
+            <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
+            <Route path="/dashboard/categories" element={<CategoriesPage />} />
+            <Route path="/dashboard/products" element={<ProductsPage />} />
+            <Route path="/dashboard/reservations" element={<ReservationsPage />} />
+            <Route path="/dashboard/tables" element={<TablesManagePage />} />
+            <Route path="/dashboard/staff" element={<StaffPage />} />
+          </Route>
         </Route>
       </Route>
 

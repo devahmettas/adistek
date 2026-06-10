@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\KitchenLoginRequest;
 use App\Models\KitchenStaff;
+use App\Support\RestaurantFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -26,7 +27,14 @@ class KitchenAuthController extends Controller
             ]);
         }
 
-        $staff->load('restaurant:id,name');
+        $staff->load('restaurant:id,name,feature_order_tracking');
+
+        if (! RestaurantFeatures::isEnabled($staff->restaurant, RestaurantFeatures::ORDER_TRACKING)) {
+            throw ValidationException::withMessages([
+                'email' => ['Bu işletme için sipariş takibi özelliği aktif değil.'],
+            ]);
+        }
+
         $token = $staff->createToken('kitchen')->plainTextToken;
 
         return response()->json([

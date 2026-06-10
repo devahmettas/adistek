@@ -5,7 +5,7 @@ import { useAdminAuth } from '../store/AdminAuthStore'
 
 const navItems = [
   { to: '/admin/restaurants/new', label: 'Restoran Ekle', icon: '＋' },
-  { to: '/admin/restaurants', label: 'Restoran Listesi', icon: '☰' },
+  { to: '/admin/restaurants', label: 'Restoran Listesi', icon: '☰', end: true },
 ]
 
 interface AdminSidebarProps {

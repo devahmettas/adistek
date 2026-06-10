@@ -8,6 +8,7 @@ use App\Models\Restaurant;
 use App\Repositories\MenuSlideRepository;
 use App\Support\LocalizedText;
 use App\Support\MenuAssetUrl;
+use App\Support\RestaurantFeatures;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class PublicMenuService
@@ -17,13 +18,17 @@ class PublicMenuService
         private readonly MenuTranslationService $translationService,
     ) {}
 
-    public function getMenu(string $identifier, ?string $lang = null): array
+    public function getMenu(string $identifier, ?string $lang = null, bool $requireQrFeature = true): array
     {
         $lang = LocalizedText::normalizeLang($lang);
         $restaurant = $this->findRestaurant($identifier);
 
         if (! $restaurant) {
             throw new NotFoundHttpException('Restoran bulunamadı.');
+        }
+
+        if ($requireQrFeature && ! RestaurantFeatures::isEnabled($restaurant, RestaurantFeatures::QR_MENU)) {
+            throw new NotFoundHttpException('Menü bulunamadı.');
         }
 
         $categories = Category::query()

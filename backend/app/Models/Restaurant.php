@@ -20,6 +20,9 @@ class Restaurant extends Authenticatable
         'address',
         'email',
         'password',
+        'feature_order_tracking',
+        'feature_qr_menu',
+        'feature_reservations',
         'menu_tagline',
         'menu_welcome_text',
         'reservation_duration_minutes',
@@ -35,6 +38,9 @@ class Restaurant extends Authenticatable
         'password' => 'hashed',
         'reservation_duration_minutes' => 'integer',
         'reservation_visible_before_minutes' => 'integer',
+        'feature_order_tracking' => 'boolean',
+        'feature_qr_menu' => 'boolean',
+        'feature_reservations' => 'boolean',
     ];
 
     public function categories(): HasMany

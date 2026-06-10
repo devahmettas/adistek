@@ -68,3 +68,20 @@ export const updateAdminRestaurant = async (
   )
   return data.data
 }
+
+export interface UpdateAdminRestaurantFeaturesPayload {
+  feature_order_tracking: boolean
+  feature_qr_menu: boolean
+  feature_reservations: boolean
+}
+
+export const updateAdminRestaurantFeatures = async (
+  id: number,
+  payload: UpdateAdminRestaurantFeaturesPayload,
+): Promise<RestaurantListItem> => {
+  const { data } = await adminApiClient.patch<ApiResponse<RestaurantListItem>>(
+    `/admin/restaurants/${id}/features`,
+    payload,
+  )
+  return data.data
+}

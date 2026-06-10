@@ -35,7 +35,19 @@ class AdminRestaurantService
         return $this->repository->create([
             ...$data,
             'slug' => RestaurantSlugGenerator::generate($data['name']),
+            'feature_order_tracking' => true,
+            'feature_qr_menu' => true,
+            'feature_reservations' => true,
         ]);
+    }
+
+    public function updateFeatures(int $id, array $data): Restaurant
+    {
+        $restaurant = $this->getById($id);
+
+        $this->repository->update($restaurant, $data);
+
+        return $this->getById($id);
     }
 
     public function update(int $id, array $data): Restaurant

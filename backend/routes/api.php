@@ -34,11 +34,21 @@ Route::get('/public/menu/{identifier}', [PublicMenuController::class, 'show']);
 Route::get('/public/table/{token}', [GuestTableOrderController::class, 'show']);
 Route::post('/public/table/{token}/order', [GuestTableOrderController::class, 'store']);
 
-Route::middleware(['auth:sanctum', 'restaurant_or_waiter'])->group(function () {
+Route::middleware([
+    'auth:sanctum',
+    'restaurant_or_waiter',
+    'restaurant.feature:feature_order_tracking|feature_qr_menu',
+])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
+});
 
+Route::middleware([
+    'auth:sanctum',
+    'restaurant_or_waiter',
+    'restaurant.feature:feature_order_tracking',
+])->group(function () {
     Route::get('/tables', [TableController::class, 'index']);
     Route::patch('/tables/{table}/status', [TableController::class, 'updateStatus']);
     Route::post('/tables/{table}/products', [TableController::class, 'addProduct']);
@@ -55,47 +65,55 @@ Route::middleware(['auth:sanctum', 'restaurant'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    Route::get('/stats', [StatisticsController::class, 'index']);
+    Route::middleware('restaurant.feature:feature_order_tracking|feature_qr_menu')->group(function () {
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::put('/categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::put('/categories/{category}', [CategoryController::class, 'update']);
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{product}', [ProductController::class, 'update']);
+        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+    });
 
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{product}', [ProductController::class, 'update']);
-    Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+    Route::middleware('restaurant.feature:feature_order_tracking')->group(function () {
+        Route::get('/stats', [StatisticsController::class, 'index']);
 
-    Route::get('/waiters', [WaiterController::class, 'index']);
-    Route::post('/waiters', [WaiterController::class, 'store']);
-    Route::put('/waiters/{waiter}', [WaiterController::class, 'update']);
-    Route::delete('/waiters/{waiter}', [WaiterController::class, 'destroy']);
+        Route::get('/waiters', [WaiterController::class, 'index']);
+        Route::post('/waiters', [WaiterController::class, 'store']);
+        Route::put('/waiters/{waiter}', [WaiterController::class, 'update']);
+        Route::delete('/waiters/{waiter}', [WaiterController::class, 'destroy']);
 
-    Route::get('/kitchen-staff', [KitchenStaffController::class, 'index']);
-    Route::post('/kitchen-staff', [KitchenStaffController::class, 'store']);
-    Route::put('/kitchen-staff/{kitchenStaff}', [KitchenStaffController::class, 'update']);
-    Route::delete('/kitchen-staff/{kitchenStaff}', [KitchenStaffController::class, 'destroy']);
+        Route::get('/kitchen-staff', [KitchenStaffController::class, 'index']);
+        Route::post('/kitchen-staff', [KitchenStaffController::class, 'store']);
+        Route::put('/kitchen-staff/{kitchenStaff}', [KitchenStaffController::class, 'update']);
+        Route::delete('/kitchen-staff/{kitchenStaff}', [KitchenStaffController::class, 'destroy']);
 
-    Route::post('/tables', [TableController::class, 'store']);
-    Route::put('/tables/{table}', [TableController::class, 'update']);
-    Route::delete('/tables/{table}', [TableController::class, 'destroy']);
+        Route::post('/tables', [TableController::class, 'store']);
+        Route::put('/tables/{table}', [TableController::class, 'update']);
+        Route::delete('/tables/{table}', [TableController::class, 'destroy']);
+    });
 
-    Route::get('/restaurant/settings', [RestaurantSettingsController::class, 'show']);
-    Route::patch('/restaurant/settings', [RestaurantSettingsController::class, 'update']);
+    Route::middleware('restaurant.feature:feature_reservations')->group(function () {
+        Route::get('/restaurant/settings', [RestaurantSettingsController::class, 'show']);
+        Route::patch('/restaurant/settings', [RestaurantSettingsController::class, 'update']);
 
-    Route::get('/restaurant/menu-settings', [MenuSettingsController::class, 'show']);
-    Route::patch('/restaurant/menu-settings', [MenuSettingsController::class, 'update']);
+        Route::get('/reservations', [TableReservationController::class, 'index']);
+        Route::post('/reservations', [TableReservationController::class, 'store']);
+        Route::put('/reservations/{reservation}', [TableReservationController::class, 'update']);
+        Route::delete('/reservations/{reservation}', [TableReservationController::class, 'destroy']);
+    });
 
-    Route::get('/menu-slides', [MenuSlideController::class, 'index']);
-    Route::post('/menu-slides', [MenuSlideController::class, 'store']);
-    Route::put('/menu-slides/{menuSlide}', [MenuSlideController::class, 'update']);
-    Route::delete('/menu-slides/{menuSlide}', [MenuSlideController::class, 'destroy']);
+    Route::middleware('restaurant.feature:feature_qr_menu')->group(function () {
+        Route::get('/restaurant/menu-settings', [MenuSettingsController::class, 'show']);
+        Route::patch('/restaurant/menu-settings', [MenuSettingsController::class, 'update']);
 
-    Route::post('/menu/uploads', [MenuUploadController::class, 'store']);
+        Route::get('/menu-slides', [MenuSlideController::class, 'index']);
+        Route::post('/menu-slides', [MenuSlideController::class, 'store']);
+        Route::put('/menu-slides/{menuSlide}', [MenuSlideController::class, 'update']);
+        Route::delete('/menu-slides/{menuSlide}', [MenuSlideController::class, 'destroy']);
 
-    Route::get('/reservations', [TableReservationController::class, 'index']);
-    Route::post('/reservations', [TableReservationController::class, 'store']);
-    Route::put('/reservations/{reservation}', [TableReservationController::class, 'update']);
-    Route::delete('/reservations/{reservation}', [TableReservationController::class, 'destroy']);
+        Route::post('/menu/uploads', [MenuUploadController::class, 'store']);
+    });
 });
 
 Route::middleware(['auth:sanctum', 'waiter'])->prefix('waiter')->group(function () {
@@ -106,9 +124,12 @@ Route::middleware(['auth:sanctum', 'waiter'])->prefix('waiter')->group(function 
 Route::middleware(['auth:sanctum', 'kitchen'])->prefix('kitchen')->group(function () {
     Route::get('/auth/me', [KitchenAuthController::class, 'me']);
     Route::post('/auth/logout', [KitchenAuthController::class, 'logout']);
-    Route::get('/orders', [KitchenOrderController::class, 'index']);
-    Route::patch('/orders/{pivotId}/ready', [KitchenOrderController::class, 'markReady']);
-    Route::patch('/orders/{pivotId}/dismiss', [KitchenOrderController::class, 'dismissCancelled']);
+
+    Route::middleware('restaurant.feature:feature_order_tracking')->group(function () {
+        Route::get('/orders', [KitchenOrderController::class, 'index']);
+        Route::patch('/orders/{pivotId}/ready', [KitchenOrderController::class, 'markReady']);
+        Route::patch('/orders/{pivotId}/dismiss', [KitchenOrderController::class, 'dismissCancelled']);
+    });
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
@@ -118,4 +139,5 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/restaurants', [AdminRestaurantController::class, 'store']);
     Route::get('/restaurants/{restaurant}', [AdminRestaurantController::class, 'show']);
     Route::put('/restaurants/{restaurant}', [AdminRestaurantController::class, 'update']);
+    Route::patch('/restaurants/{restaurant}/features', [AdminRestaurantController::class, 'updateFeatures']);
 });

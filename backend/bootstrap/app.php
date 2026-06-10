@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'kitchen' => \App\Http\Middleware\EnsureKitchen::class,
             'restaurant_or_waiter' => \App\Http\Middleware\EnsureRestaurantOrWaiter::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'restaurant.feature' => \App\Http\Middleware\EnsureRestaurantFeature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

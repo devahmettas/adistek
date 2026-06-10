@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WaiterLoginRequest;
 use App\Models\Waiter;
+use App\Support\RestaurantFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -26,7 +27,14 @@ class WaiterAuthController extends Controller
             ]);
         }
 
-        $waiter->load('restaurant:id,name');
+        $waiter->load('restaurant:id,name,feature_order_tracking');
+
+        if (! RestaurantFeatures::isEnabled($waiter->restaurant, RestaurantFeatures::ORDER_TRACKING)) {
+            throw ValidationException::withMessages([
+                'email' => ['Bu işletme için sipariş takibi özelliği aktif değil.'],
+            ]);
+        }
+
         $token = $waiter->createToken('waiter')->plainTextToken;
 
         return response()->json([
