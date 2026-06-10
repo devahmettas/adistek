@@ -11,6 +11,7 @@ import KitchenDashboardPage from '../pages/KitchenDashboardPage'
 import KitchenLoginPage from '../pages/KitchenLoginPage'
 import LoginPage from '../pages/LoginPage'
 import CategoriesPage from '../pages/restaurant/CategoriesPage'
+import ManagementPanelPage from '../pages/restaurant/ManagementPanelPage'
 import ProductsPage from '../pages/restaurant/ProductsPage'
 import StaffPage from '../pages/restaurant/StaffPage'
 import PublicMenuLayout from '../layouts/PublicMenuLayout'
@@ -45,7 +46,8 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route element={<RestaurantFeatureRoute />}>
-            <Route path="/dashboard" element={<TablesHomePage />} />
+            <Route path="/dashboard" element={<ManagementPanelPage />} />
+            <Route path="/dashboard/masalar" element={<TablesHomePage />} />
             <Route path="/dashboard/stats" element={<StatsPage />} />
             <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
             <Route path="/dashboard/categories" element={<CategoriesPage />} />

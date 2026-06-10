@@ -9,13 +9,14 @@ export interface RestaurantNavItem {
   end?: boolean
   feature?: RestaurantFeatureKey
   anyFeature?: RestaurantFeatureKey[]
+  always?: boolean
 }
 
 export const RESTAURANT_NAV_ITEMS: RestaurantNavItem[] = [
-  { to: '/dashboard', label: 'Masalar', icon: '◫', end: true, feature: 'order_tracking' },
+  { to: '/dashboard', label: 'Yönetim Paneli', icon: '⌂', end: true, always: true },
+  { to: '/dashboard/masalar', label: 'Masalar', icon: '◫', feature: 'order_tracking' },
   { to: '/dashboard/stats', label: 'İstatistikler', icon: '▤', feature: 'order_tracking' },
   { to: '/dashboard/reservations', label: 'Rezervasyonlar', icon: '◷', feature: 'reservations' },
-  { to: '/dashboard/menu', label: 'Müşteri Menüsü', icon: '◎', feature: 'qr_menu' },
   {
     to: '/dashboard/categories',
     label: 'Kategoriler',
@@ -28,15 +29,15 @@ export const RESTAURANT_NAV_ITEMS: RestaurantNavItem[] = [
     icon: '▣',
     anyFeature: ['order_tracking', 'qr_menu'],
   },
-  { to: '/dashboard/tables', label: 'Masa Ayarları', icon: '⬚', feature: 'order_tracking' },
-  { to: '/dashboard/staff', label: 'Personel', icon: '◉', feature: 'order_tracking' },
 ]
 
 const PATH_ACCESS: Array<{
   prefix: string
   feature?: RestaurantFeatureKey
   anyFeature?: RestaurantFeatureKey[]
+  always?: boolean
 }> = [
+  { prefix: '/dashboard/masalar', feature: 'order_tracking' },
   { prefix: '/dashboard/stats', feature: 'order_tracking' },
   { prefix: '/dashboard/reservations', feature: 'reservations' },
   { prefix: '/dashboard/menu', feature: 'qr_menu' },
@@ -44,7 +45,7 @@ const PATH_ACCESS: Array<{
   { prefix: '/dashboard/products', anyFeature: ['order_tracking', 'qr_menu'] },
   { prefix: '/dashboard/tables', feature: 'order_tracking' },
   { prefix: '/dashboard/staff', feature: 'order_tracking' },
-  { prefix: '/dashboard', feature: 'order_tracking' },
+  { prefix: '/dashboard', always: true },
 ]
 
 export function isRestaurantFeatureEnabled(
@@ -75,6 +76,10 @@ export function canAccessRestaurantNavItem(
   restaurant: Restaurant | null | undefined,
   item: RestaurantNavItem,
 ): boolean {
+  if (item.always) {
+    return true
+  }
+
   if (item.anyFeature) {
     return item.anyFeature.some((feature) => isRestaurantFeatureEnabled(restaurant, feature))
   }
@@ -97,6 +102,10 @@ export function canAccessRestaurantPath(
   )
 
   if (!rule) {
+    return true
+  }
+
+  if (rule.always) {
     return true
   }
 

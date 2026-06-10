@@ -38,7 +38,7 @@ export default function MainLayout() {
                 <span className="text-base leading-none">☰</span>
                 Menü
               </button>
-              <p className="hidden text-sm text-slate-500 sm:block">İşletme yönetim paneli</p>
+              <p className="hidden text-sm text-slate-500 sm:block">Yönetim Paneli</p>
             </div>
           </header>
 
