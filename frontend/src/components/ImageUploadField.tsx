@@ -11,6 +11,12 @@ interface ImageUploadFieldProps {
   onChange: (payload: { path: string | null; url: string | null }) => void
 }
 
+const imageSizeHints: Record<ImageUploadFieldProps['context'], string> = {
+  product: 'Önerilen boyut: 1200×900 px (4:3 oran)',
+  category: 'Önerilen boyut: 512×512 px (kare)',
+  slide: 'Önerilen boyut: 1920×640 px (geniş banner)',
+}
+
 export default function ImageUploadField({
   label,
   context,
@@ -56,7 +62,12 @@ export default function ImageUploadField({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-slate-700">{label}</p>
+      <div>
+        <p className="text-sm font-medium text-slate-700">{label}</p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {imageSizeHints[context]}. JPG, JPEG, PNG veya WebP, en fazla 5 MB.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="h-28 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 sm:w-40">
