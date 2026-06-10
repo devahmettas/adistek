@@ -4,6 +4,11 @@ import {
   playKitchenNotificationSound,
   unlockKitchenNotificationSound,
 } from '../utils/kitchenNotificationSound'
+import {
+  buildTicketsFromOrderItems,
+  isKitchenAutoPrintEnabled,
+  printKitchenTickets,
+} from '../utils/kitchenTicketPrint'
 
 export interface KitchenNotification {
   id: string
@@ -59,7 +64,10 @@ function showBrowserNotification(items: KitchenNotification[]): void {
   })
 }
 
-export function useKitchenOrderNotifications(orders: KitchenOrder[]) {
+export function useKitchenOrderNotifications(
+  orders: KitchenOrder[],
+  options?: { restaurantName?: string },
+) {
   const knownPendingIdsRef = useRef<Set<number> | null>(null)
   const [notifications, setNotifications] = useState<KitchenNotification[]>([])
   const [needsSoundUnlock, setNeedsSoundUnlock] = useState(false)
@@ -110,10 +118,15 @@ export function useKitchenOrderNotifications(orders: KitchenOrder[]) {
           setNeedsSoundUnlock(true)
         }
       })
+
+      if (isKitchenAutoPrintEnabled()) {
+        const tickets = buildTicketsFromOrderItems(newItems, options?.restaurantName)
+        void printKitchenTickets(tickets)
+      }
     }
 
     knownPendingIdsRef.current = currentIds
-  }, [orders])
+  }, [orders, options?.restaurantName])
 
   return {
     notifications,

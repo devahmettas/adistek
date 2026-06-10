@@ -4,6 +4,7 @@ import type { KitchenOrder } from '../api/types'
 import Button from '../components/Button'
 import KitchenEmptyState from '../components/kitchen/KitchenEmptyState'
 import KitchenOrderCard from '../components/kitchen/KitchenOrderCard'
+import KitchenPrintSettings from '../components/kitchen/KitchenPrintSettings'
 import KitchenStatsBar from '../components/kitchen/KitchenStatsBar'
 import KitchenNotificationToasts from '../components/KitchenNotificationToasts'
 import LoadingState from '../components/LoadingState'
@@ -46,7 +47,9 @@ export default function KitchenDashboardPage() {
   }, [])
 
   const { notifications, dismissNotification, needsSoundUnlock, enableSound } =
-    useKitchenOrderNotifications(orders)
+    useKitchenOrderNotifications(orders, {
+      restaurantName: kitchenStaff?.restaurant?.name,
+    })
 
   const stats = useMemo(
     () => ({
@@ -161,6 +164,8 @@ export default function KitchenDashboardPage() {
           />
         )}
 
+        <KitchenPrintSettings restaurantName={kitchenStaff?.restaurant?.name} />
+
         {needsSoundUnlock && (
           <div className="alert-warning">
             <p className="text-sm">
@@ -185,6 +190,7 @@ export default function KitchenDashboardPage() {
                 key={order.table_id}
                 order={order}
                 submittingId={submittingId}
+                restaurantName={kitchenStaff?.restaurant?.name}
                 onMarkReady={handleMarkReady}
                 onDismissCancelled={handleDismissCancelled}
               />

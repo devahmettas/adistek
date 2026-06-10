@@ -1,10 +1,13 @@
 import type { KitchenOrder, KitchenOrderItem } from '../../api/types'
+import Button from '../Button'
+import { printKitchenTicket } from '../../utils/kitchenTicketPrint'
 
 import KitchenOrderItemCard from './KitchenOrderItemCard'
 
 interface KitchenOrderCardProps {
   order: KitchenOrder
   submittingId: number | null
+  restaurantName?: string
   onMarkReady: (pivotId: number) => void
   onDismissCancelled: (pivotId: number) => void
 }
@@ -29,12 +32,31 @@ function countByStatus(items: KitchenOrderItem[], status: KitchenOrderItem['kitc
 export default function KitchenOrderCard({
   order,
   submittingId,
+  restaurantName,
   onMarkReady,
   onDismissCancelled,
 }: KitchenOrderCardProps) {
   const sortedItems = sortItems(order.items)
   const pendingCount = countByStatus(order.items, 'pending')
   const readyCount = countByStatus(order.items, 'ready')
+  const pendingItems = order.items.filter((item) => item.kitchen_status === 'pending')
+
+  const handlePrint = () => {
+    if (pendingItems.length === 0) {
+      return
+    }
+
+    void printKitchenTicket({
+      tableName: order.table_name,
+      restaurantName,
+      printedAt: new Date(),
+      items: pendingItems.map((item) => ({
+        productName: item.product_name,
+        quantity: item.quantity,
+        note: item.note,
+      })),
+    })
+  }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
@@ -45,9 +67,14 @@ export default function KitchenOrderCard({
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           {pendingCount > 0 && (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-              {pendingCount} bekliyor
-            </span>
+            <>
+              <Button type="button" variant="secondary" onClick={handlePrint}>
+                Fiş Yazdır
+              </Button>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                {pendingCount} bekliyor
+              </span>
+            </>
           )}
           {readyCount > 0 && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
