@@ -19,6 +19,7 @@ class StoreTableReservationRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
             'guest_count' => ['required', 'integer', 'min:1', 'max:50'],
             'reserved_at' => ['required', 'date'],
+            'duration_minutes' => ['nullable', 'integer', 'min:15', 'max:480'],
         ];
     }
 }

@@ -27,6 +27,8 @@ class Restaurant extends Authenticatable
         'menu_welcome_text',
         'reservation_duration_minutes',
         'reservation_visible_before_minutes',
+        'reservation_start_time',
+        'reservation_end_time',
     ];
 
     protected $hidden = [

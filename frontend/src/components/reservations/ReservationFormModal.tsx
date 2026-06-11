@@ -6,7 +6,12 @@ import {
   type UpdateReservationPayload,
 } from '../../api/reservations'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
-import { findReservationForSlot } from '../../utils/reservationSlotUtils'
+import {
+  addMinutesToTime,
+  computeDurationMinutes,
+  findReservationForSlot,
+  type ReservationOperatingHours,
+} from '../../utils/reservationSlotUtils'
 import Button from '../Button'
 import Input from '../Input'
 import ReservationDetailList from './ReservationDetailList'
@@ -17,6 +22,7 @@ interface ReservationFormModalProps {
   selectedDate: string
   prefilledTime?: string | null
   durationMinutes: number
+  operatingHours: ReservationOperatingHours
   submitting: boolean
   error: string | null
   cancellingId: number | null
@@ -27,6 +33,7 @@ interface ReservationFormModalProps {
     phone: string
     guest_count: number
     reserved_at: string
+    duration_minutes: number
     reservation_date: string
   }) => Promise<void>
   onCancelReservation: (reservationId: number) => Promise<void>
@@ -38,6 +45,7 @@ export default function ReservationFormModal({
   selectedDate,
   prefilledTime = null,
   durationMinutes,
+  operatingHours,
   submitting,
   error,
   cancellingId,
@@ -52,6 +60,10 @@ export default function ReservationFormModal({
   const [guestCount, setGuestCount] = useState('2')
   const [reservationDate, setReservationDate] = useState(selectedDate)
   const [selectedTime, setSelectedTime] = useState<string | null>(prefilledTime)
+  const [startTime, setStartTime] = useState(prefilledTime ?? '')
+  const [endTime, setEndTime] = useState(
+    prefilledTime ? addMinutesToTime(prefilledTime, durationMinutes) : '',
+  )
   const [existingReservations, setExistingReservations] = useState(table.reservations)
   const [loadingReservations, setLoadingReservations] = useState(false)
   const [slotError, setSlotError] = useState<string | null>(null)
@@ -69,7 +81,12 @@ export default function ReservationFormModal({
   useEffect(() => {
     setSelectedTime(prefilledTime)
     setSlotError(null)
-  }, [reservationDate, table.id, prefilledTime])
+
+    if (prefilledTime) {
+      setStartTime(prefilledTime)
+      setEndTime(addMinutesToTime(prefilledTime, durationMinutes))
+    }
+  }, [reservationDate, table.id, prefilledTime, durationMinutes])
 
   useEffect(() => {
     if (!selectedTime) {
@@ -124,22 +141,56 @@ export default function ReservationFormModal({
     }
   }, [reservationDate, selectedDate, table.id, table.reservations])
 
+  const handleSelectTime = (time: string) => {
+    setSelectedTime(time)
+    setStartTime(time)
+    setEndTime(addMinutesToTime(time, durationMinutes))
+    setSlotError(null)
+  }
+
+  const handleStartTimeChange = (value: string) => {
+    setStartTime(value)
+    setSelectedTime(value || null)
+
+    if (value && !endTime) {
+      setEndTime(addMinutesToTime(value, durationMinutes))
+    }
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setSlotError(null)
 
-    if (!selectedTime) {
-      setSlotError('Lütfen bir saat aralığı seçin.')
+    if (!startTime || !endTime) {
+      setSlotError('Lütfen başlangıç ve bitiş saatini girin.')
       return
     }
 
-    const reservedAt = `${reservationDate}T${selectedTime}:00`
+    const duration = computeDurationMinutes(startTime, endTime)
+
+    if (duration < 15) {
+      setSlotError('Rezervasyon süresi en az 15 dakika olmalıdır.')
+      return
+    }
+
+    if (duration > 480) {
+      setSlotError('Rezervasyon süresi en fazla 480 dakika olabilir.')
+      return
+    }
+
+    if (endTime <= startTime) {
+      setSlotError('Bitiş saati başlangıç saatinden sonra olmalıdır.')
+      return
+    }
+
+    const reservedAt = `${reservationDate}T${startTime}:00`
 
     await onSubmit({
       customer_name: customerName.trim(),
       phone: phone.trim(),
       guest_count: Number(guestCount),
       reserved_at: reservedAt,
+      duration_minutes: duration,
       reservation_date: reservationDate,
     })
   }
@@ -179,7 +230,7 @@ export default function ReservationFormModal({
 
               {!prefilledTime && (
                 <div>
-                  <p className="mb-3 text-sm font-medium text-slate-700">Saat Aralığı Seçin</p>
+                  <p className="mb-3 text-sm font-medium text-slate-700">Başlangıç Saati Seçin</p>
                   {loadingReservations ? (
                     <p className="text-sm text-slate-500">Saatler yükleniyor...</p>
                   ) : (
@@ -187,16 +238,44 @@ export default function ReservationFormModal({
                       date={reservationDate}
                       reservations={existingReservations}
                       durationMinutes={durationMinutes}
+                      operatingHours={operatingHours}
                       selectedTime={selectedTime}
-                      onSelectTime={setSelectedTime}
+                      onSelectTime={handleSelectTime}
                     />
                   )}
                 </div>
               )}
 
-              {selectedTime && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Başlangıç saati"
+                  name="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(event) => handleStartTimeChange(event.target.value)}
+                  min={operatingHours.startTime}
+                  max={operatingHours.endTime}
+                  required
+                />
+                <Input
+                  label="Bitiş saati"
+                  name="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  min={startTime || operatingHours.startTime}
+                  max={operatingHours.endTime}
+                  required
+                />
+              </div>
+
+              {startTime && endTime && endTime > startTime && (
                 <p className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-900">
-                  Seçilen saat: <span className="font-bold">{selectedTime}</span>
+                  Rezervasyon aralığı:{' '}
+                  <span className="font-bold">
+                    {startTime} – {endTime}
+                  </span>{' '}
+                  ({computeDurationMinutes(startTime, endTime)} dk)
                 </p>
               )}
 
@@ -254,7 +333,7 @@ export default function ReservationFormModal({
             <Button type="button" variant="secondary" onClick={onClose} disabled={submitting} className="flex-1">
               Vazgeç
             </Button>
-            <Button type="submit" disabled={submitting || !selectedTime} className="flex-1">
+            <Button type="submit" disabled={submitting || !startTime || !endTime} className="flex-1">
               {submitting ? 'Kaydediliyor...' : 'Rezervasyon Oluştur'}
             </Button>
           </div>

@@ -13,6 +13,8 @@ export default function ReservationSettingsPanel({ settings, onSaved }: Reservat
   const [visibleBeforeMinutes, setVisibleBeforeMinutes] = useState(
     String(settings.reservation_visible_before_minutes),
   )
+  const [startTime, setStartTime] = useState(settings.reservation_start_time)
+  const [endTime, setEndTime] = useState(settings.reservation_end_time)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -20,6 +22,8 @@ export default function ReservationSettingsPanel({ settings, onSaved }: Reservat
   useEffect(() => {
     setDurationMinutes(String(settings.reservation_duration_minutes))
     setVisibleBeforeMinutes(String(settings.reservation_visible_before_minutes))
+    setStartTime(settings.reservation_start_time)
+    setEndTime(settings.reservation_end_time)
   }, [settings])
 
   const handleSubmit = async (event: FormEvent) => {
@@ -32,6 +36,8 @@ export default function ReservationSettingsPanel({ settings, onSaved }: Reservat
       const saved = await updateRestaurantSettings({
         reservation_duration_minutes: Number(durationMinutes),
         reservation_visible_before_minutes: Number(visibleBeforeMinutes),
+        reservation_start_time: startTime,
+        reservation_end_time: endTime,
       })
       onSaved(saved)
       setSuccess(true)
@@ -47,14 +53,36 @@ export default function ReservationSettingsPanel({ settings, onSaved }: Reservat
       <div>
         <h2 className="text-sm font-bold text-slate-900">Rezervasyon Ayarları</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Süre ve &quot;Rezerve&quot; görünümü bu ayarlara göre belirlenir.
+          Çalışma saatleri, varsayılan süre ve &quot;Rezerve&quot; görünümü bu ayarlara göre belirlenir.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="Rezervasyon başlangıç saati"
+          name="reservationStartTime"
+          type="time"
+          value={startTime}
+          onChange={(event) => setStartTime(event.target.value)}
+          required
+        />
+        <Input
+          label="Rezervasyon bitiş saati"
+          name="reservationEndTime"
+          type="time"
+          value={endTime}
+          onChange={(event) => setEndTime(event.target.value)}
+          required
+        />
+      </div>
+      <p className="-mt-2 text-xs text-slate-500">
+        Rezervasyonlar yalnızca bu saat aralığı içinde alınabilir.
+      </p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Input
-            label="Rezervasyon süresi (dakika)"
+            label="Varsayılan rezervasyon süresi (dakika)"
             name="reservationDuration"
             type="number"
             min={15}
@@ -65,7 +93,7 @@ export default function ReservationSettingsPanel({ settings, onSaved }: Reservat
             required
           />
           <p className="mt-1.5 text-xs text-slate-500">
-            Her rezervasyon için masa bu süre boyunca ayrılır.
+            Yeni rezervasyonlarda başlangıç saatine eklenen varsayılan süre.
           </p>
         </div>
         <div>

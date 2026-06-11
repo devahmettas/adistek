@@ -10,6 +10,7 @@ export interface TableReservation {
   guest_count: number
   reserved_at: string
   reserved_time: string
+  reserved_end_time?: string
   duration_minutes: number
   created_at?: string | null
 }
@@ -27,6 +28,8 @@ export interface ReservationDayOverview {
   date: string
   reservation_duration_minutes: number
   reservation_visible_before_minutes: number
+  reservation_start_time: string
+  reservation_end_time: string
   reservations: TableReservation[]
   tables: ReservationDayTable[]
 }
@@ -37,6 +40,7 @@ export interface CreateReservationPayload {
   phone: string
   guest_count: number
   reserved_at: string
+  duration_minutes?: number
 }
 
 export interface UpdateReservationPayload {
@@ -45,6 +49,7 @@ export interface UpdateReservationPayload {
   phone: string
   guest_count: number
   reserved_at: string
+  duration_minutes?: number
 }
 
 export const getReservationDay = async (date: string): Promise<ReservationDayOverview> => {

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateRestaurantSettingsRequest;
-use App\Models\TableReservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,10 +14,7 @@ class RestaurantSettingsController extends Controller
         $restaurant = $request->user();
 
         return response()->json([
-            'data' => [
-                'reservation_duration_minutes' => $restaurant->reservation_duration_minutes,
-                'reservation_visible_before_minutes' => $restaurant->reservation_visible_before_minutes,
-            ],
+            'data' => $this->formatSettings($restaurant),
         ]);
     }
 
@@ -27,17 +23,19 @@ class RestaurantSettingsController extends Controller
         $restaurant = $request->user();
         $restaurant->update($request->validated());
 
-        TableReservation::query()
-            ->where('restaurant_id', $restaurant->id)
-            ->where('reserved_at', '>=', now())
-            ->update(['duration_minutes' => $restaurant->reservation_duration_minutes]);
-
         return response()->json([
-            'data' => [
-                'reservation_duration_minutes' => $restaurant->reservation_duration_minutes,
-                'reservation_visible_before_minutes' => $restaurant->reservation_visible_before_minutes,
-            ],
+            'data' => $this->formatSettings($restaurant->fresh()),
             'message' => 'Ayarlar kaydedildi.',
         ]);
+    }
+
+    private function formatSettings($restaurant): array
+    {
+        return [
+            'reservation_duration_minutes' => $restaurant->reservation_duration_minutes,
+            'reservation_visible_before_minutes' => $restaurant->reservation_visible_before_minutes,
+            'reservation_start_time' => $restaurant->reservation_start_time ?? '10:00',
+            'reservation_end_time' => $restaurant->reservation_end_time ?? '23:00',
+        ];
     }
 }

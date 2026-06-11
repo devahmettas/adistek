@@ -1,8 +1,18 @@
 import type { TableReservation } from '../api/reservations'
 import { todayLocalString } from './dateHelpers'
 
-export const RESERVATION_DAY_START_HOUR = 10
-export const RESERVATION_DAY_END_HOUR = 23
+export const DEFAULT_RESERVATION_START_TIME = '10:00'
+export const DEFAULT_RESERVATION_END_TIME = '23:00'
+
+export interface ReservationOperatingHours {
+  startTime: string
+  endTime: string
+}
+
+export const DEFAULT_OPERATING_HOURS: ReservationOperatingHours = {
+  startTime: DEFAULT_RESERVATION_START_TIME,
+  endTime: DEFAULT_RESERVATION_END_TIME,
+}
 
 export interface ReservationTimeSlot {
   time: string
@@ -25,10 +35,21 @@ function toTimeString(totalMinutes: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
-export function generateReservationSlotTimes(durationMinutes: number): string[] {
+export function computeDurationMinutes(startTime: string, endTime: string): number {
+  return toMinutes(endTime) - toMinutes(startTime)
+}
+
+export function addMinutesToTime(time: string, minutes: number): string {
+  return toTimeString(toMinutes(time) + minutes)
+}
+
+export function generateReservationSlotTimes(
+  durationMinutes: number,
+  operatingHours: ReservationOperatingHours = DEFAULT_OPERATING_HOURS,
+): string[] {
   const slots: string[] = []
-  const startMinutes = RESERVATION_DAY_START_HOUR * 60
-  const endMinutes = RESERVATION_DAY_END_HOUR * 60
+  const startMinutes = toMinutes(operatingHours.startTime)
+  const endMinutes = toMinutes(operatingHours.endTime)
 
   for (let current = startMinutes; current + durationMinutes <= endMinutes; current += durationMinutes) {
     slots.push(toTimeString(current))
@@ -37,9 +58,10 @@ export function generateReservationSlotTimes(durationMinutes: number): string[] 
   return slots
 }
 
-function getReservationWindow(reservation: TableReservation, durationMinutes: number) {
+function getReservationWindow(reservation: TableReservation) {
   const start = new Date(reservation.reserved_at).getTime()
-  const end = start + durationMinutes * 60_000
+  const duration = reservation.duration_minutes
+  const end = start + duration * 60_000
 
   return { start, end }
 }
@@ -54,7 +76,7 @@ export function findReservationForSlot(
   const slotEnd = slotStart + durationMinutes * 60_000
 
   return reservations.find((reservation) => {
-    const { start, end } = getReservationWindow(reservation, durationMinutes)
+    const { start, end } = getReservationWindow(reservation)
 
     return slotStart < end && slotEnd > start
   })
@@ -72,8 +94,9 @@ export function buildReservationTimeSlots(
   date: string,
   reservations: TableReservation[],
   durationMinutes: number,
+  operatingHours: ReservationOperatingHours = DEFAULT_OPERATING_HOURS,
 ): ReservationTimeSlot[] {
-  return generateReservationSlotTimes(durationMinutes).map((time) => {
+  return generateReservationSlotTimes(durationMinutes, operatingHours).map((time) => {
     const reservation = findReservationForSlot(date, time, reservations, durationMinutes)
     const past = isSlotInPast(date, time)
 
@@ -108,6 +131,14 @@ export function formatSlotRange(time: string, durationMinutes: number): string {
   return `${time} – ${toTimeString(endMinutes)}`
 }
 
+export function formatReservationTimeRange(reservation: TableReservation): string {
+  if (reservation.reserved_end_time) {
+    return `${reservation.reserved_time} – ${reservation.reserved_end_time}`
+  }
+
+  return formatSlotRange(reservation.reserved_time, reservation.duration_minutes)
+}
+
 export function isTableFreeAtSlot(
   date: string,
   slotTime: string,
@@ -125,8 +156,9 @@ export function buildPageReservationTimeSlots(
   date: string,
   tables: { reservations: TableReservation[] }[],
   durationMinutes: number,
+  operatingHours: ReservationOperatingHours = DEFAULT_OPERATING_HOURS,
 ): ReservationTimeSlot[] {
-  return generateReservationSlotTimes(durationMinutes).map((time) => {
+  return generateReservationSlotTimes(durationMinutes, operatingHours).map((time) => {
     const past = isSlotInPast(date, time)
     const availableTableCount = tables.filter((table) =>
       isTableFreeAtSlot(date, time, table.reservations, durationMinutes),

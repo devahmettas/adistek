@@ -1,6 +1,11 @@
 import { FormEvent, useMemo, useState } from 'react'
 import type { TableReservation, UpdateReservationPayload } from '../../api/reservations'
 import {
+  addMinutesToTime,
+  computeDurationMinutes,
+  formatReservationTimeRange,
+} from '../../utils/reservationSlotUtils'
+import {
   defaultReservationListFilters,
   filterReservations,
   getReservationListStats,
@@ -59,6 +64,7 @@ export default function ReservationDetailList({
     guest_count: '2',
     date: '',
     time: '',
+    endTime: '',
   })
 
   const effectiveFilters = fixedTableId
@@ -89,6 +95,8 @@ export default function ReservationDetailList({
 
   const startEditing = (reservation: TableReservation) => {
     const { date, time } = parseReservationDateTime(reservation.reserved_at)
+    const endTime =
+      reservation.reserved_end_time ?? addMinutesToTime(time, reservation.duration_minutes)
 
     setEditingId(reservation.id)
     setEditError(null)
@@ -99,12 +107,25 @@ export default function ReservationDetailList({
       guest_count: String(reservation.guest_count),
       date,
       time,
+      endTime,
     })
   }
 
   const handleEditSubmit = async (event: FormEvent, reservationId: number) => {
     event.preventDefault()
     setEditError(null)
+
+    const duration = computeDurationMinutes(editForm.time, editForm.endTime)
+
+    if (duration < 15) {
+      setEditError('Rezervasyon süresi en az 15 dakika olmalıdır.')
+      return
+    }
+
+    if (editForm.endTime <= editForm.time) {
+      setEditError('Bitiş saati başlangıç saatinden sonra olmalıdır.')
+      return
+    }
 
     try {
       await onUpdate(reservationId, {
@@ -113,6 +134,7 @@ export default function ReservationDetailList({
         phone: editForm.phone.trim(),
         guest_count: Number(editForm.guest_count),
         reserved_at: `${editForm.date}T${editForm.time}:00`,
+        duration_minutes: duration,
       })
       setEditingId(null)
     } catch (err) {
@@ -234,12 +256,22 @@ export default function ReservationDetailList({
                         required
                       />
                       <Input
-                        label="Saat"
+                        label="Başlangıç saati"
                         name={`time-${reservation.id}`}
                         type="time"
                         value={editForm.time}
                         onChange={(event) =>
                           setEditForm((current) => ({ ...current, time: event.target.value }))
+                        }
+                        required
+                      />
+                      <Input
+                        label="Bitiş saati"
+                        name={`endTime-${reservation.id}`}
+                        type="time"
+                        value={editForm.endTime}
+                        onChange={(event) =>
+                          setEditForm((current) => ({ ...current, endTime: event.target.value }))
                         }
                         required
                       />
@@ -301,20 +333,18 @@ export default function ReservationDetailList({
                           {reservation.table_name ?? 'Masa'}
                         </span>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          {reservation.reserved_time}
+                          {formatReservationTimeRange(reservation)}
                         </span>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                           {reservation.guest_count} kişi
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          {reservation.duration_minutes} dk
                         </span>
                       </div>
                       <div>
                         <p className="text-lg font-bold text-slate-900">{reservation.customer_name}</p>
                         <p className="mt-1 text-sm text-slate-600">{reservation.phone}</p>
                         <p className="mt-2 text-sm font-medium text-slate-800">
-                          {formatReservationDate(reservation.reserved_at)} · {reservation.reserved_time}
+                          {formatReservationDate(reservation.reserved_at)} ·{' '}
+                          {formatReservationTimeRange(reservation)}
                         </p>
                       </div>
                     </div>

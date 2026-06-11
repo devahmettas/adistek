@@ -3,7 +3,9 @@ import type { TableReservation } from '../../api/reservations'
 import { TABLE_STATUS_STYLES } from '../../constants/tableStatuses'
 import {
   buildReservationTimeSlots,
+  DEFAULT_OPERATING_HOURS,
   formatSlotRange,
+  type ReservationOperatingHours,
   type ReservationTimeSlot,
 } from '../../utils/reservationSlotUtils'
 
@@ -12,6 +14,7 @@ interface ReservationTimeSlotGridProps {
   date?: string
   reservations?: TableReservation[]
   durationMinutes: number
+  operatingHours?: ReservationOperatingHours
   selectedTime: string | null
   onSelectTime: (time: string) => void
   compact?: boolean
@@ -58,6 +61,7 @@ export default function ReservationTimeSlotGrid({
   date,
   reservations,
   durationMinutes,
+  operatingHours = DEFAULT_OPERATING_HOURS,
   selectedTime,
   onSelectTime,
   compact = false,
@@ -67,8 +71,8 @@ export default function ReservationTimeSlotGrid({
       return providedSlots
     }
 
-    return buildReservationTimeSlots(date ?? '', reservations ?? [], durationMinutes)
-  }, [providedSlots, date, reservations, durationMinutes])
+    return buildReservationTimeSlots(date ?? '', reservations ?? [], durationMinutes, operatingHours)
+  }, [providedSlots, date, reservations, durationMinutes, operatingHours])
 
   if (slots.length === 0) {
     return <p className="text-sm text-slate-500">Saat aralığı oluşturulamadı.</p>

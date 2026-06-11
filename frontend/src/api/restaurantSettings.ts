@@ -4,6 +4,8 @@ import type { ApiResponse } from './types'
 export interface RestaurantSettings {
   reservation_duration_minutes: number
   reservation_visible_before_minutes: number
+  reservation_start_time: string
+  reservation_end_time: string
 }
 
 export const getRestaurantSettings = async (): Promise<RestaurantSettings> => {

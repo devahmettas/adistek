@@ -30,16 +30,18 @@ class TableReservationService
         $now = Carbon::now();
         $isToday = $day->isSameDay($now);
         $visibleBeforeMinutes = $restaurant?->reservation_visible_before_minutes ?? 60;
-        $durationMinutes = $this->getReservationDurationMinutes($restaurant);
+        $defaultDurationMinutes = $this->getDefaultDurationMinutes($restaurant);
 
         return [
             'date' => $day->toDateString(),
-            'reservation_duration_minutes' => $durationMinutes,
+            'reservation_duration_minutes' => $defaultDurationMinutes,
             'reservation_visible_before_minutes' => $visibleBeforeMinutes,
+            'reservation_start_time' => $this->getReservationStartTime($restaurant),
+            'reservation_end_time' => $this->getReservationEndTime($restaurant),
             'reservations' => $reservations
-                ->map(fn (TableReservation $row) => $this->formatReservation($row, $durationMinutes))
+                ->map(fn (TableReservation $row) => $this->formatReservation($row))
                 ->values(),
-            'tables' => $tables->map(function ($table) use ($reservationsByTable, $isToday, $now, $visibleBeforeMinutes, $durationMinutes) {
+            'tables' => $tables->map(function ($table) use ($reservationsByTable, $isToday, $now, $visibleBeforeMinutes) {
                 $tableReservations = $reservationsByTable->get($table->id, collect());
 
                 return [
@@ -53,10 +55,9 @@ class TableReservationService
                         $tableReservations,
                         $now,
                         $visibleBeforeMinutes,
-                        $durationMinutes,
                     ),
                     'reservations' => $tableReservations
-                        ->map(fn (TableReservation $row) => $this->formatReservation($row, $durationMinutes))
+                        ->map(fn (TableReservation $row) => $this->formatReservation($row))
                         ->values(),
                 ];
             })->values(),
@@ -73,12 +74,13 @@ class TableReservationService
 
         $reservedAt = Carbon::parse($data['reserved_at']);
         $restaurant = $this->restaurantRepository->find($restaurantId);
-        $duration = $this->getReservationDurationMinutes($restaurant);
+        $duration = $this->resolveDurationMinutes($data, $restaurant);
 
         if ($reservedAt->isPast()) {
             throw new UnprocessableEntityHttpException('Rezervasyon saati geçmiş bir zaman olamaz.');
         }
 
+        $this->assertWithinOperatingHours($reservedAt, $duration, $restaurant);
         $this->assertNoOverlap($restaurantId, $table->id, $reservedAt, $duration);
 
         return $this->reservationRepository->create([
@@ -108,12 +110,13 @@ class TableReservationService
 
         $reservedAt = Carbon::parse($data['reserved_at']);
         $restaurant = $this->restaurantRepository->find($restaurantId);
-        $duration = $this->getReservationDurationMinutes($restaurant);
+        $duration = $this->resolveDurationMinutes($data, $restaurant, $reservation);
 
         if ($reservedAt->isPast()) {
             throw new UnprocessableEntityHttpException('Rezervasyon saati geçmiş bir zaman olamaz.');
         }
 
+        $this->assertWithinOperatingHours($reservedAt, $duration, $restaurant);
         $this->assertNoOverlap($restaurantId, $table->id, $reservedAt, $duration, $reservationId);
 
         return $this->reservationRepository->update($reservation, [
@@ -160,7 +163,6 @@ class TableReservationService
         $now = $now ?? Carbon::now();
         $restaurant = $this->restaurantRepository->find($restaurantId);
         $visibleBeforeMinutes = $restaurant?->reservation_visible_before_minutes ?? 60;
-        $durationMinutes = $this->getReservationDurationMinutes($restaurant);
         $reservations = $this->reservationRepository->getByRestaurantAndDate(
             $restaurantId,
             $now->copy()->startOfDay(),
@@ -169,7 +171,7 @@ class TableReservationService
         $tableIds = [];
 
         foreach ($reservations->groupBy('restaurant_table_id') as $tableId => $tableReservations) {
-            if ($this->isActivelyReserved($tableReservations, $now, $visibleBeforeMinutes, $durationMinutes)) {
+            if ($this->isActivelyReserved($tableReservations, $now, $visibleBeforeMinutes)) {
                 $tableIds[] = (int) $tableId;
             }
         }
@@ -198,6 +200,34 @@ class TableReservationService
         return $this->formatReservation($reservation);
     }
 
+    private function resolveDurationMinutes(array $data, $restaurant, ?TableReservation $existing = null): int
+    {
+        if (array_key_exists('duration_minutes', $data) && $data['duration_minutes'] !== null) {
+            return (int) $data['duration_minutes'];
+        }
+
+        if ($existing) {
+            return $existing->duration_minutes;
+        }
+
+        return $this->getDefaultDurationMinutes($restaurant);
+    }
+
+    private function assertWithinOperatingHours(Carbon $reservedAt, int $durationMinutes, $restaurant): void
+    {
+        $startTime = $this->getReservationStartTime($restaurant);
+        $endTime = $this->getReservationEndTime($restaurant);
+        $dayStart = $reservedAt->copy()->setTimeFromTimeString($startTime);
+        $dayEnd = $reservedAt->copy()->setTimeFromTimeString($endTime);
+        $reservationEnd = $reservedAt->copy()->addMinutes($durationMinutes);
+
+        if ($reservedAt->lt($dayStart) || $reservationEnd->gt($dayEnd)) {
+            throw new UnprocessableEntityHttpException(
+                "Rezervasyon {$startTime} – {$endTime} çalışma saatleri içinde olmalıdır.",
+            );
+        }
+    }
+
     private function assertNoOverlap(
         int $restaurantId,
         int $tableId,
@@ -220,7 +250,7 @@ class TableReservationService
             }
 
             $start = $reservation->reserved_at->copy();
-            $end = $reservation->reserved_at->copy()->addMinutes($durationMinutes);
+            $end = $reservation->reserved_at->copy()->addMinutes($reservation->duration_minutes);
 
             if ($newStart->lt($end) && $newEnd->gt($start)) {
                 throw new UnprocessableEntityHttpException(
@@ -230,20 +260,29 @@ class TableReservationService
         }
     }
 
-    private function getReservationDurationMinutes($restaurant): int
+    private function getDefaultDurationMinutes($restaurant): int
     {
         return $restaurant?->reservation_duration_minutes ?? 60;
+    }
+
+    private function getReservationStartTime($restaurant): string
+    {
+        return $restaurant?->reservation_start_time ?? '10:00';
+    }
+
+    private function getReservationEndTime($restaurant): string
+    {
+        return $restaurant?->reservation_end_time ?? '23:00';
     }
 
     private function isActivelyReserved(
         $reservations,
         Carbon $now,
         int $visibleBeforeMinutes,
-        int $durationMinutes,
     ): bool {
         foreach ($reservations as $reservation) {
             $visibleFrom = $reservation->reserved_at->copy()->subMinutes($visibleBeforeMinutes);
-            $visibleUntil = $reservation->reserved_at->copy()->addMinutes($durationMinutes);
+            $visibleUntil = $reservation->reserved_at->copy()->addMinutes($reservation->duration_minutes);
 
             if ($now->gte($visibleFrom) && $now->lt($visibleUntil)) {
                 return true;
@@ -253,8 +292,10 @@ class TableReservationService
         return false;
     }
 
-    private function formatReservation(TableReservation $reservation, ?int $durationMinutes = null): array
+    private function formatReservation(TableReservation $reservation): array
     {
+        $endAt = $reservation->reserved_at->copy()->addMinutes($reservation->duration_minutes);
+
         return [
             'id' => $reservation->id,
             'restaurant_table_id' => $reservation->restaurant_table_id,
@@ -264,7 +305,8 @@ class TableReservationService
             'guest_count' => $reservation->guest_count,
             'reserved_at' => $reservation->reserved_at->toIso8601String(),
             'reserved_time' => $reservation->reserved_at->format('H:i'),
-            'duration_minutes' => $durationMinutes ?? $reservation->duration_minutes,
+            'reserved_end_time' => $endAt->format('H:i'),
+            'duration_minutes' => $reservation->duration_minutes,
             'created_at' => $reservation->created_at?->toIso8601String(),
         ];
     }

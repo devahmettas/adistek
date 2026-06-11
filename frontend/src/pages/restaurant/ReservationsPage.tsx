@@ -21,7 +21,12 @@ import ReservationSettingsPanel from '../../components/reservations/ReservationS
 import ReservationTableGrid from '../../components/reservations/ReservationTableGrid'
 import ReservationTimeSlotGrid from '../../components/reservations/ReservationTimeSlotGrid'
 import { todayLocalString } from '../../utils/dateHelpers'
-import { buildPageReservationTimeSlots, getReservationTableViewState } from '../../utils/reservationSlotUtils'
+import {
+  buildPageReservationTimeSlots,
+  DEFAULT_OPERATING_HOURS,
+  getReservationTableViewState,
+  type ReservationOperatingHours,
+} from '../../utils/reservationSlotUtils'
 
 type ReservationTab = 'tables' | 'settings'
 
@@ -38,6 +43,8 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 const defaultSettings: RestaurantSettings = {
   reservation_duration_minutes: 60,
   reservation_visible_before_minutes: 60,
+  reservation_start_time: '10:00',
+  reservation_end_time: '23:00',
 }
 
 function tabButtonClass(isActive: boolean): string {
@@ -66,13 +73,26 @@ export default function ReservationsPage() {
 
   const durationMinutes = overview?.reservation_duration_minutes ?? settings.reservation_duration_minutes
 
+  const operatingHours: ReservationOperatingHours = useMemo(
+    () => ({
+      startTime: overview?.reservation_start_time ?? settings.reservation_start_time,
+      endTime: overview?.reservation_end_time ?? settings.reservation_end_time,
+    }),
+    [
+      overview?.reservation_start_time,
+      overview?.reservation_end_time,
+      settings.reservation_start_time,
+      settings.reservation_end_time,
+    ],
+  )
+
   const pageTimeSlots = useMemo(() => {
     if (!overview) {
       return []
     }
 
-    return buildPageReservationTimeSlots(selectedDate, overview.tables, durationMinutes)
-  }, [overview, selectedDate, durationMinutes])
+    return buildPageReservationTimeSlots(selectedDate, overview.tables, durationMinutes, operatingHours)
+  }, [overview, selectedDate, durationMinutes, operatingHours])
 
   const syncSelectedTable = useCallback((data: ReservationDayOverview) => {
     setSelectedTable((current) => {
@@ -97,6 +117,8 @@ export default function ReservationsPage() {
         setSettings({
           reservation_duration_minutes: data.reservation_duration_minutes,
           reservation_visible_before_minutes: data.reservation_visible_before_minutes,
+          reservation_start_time: data.reservation_start_time ?? DEFAULT_OPERATING_HOURS.startTime,
+          reservation_end_time: data.reservation_end_time ?? DEFAULT_OPERATING_HOURS.endTime,
         })
         syncSelectedTable(data)
         return data
@@ -162,6 +184,7 @@ export default function ReservationsPage() {
     phone: string
     guest_count: number
     reserved_at: string
+    duration_minutes: number
     reservation_date: string
   }) => {
     if (!selectedTable) {
@@ -181,6 +204,7 @@ export default function ReservationsPage() {
         phone: payload.phone,
         guest_count: payload.guest_count,
         reserved_at: payload.reserved_at,
+        duration_minutes: payload.duration_minutes,
       })
 
       setSelectedTable(null)
@@ -318,6 +342,7 @@ export default function ReservationsPage() {
                 <ReservationTimeSlotGrid
                   slots={pageTimeSlots}
                   durationMinutes={durationMinutes}
+                  operatingHours={operatingHours}
                   selectedTime={selectedTime}
                   onSelectTime={(time) => setSelectedTime((current) => (current === time ? null : time))}
                   compact
@@ -372,6 +397,7 @@ export default function ReservationsPage() {
           selectedDate={selectedDate}
           prefilledTime={selectedTime}
           durationMinutes={durationMinutes}
+          operatingHours={operatingHours}
           submitting={submitting}
           error={formError}
           cancellingId={cancellingId}
