@@ -1,47 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
-import MenuProductCard from '../components/menu/MenuProductCard'
-import { getPublicMenu, type PublicMenu, type PublicMenuCategory } from '../api/publicMenu'
+import MenuCategoryGrid from '../components/menu/MenuCategoryGrid'
+import MenuLoadingScreen from '../components/menu/MenuLoadingScreen'
+import MenuProductsPanel from '../components/menu/MenuProductsPanel'
+import { getPublicMenu, type PublicMenu } from '../api/publicMenu'
 import { getMenuLanguage, type MenuLanguage } from '../i18n'
-import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
-
-function CategorySection({
-  category,
-  sectionRef,
-}: {
-  category: PublicMenuCategory
-  sectionRef: (element: HTMLElement | null) => void
-}) {
-  const categoryImageUrl = resolveMenuAssetUrl(category.image_url, category.image_path)
-
-  return (
-    <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
-      <div className="mb-5 flex items-center gap-4">
-        {categoryImageUrl && (
-          <img
-            src={categoryImageUrl}
-            alt={category.name}
-            className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover shadow-sm"
-          />
-        )}
-        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{category.name}</h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-          {category.products.length}
-        </span>
-      </div>
-
-      <div className="grid gap-4">
-        {category.products.map((product, index) => (
-          <MenuProductCard key={product.id} product={product} index={index} />
-        ))}
-      </div>
-    </section>
-  )
-}
+import {
+  ALL_PRODUCTS_VIEW,
+  countMenuProducts,
+  flattenMenuProducts,
+  type MenuCategorySelection,
+} from '../utils/menuCategoryView'
 
 export default function PublicMenuPage() {
   const { t, i18n } = useTranslation()
@@ -50,8 +21,8 @@ export default function PublicMenuPage() {
   const [menu, setMenu] = useState<PublicMenu | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
-  const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
+  const [selectedView, setSelectedView] = useState<MenuCategorySelection | null>(null)
+  const productsRef = useRef<HTMLDivElement | null>(null)
   const hasMenuRef = useRef(false)
 
   useEffect(() => {
@@ -71,7 +42,7 @@ export default function PublicMenuPage() {
       .then((data) => {
         hasMenuRef.current = true
         setMenu(data)
-        setActiveCategoryId(data.categories[0]?.id ?? null)
+        setSelectedView(null)
       })
       .catch(() => {
         setError(t('common.menuNotFound'))
@@ -83,55 +54,58 @@ export default function PublicMenuPage() {
       })
   }, [identifier, language, t])
 
-  useEffect(() => {
-    if (!menu || menu.categories.length === 0) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-
-        if (visible) {
-          const id = Number(visible.target.getAttribute('data-category-id'))
-          if (!Number.isNaN(id)) {
-            setActiveCategoryId(id)
-          }
-        }
-      },
-      { rootMargin: '-40% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] },
-    )
-
-    menu.categories.forEach((category) => {
-      const element = sectionRefs.current[category.id]
-      if (element) {
-        observer.observe(element)
-      }
+  const scrollToProducts = () => {
+    requestAnimationFrame(() => {
+      productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
+  }
 
-    return () => observer.disconnect()
-  }, [menu])
+  const openView = (view: MenuCategorySelection) => {
+    setSelectedView(view)
+    scrollToProducts()
+  }
 
-  const scrollToCategory = (categoryId: number) => {
-    sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    setActiveCategoryId(categoryId)
+  const switchView = (view: MenuCategorySelection) => {
+    setSelectedView(view)
+    requestAnimationFrame(() => {
+      productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  const backToCategories = () => {
+    setSelectedView(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (loading) {
-    return <LoadingState fullScreen label={t('common.menuLoading')} />
+    return <MenuLoadingScreen label={t('common.menuLoading')} />
   }
 
   if (error || !menu) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="panel-surface max-w-sm px-6 py-8 text-center">
-          <p className="text-lg font-semibold text-slate-800">{error ?? t('common.menuNotFound')}</p>
+      <div className="menu-theme menu-error-screen">
+        <div className="menu-page-bg" aria-hidden />
+        <div className="menu-error-card">
+          <p>{error ?? t('common.menuNotFound')}</p>
         </div>
       </div>
     )
   }
+
+  const selectedCategory =
+    selectedView !== null && selectedView !== ALL_PRODUCTS_VIEW
+      ? menu.categories.find((category) => category.id === selectedView)
+      : undefined
+
+  const productsToShow =
+    selectedView === ALL_PRODUCTS_VIEW
+      ? flattenMenuProducts(menu.categories)
+      : (selectedCategory?.products ?? [])
+
+  const productsTitle =
+    selectedView === ALL_PRODUCTS_VIEW
+      ? t('common.allProducts')
+      : (selectedCategory?.name ?? '')
 
   return (
     <PublicPageShell
@@ -140,31 +114,39 @@ export default function PublicMenuPage() {
       menuSettings={menu.menu_settings}
       slides={menu.slides}
       categories={menu.categories}
-      activeCategoryId={activeCategoryId}
-      onCategoryClick={scrollToCategory}
+      activeCategoryId={selectedView}
+      onCategoryClick={switchView}
+      showCategoryNav={selectedView !== null}
+      onBackToCategories={backToCategories}
       footer={
-        <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
-          {t('common.footerBonAppetit')}
+        <footer className="menu-footer">
+          <div className="menu-footer__ornament" aria-hidden>
+            <span />
+            <span />
+          </div>
+          <p>{t('common.footerBonAppetit')}</p>
         </footer>
       }
     >
       {menu.categories.length === 0 ? (
-        <div className="panel-surface p-8 text-center">
-          <p className="text-slate-600">{t('common.noProducts')}</p>
+        <div className="menu-empty-state">
+          <p>{t('common.noProducts')}</p>
         </div>
+      ) : selectedView === null ? (
+        <MenuCategoryGrid
+          categories={menu.categories}
+          totalProductCount={countMenuProducts(menu.categories)}
+          onSelectAll={() => openView(ALL_PRODUCTS_VIEW)}
+          onSelect={(categoryId) => openView(categoryId)}
+        />
       ) : (
-        <div className="space-y-10">
-          {menu.categories.map((category) => (
-            <div key={category.id} data-category-id={category.id} className="menu-section-reveal">
-              <CategorySection
-                category={category}
-                sectionRef={(element) => {
-                  sectionRefs.current[category.id] = element
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        <MenuProductsPanel
+          title={productsTitle}
+          products={productsToShow}
+          panelRef={(element) => {
+            productsRef.current = element
+          }}
+        />
       )}
     </PublicPageShell>
   )

@@ -19,32 +19,32 @@ export default function LanguageSwitcher() {
   }
 
   return (
-    <div className="relative">
+    <div className="menu-lang-switcher">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:border-brand-300 hover:text-brand-800"
+        className="menu-lang-switcher__trigger"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={t('language.switchLabel')}
       >
         <svg
-          className="h-3.5 w-3.5 text-brand-700"
+          className="menu-lang-switcher__icon"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={1.8}
           aria-hidden
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M3 5h12M9 3v2m4.5 9a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM21 19l-3-3m0 0l-3 3m3-3v6"
+            d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3c2.2 2.8 3.4 5.8 3.4 9s-1.2 6.2-3.4 9c-2.2-2.8-3.4-5.8-3.4-9s1.2-6.2 3.4-9z"
           />
         </svg>
         <span>{LANGUAGE_LABELS[current] ?? current.toUpperCase()}</span>
         <svg
-          className={`h-3 w-3 transition ${open ? 'rotate-180' : ''}`}
+          className={`menu-lang-switcher__chevron ${open ? 'menu-lang-switcher__chevron--open' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -59,14 +59,11 @@ export default function LanguageSwitcher() {
         <>
           <button
             type="button"
-            className="fixed inset-0 z-30 cursor-default"
+            className="menu-lang-switcher__backdrop"
             aria-label={t('common.close')}
             onClick={() => setOpen(false)}
           />
-          <ul
-            role="listbox"
-            className="absolute right-0 z-40 mt-2 min-w-[9rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
-          >
+          <ul role="listbox" className="menu-lang-switcher__menu">
             {SUPPORTED_LANGUAGES.map((lang) => (
               <li key={lang}>
                 <button
@@ -74,8 +71,8 @@ export default function LanguageSwitcher() {
                   role="option"
                   aria-selected={lang === current}
                   onClick={() => handleSelect(lang)}
-                  className={`flex w-full items-center px-4 py-2.5 text-left text-sm transition hover:bg-brand-50 ${
-                    lang === current ? 'font-bold text-brand-800' : 'text-slate-700'
+                  className={`menu-lang-switcher__option ${
+                    lang === current ? 'menu-lang-switcher__option--active' : ''
                   }`}
                 >
                   {LANGUAGE_LABELS[lang]}

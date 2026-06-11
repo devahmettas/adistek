@@ -1,11 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PublicMenuSlide } from '../../api/publicMenu'
+import { MENU_HERO_FALLBACK_IMAGES } from '../../constants/menuImagery'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 
 interface MenuHeroSliderProps {
   slides: PublicMenuSlide[]
   restaurantName: string
+}
+
+function HeroFrame({ children }: { children: ReactNode }) {
+  return <div className="menu-hero-frame">{children}</div>
+}
+
+function HeroSlideVisual({
+  imageSrc,
+  alt,
+  eager = false,
+}: {
+  imageSrc: string
+  alt: string
+  eager?: boolean
+}) {
+  return (
+    <>
+      <img
+        src={imageSrc}
+        alt={alt}
+        className="menu-hero__image"
+        loading={eager ? 'eager' : 'lazy'}
+      />
+      <div className="menu-hero__overlay" />
+    </>
+  )
 }
 
 export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSliderProps) {
@@ -30,121 +57,111 @@ export default function MenuHeroSlider({ slides, restaurantName }: MenuHeroSlide
 
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % slides.length)
-    }, 5000)
+    }, 6000)
 
     return () => window.clearInterval(timer)
   }, [slides.length, isPaused])
 
   if (slides.length === 0) {
+    const fallbackImage = MENU_HERO_FALLBACK_IMAGES[0]
+
     return (
-      <div className="menu-hero-fallback relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 px-6 py-12 text-white shadow-panel">
-        <div className="menu-hero-glow pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="menu-hero-glow pointer-events-none absolute -bottom-8 left-8 h-32 w-32 rounded-full bg-brand-300/20 blur-2xl" />
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-100">
-          {t('hero.digitalMenu')}
-        </p>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight">{restaurantName}</h2>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-brand-100">
-          {t('hero.fallbackDescription')}
-        </p>
-      </div>
+      <HeroFrame>
+        <div className="menu-hero menu-hero--fallback">
+          <HeroSlideVisual imageSrc={fallbackImage} alt="" />
+          <div className="menu-hero__content menu-hero__content--centered">
+            <p className="menu-hero__kicker">{t('hero.digitalMenu')}</p>
+            <h2 className="menu-hero__headline">{restaurantName}</h2>
+            <p className="menu-hero__lede">{t('hero.fallbackDescription')}</p>
+          </div>
+        </div>
+      </HeroFrame>
     )
   }
 
   return (
-    <div
-      className="menu-slider relative overflow-hidden rounded-3xl shadow-panel"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onFocus={() => setIsPaused(true)}
-      onBlur={() => setIsPaused(false)}
-    >
+    <HeroFrame>
       <div
-        className="menu-slider-track flex transition-transform duration-700 ease-out will-change-transform motion-reduce:transition-none"
-        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        className="menu-hero menu-hero--slider"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onFocus={() => setIsPaused(true)}
+        onBlur={() => setIsPaused(false)}
       >
-        {slides.map((slide) => {
-          const slideImage = resolveMenuAssetUrl(slide.image_url, slide.image_path)
-          const content = (
-            <div className="relative h-56 w-full shrink-0 sm:h-64">
-              {slideImage ? (
-                <img
-                  src={slideImage}
-                  alt={slide.title}
-                  className="h-full w-full object-cover"
-                  loading={slide.id === slides[0]?.id ? 'eager' : 'lazy'}
-                />
-              ) : (
-                <div className="h-full w-full bg-gradient-to-br from-brand-700 to-brand-900" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
-                {slide.subtitle && (
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
-                    {slide.subtitle}
-                  </p>
-                )}
-                <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{slide.title}</h2>
+        <div
+          className="menu-slider-track"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {slides.map((slide, index) => {
+            const slideImage = resolveMenuAssetUrl(slide.image_url, slide.image_path)
+            const imageSrc =
+              slideImage ?? MENU_HERO_FALLBACK_IMAGES[slide.id % MENU_HERO_FALLBACK_IMAGES.length]
+
+            const content = (
+              <div className="menu-hero__slide">
+                <HeroSlideVisual imageSrc={imageSrc} alt={slide.title} eager={index === 0} />
+                <div className="menu-hero__content">
+                  {slide.subtitle && <p className="menu-hero__kicker">{slide.subtitle}</p>}
+                  <h2 className="menu-hero__headline">{slide.title}</h2>
+                </div>
               </div>
-            </div>
-          )
-
-          if (slide.link_url) {
-            return (
-              <a
-                key={slide.id}
-                href={slide.link_url}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full shrink-0"
-              >
-                {content}
-              </a>
             )
-          }
 
-          return (
-            <div key={slide.id} className="w-full shrink-0">
-              {content}
+            if (slide.link_url) {
+              return (
+                <a
+                  key={slide.id}
+                  href={slide.link_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="menu-hero__link"
+                >
+                  {content}
+                </a>
+              )
+            }
+
+            return (
+              <div key={slide.id} className="menu-hero__link">
+                {content}
+              </div>
+            )
+          })}
+        </div>
+
+        {slides.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label={t('hero.prevSlide')}
+              onClick={() => goTo(activeIndex - 1)}
+              className="menu-hero__nav menu-hero__nav--prev"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label={t('hero.nextSlide')}
+              onClick={() => goTo(activeIndex + 1)}
+              className="menu-hero__nav menu-hero__nav--next"
+            >
+              ›
+            </button>
+
+            <div className="menu-hero__dots">
+              {slides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  aria-label={t('hero.slide', { number: index + 1 })}
+                  onClick={() => goTo(index)}
+                  className={`menu-hero__dot ${index === activeIndex ? 'menu-hero__dot--active' : ''}`}
+                />
+              ))}
             </div>
-          )
-        })}
+          </>
+        )}
       </div>
-
-      {slides.length > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label={t('hero.prevSlide')}
-            onClick={() => goTo(activeIndex - 1)}
-            className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            aria-label={t('hero.nextSlide')}
-            onClick={() => goTo(activeIndex + 1)}
-            className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50"
-          >
-            ›
-          </button>
-
-          <div className="absolute inset-x-0 bottom-3 flex justify-center gap-2">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                type="button"
-                aria-label={t('hero.slide', { number: index + 1 })}
-                onClick={() => goTo(index)}
-                className={`h-2 rounded-full transition-all ${
-                  index === activeIndex ? 'w-6 bg-white' : 'w-2 bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    </HeroFrame>
   )
 }

@@ -19,7 +19,10 @@
     "calories": "Kalori",
     "allergens": "Alerjen",
     "quantity": "Adet",
-    "total": "Toplam"
+    "total": "Toplam",
+    "backToCategories": "Kategoriler",
+    "allProducts": "Tüm Ürünler",
+    "products": "ürün"
   },
   "hero": {
     "digitalMenu": "Dijital Menü",

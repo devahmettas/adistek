@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import LoadingState from '../components/LoadingState'
 import PublicPageShell from '../components/PublicPageShell'
-import MenuProductCard from '../components/menu/MenuProductCard'
+import MenuCategoryGrid from '../components/menu/MenuCategoryGrid'
+import MenuLoadingScreen from '../components/menu/MenuLoadingScreen'
+import MenuProductsPanel from '../components/menu/MenuProductsPanel'
 import ProductOrderModal from '../components/menu/ProductOrderModal'
 import {
   getTableOrderPage,
   placeGuestOrder,
   type TableOrderPage,
 } from '../api/tableOrder'
-import type { PublicMenuCategory, PublicMenuProduct } from '../api/publicMenu'
+import type { PublicMenuProduct } from '../api/publicMenu'
 import { getMenuLanguage, type MenuLanguage } from '../i18n'
 import { formatMenuPrice } from '../utils/formatMenuPrice'
-import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
-
+import {
+  ALL_PRODUCTS_VIEW,
+  countMenuProducts,
+  flattenMenuProducts,
+  type MenuCategorySelection,
+} from '../utils/menuCategoryView'
 interface CartItem {
   cartId: string
   productId: number
@@ -32,102 +37,23 @@ function createCartId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function CategorySection({
-  category,
-  cart,
-  canOrder,
-  onAdd,
-  sectionRef,
-}: {
-  category: PublicMenuCategory
-  cart: CartItem[]
-  canOrder: boolean
-  onAdd: (product: PublicMenuProduct) => void
-  sectionRef: (element: HTMLElement | null) => void
-}) {
-  const { t } = useTranslation()
-  const categoryImageUrl = resolveMenuAssetUrl(category.image_url, category.image_path)
-
-  return (
-    <section ref={sectionRef} id={`category-${category.id}`} className="scroll-mt-36">
-      <div className="mb-4 flex items-center gap-4">
-        {categoryImageUrl && (
-          <img
-            src={categoryImageUrl}
-            alt={category.name}
-            className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover shadow-sm"
-          />
-        )}
-        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{category.name}</h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-brand-200 to-transparent" />
-      </div>
-
-      <div className="grid gap-4">
-        {category.products.map((product, index) => {
-          const cartQuantity = cart
-            .filter((item) => item.productId === product.id)
-            .reduce((sum, item) => sum + item.quantity, 0)
-
-          return (
-            <MenuProductCard
-              key={product.id}
-              product={product}
-              index={index}
-              onClick={canOrder ? () => onAdd(product) : undefined}
-              action={
-                canOrder ? (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onAdd(product)
-                    }}
-                    className="relative rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 active:scale-95"
-                  >
-                    {t('order.add')}
-                    {cartQuantity > 0 && (
-                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-xs font-bold text-white">
-                        {cartQuantity}
-                      </span>
-                    )}
-                  </button>
-                ) : undefined
-              }
-            />
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
 function OrderSuccessModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-8 text-center shadow-2xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-          <svg
-            className="h-8 w-8 text-emerald-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
+    <div className="menu-modal-backdrop menu-modal-backdrop--centered">
+      <div className="menu-success-modal">
+        <div className="menu-success-modal__icon" aria-hidden>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
-        <h2 className="mt-5 text-2xl font-bold text-slate-900">{t('order.successTitle')}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600">{t('order.successMessage')}</p>
-        <p className="mt-2 text-xs text-slate-400">{t('order.bonAppetit')}</p>
+        <h2 className="menu-success-modal__title">{t('order.successTitle')}</h2>
+        <p className="menu-success-modal__text">{t('order.successMessage')}</p>
+        <p className="menu-success-modal__note">{t('order.bonAppetit')}</p>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800"
-        >
+        <button type="button" onClick={onClose} className="menu-btn menu-btn--primary menu-btn--full">
           {t('order.backToMenu')}
         </button>
       </div>
@@ -148,8 +74,8 @@ export default function TableOrderPage() {
   const [addingProduct, setAddingProduct] = useState<PublicMenuProduct | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [orderSuccessOpen, setOrderSuccessOpen] = useState(false)
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
-  const sectionRefs = useRef<Record<number, HTMLElement | null>>({})
+  const [selectedView, setSelectedView] = useState<MenuCategorySelection | null>(null)
+  const productsRef = useRef<HTMLDivElement | null>(null)
 
   const loadPage = async (options?: { silent?: boolean }) => {
     if (!token) {
@@ -165,7 +91,7 @@ export default function TableOrderPage() {
       const data = await getTableOrderPage(token, language)
       setPage(data)
       setSessionToken(data.session_token)
-      setActiveCategoryId((current) => current ?? data.categories[0]?.id ?? null)
+      setSelectedView(null)
     } catch {
       if (!options?.silent) {
         setError(t('common.tableNotFound'))
@@ -192,37 +118,6 @@ export default function TableOrderPage() {
 
     return () => window.clearInterval(intervalId)
   }, [token, page?.can_order])
-
-  useEffect(() => {
-    if (!page || page.categories.length === 0) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-
-        if (visible) {
-          const id = Number(visible.target.getAttribute('data-category-id'))
-          if (!Number.isNaN(id)) {
-            setActiveCategoryId(id)
-          }
-        }
-      },
-      { rootMargin: '-40% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] },
-    )
-
-    page.categories.forEach((category) => {
-      const element = sectionRefs.current[category.id]
-      if (element) {
-        observer.observe(element)
-      }
-    })
-
-    return () => observer.disconnect()
-  }, [page])
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0),
@@ -282,9 +177,27 @@ export default function TableOrderPage() {
     )
   }
 
-  const scrollToCategory = (categoryId: number) => {
-    sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    setActiveCategoryId(categoryId)
+  const scrollToProducts = () => {
+    requestAnimationFrame(() => {
+      productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  const openView = (view: MenuCategorySelection) => {
+    setSelectedView(view)
+    scrollToProducts()
+  }
+
+  const switchView = (view: MenuCategorySelection) => {
+    setSelectedView(view)
+    requestAnimationFrame(() => {
+      productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  const backToCategories = () => {
+    setSelectedView(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmitOrder = async () => {
@@ -317,14 +230,15 @@ export default function TableOrderPage() {
   }
 
   if (loading) {
-    return <LoadingState fullScreen label={t('common.menuLoading')} />
+    return <MenuLoadingScreen label={t('common.menuLoading')} />
   }
 
   if (error && !page) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="panel-surface max-w-sm px-6 py-8 text-center">
-          <p className="text-lg font-semibold text-slate-800">{error}</p>
+      <div className="menu-theme menu-error-screen">
+        <div className="menu-page-bg" aria-hidden />
+        <div className="menu-error-card">
+          <p>{error}</p>
         </div>
       </div>
     )
@@ -334,8 +248,23 @@ export default function TableOrderPage() {
     return null
   }
 
+  const selectedCategory =
+    selectedView !== null && selectedView !== ALL_PRODUCTS_VIEW
+      ? page.categories.find((category) => category.id === selectedView)
+      : undefined
+
+  const productsToShow =
+    selectedView === ALL_PRODUCTS_VIEW
+      ? flattenMenuProducts(page.categories)
+      : (selectedCategory?.products ?? [])
+
+  const productsTitle =
+    selectedView === ALL_PRODUCTS_VIEW
+      ? t('common.allProducts')
+      : (selectedCategory?.name ?? '')
+
   return (
-    <div className={`min-h-screen bg-[#f7f8fb] text-slate-900 ${page.can_order && cartItemCount > 0 ? 'pb-28' : ''}`}>
+    <div className={page.can_order && cartItemCount > 0 ? 'menu-page--with-cart' : undefined}>
       <PublicPageShell
         eyebrow={page.table.name}
         title={page.restaurant.name}
@@ -343,38 +272,59 @@ export default function TableOrderPage() {
         menuSettings={page.menu_settings}
         slides={page.slides}
         categories={page.categories}
-        activeCategoryId={activeCategoryId}
-        onCategoryClick={scrollToCategory}
+        activeCategoryId={selectedView}
+        onCategoryClick={switchView}
+        showCategoryNav={selectedView !== null}
+        onBackToCategories={backToCategories}
         hideFooter
       >
-        {!page.can_order && (
-          <div className="alert-warning mb-6">
-            {t('order.inactiveWarning')}
-          </div>
-        )}
+        {!page.can_order && <div className="menu-alert menu-alert--warning">{t('order.inactiveWarning')}</div>}
 
-        {error && <div className="alert-error mb-6">{error}</div>}
+        {error && <div className="menu-alert menu-alert--error">{error}</div>}
 
         {page.categories.length === 0 ? (
-          <div className="panel-surface p-8 text-center">
-            <p className="text-slate-600">{t('common.noProducts')}</p>
+          <div className="menu-empty-state">
+            <p>{t('common.noProducts')}</p>
           </div>
+        ) : selectedView === null ? (
+          <MenuCategoryGrid
+            categories={page.categories}
+            totalProductCount={countMenuProducts(page.categories)}
+            onSelectAll={() => openView(ALL_PRODUCTS_VIEW)}
+            onSelect={(categoryId) => openView(categoryId)}
+          />
         ) : (
-          <div className="space-y-10">
-            {page.categories.map((category) => (
-              <div key={category.id} data-category-id={category.id} className="menu-section-reveal">
-                <CategorySection
-                  category={category}
-                  cart={cart}
-                  canOrder={page.can_order}
-                  onAdd={setAddingProduct}
-                  sectionRef={(element) => {
-                    sectionRefs.current[category.id] = element
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          <MenuProductsPanel
+            title={productsTitle}
+            products={productsToShow}
+            panelRef={(element) => {
+              productsRef.current = element
+            }}
+            renderProductExtra={(product) => {
+              const cartQuantity = cart
+                .filter((item) => item.productId === product.id)
+                .reduce((sum, item) => sum + item.quantity, 0)
+
+              return {
+                onClick: page.can_order ? () => setAddingProduct(product) : undefined,
+                action: page.can_order ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setAddingProduct(product)
+                    }}
+                    className="menu-add-btn menu-add-btn--compact"
+                  >
+                    {t('order.add')}
+                    {cartQuantity > 0 && (
+                      <span className="menu-add-btn__badge">{cartQuantity}</span>
+                    )}
+                  </button>
+                ) : undefined,
+              }
+            }}
+          />
         )}
       </PublicPageShell>
 
@@ -393,25 +343,17 @@ export default function TableOrderPage() {
 
       {page.can_order && cartItemCount > 0 && (
         <>
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-md">
-            <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
-              <button
-                type="button"
-                onClick={() => setCartOpen(true)}
-                className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
-              >
-                <span className="text-sm font-medium text-slate-700">
-                  {t('order.cart', { count: cartItemCount })}
-                </span>
-                <span className="text-sm font-bold text-slate-900">
-                  {formatMenuPrice(cartTotal.toFixed(2), language)}
-                </span>
+          <div className="menu-cart-bar">
+            <div className="menu-cart-bar__inner">
+              <button type="button" onClick={() => setCartOpen(true)} className="menu-cart-bar__summary">
+                <span>{t('order.cart', { count: cartItemCount })}</span>
+                <span>{formatMenuPrice(cartTotal.toFixed(2), language)}</span>
               </button>
               <button
                 type="button"
                 onClick={handleSubmitOrder}
                 disabled={submitting}
-                className="shrink-0 rounded-2xl bg-brand-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
+                className="menu-btn menu-btn--primary menu-cart-bar__submit"
               >
                 {submitting ? t('order.submitting') : t('order.placeOrder')}
               </button>
@@ -419,44 +361,36 @@ export default function TableOrderPage() {
           </div>
 
           {cartOpen && (
-            <div className="fixed inset-0 z-40 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-4">
-              <div className="max-h-[80vh] w-full overflow-hidden rounded-t-3xl bg-white sm:max-w-lg sm:rounded-3xl">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-xl font-semibold text-slate-900">{t('order.yourCart')}</h2>
-                  <button
-                    type="button"
-                    onClick={() => setCartOpen(false)}
-                    className="rounded-lg px-3 py-1 text-sm text-slate-500 hover:bg-slate-50"
-                  >
+            <div className="menu-modal-backdrop">
+              <div className="menu-cart-drawer">
+                <div className="menu-cart-drawer__head">
+                  <h2>{t('order.yourCart')}</h2>
+                  <button type="button" onClick={() => setCartOpen(false)} className="menu-cart-drawer__close">
                     {t('common.close')}
                   </button>
                 </div>
 
-                <ul className="max-h-[50vh] divide-y divide-slate-100 overflow-y-auto px-5">
+                <ul className="menu-cart-drawer__list">
                   {cart.map((item) => (
-                    <li key={item.cartId} className="py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-slate-900">{item.name}</p>
-                          <p className="text-sm text-slate-500">
-                            {formatMenuPrice(item.price, language)}
-                          </p>
+                    <li key={item.cartId} className="menu-cart-drawer__item">
+                      <div className="menu-cart-drawer__row">
+                        <div className="menu-cart-drawer__info">
+                          <p>{item.name}</p>
+                          <span>{formatMenuPrice(item.price, language)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="menu-qty-control menu-qty-control--compact">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.cartId, -1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700"
+                            className="menu-qty-control__btn menu-qty-control__btn--ghost"
                           >
                             −
                           </button>
-                          <span className="w-6 text-center text-sm font-semibold">
-                            {item.quantity}
-                          </span>
+                          <span className="menu-qty-control__value">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.cartId, 1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-white"
+                            className="menu-qty-control__btn menu-qty-control__btn--accent"
                           >
                             +
                           </button>
@@ -468,24 +402,22 @@ export default function TableOrderPage() {
                         placeholder={t('order.cartNotePlaceholder')}
                         rows={2}
                         maxLength={255}
-                        className="input-field mt-3 resize-none text-xs"
+                        className="menu-input menu-input--compact"
                       />
                     </li>
                   ))}
                 </ul>
 
-                <div className="border-t border-slate-100 px-5 py-4">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-sm text-slate-600">{t('common.total')}</span>
-                    <span className="text-lg font-bold text-slate-900">
-                      {formatMenuPrice(cartTotal.toFixed(2), language)}
-                    </span>
+                <div className="menu-cart-drawer__footer">
+                  <div className="menu-cart-drawer__total">
+                    <span>{t('common.total')}</span>
+                    <strong>{formatMenuPrice(cartTotal.toFixed(2), language)}</strong>
                   </div>
                   <button
                     type="button"
                     onClick={handleSubmitOrder}
                     disabled={submitting}
-                    className="w-full rounded-2xl bg-brand-700 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
+                    className="menu-btn menu-btn--primary menu-btn--full"
                   >
                     {submitting ? t('order.submittingOrder') : t('order.placeOrder')}
                   </button>

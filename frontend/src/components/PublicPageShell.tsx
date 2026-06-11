@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PublicMenuSettings, PublicMenuSlide } from '../api/publicMenu'
+import { ALL_PRODUCTS_VIEW, type MenuCategorySelection } from '../utils/menuCategoryView'
 import LanguageSwitcher from './menu/LanguageSwitcher'
 import MenuHeroSlider from './menu/MenuHeroSlider'
 
@@ -11,8 +12,10 @@ interface PublicPageShellProps {
   menuSettings?: PublicMenuSettings
   slides?: PublicMenuSlide[]
   categories?: { id: number; name: string }[]
-  activeCategoryId?: number | null
-  onCategoryClick?: (categoryId: number) => void
+  activeCategoryId?: MenuCategorySelection | null
+  onCategoryClick?: (categoryId: MenuCategorySelection) => void
+  showCategoryNav?: boolean
+  onBackToCategories?: () => void
   children: ReactNode
   footer?: ReactNode | null
   hideFooter?: boolean
@@ -27,6 +30,8 @@ export default function PublicPageShell({
   categories,
   activeCategoryId,
   onCategoryClick,
+  showCategoryNav = false,
+  onBackToCategories,
   children,
   footer,
   hideFooter = false,
@@ -36,65 +41,75 @@ export default function PublicPageShell({
   const welcomeText = menuSettings?.welcome_text ?? description
 
   return (
-    <div className="min-h-screen bg-[#f7f8fb] text-slate-900">
-      <header className="relative overflow-hidden border-b border-slate-200/80 bg-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.04),transparent_40%)]" />
-        <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+    <div className="menu-theme min-h-screen">
+      <div className="menu-page-bg" aria-hidden />
+
+      <header className="menu-header">
+        <div className="menu-header__top">
+          <div className="menu-header__brand">
+            {eyebrow && <p className="menu-eyebrow">{eyebrow}</p>}
+            <h1 className="menu-title">{title}</h1>
+            {tagline && <p className="menu-tagline">{tagline}</p>}
+          </div>
           <LanguageSwitcher />
         </div>
-        <div className="relative mx-auto max-w-3xl px-4 pb-6 pt-6 sm:px-6 sm:pt-8">
-          <div className="mb-5 pr-24 sm:pr-28">
-            {eyebrow && (
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700">
-                {eyebrow}
-              </p>
-            )}
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              {title}
-            </h1>
-            {tagline && (
-              <p className="mt-2 text-sm font-medium text-brand-700">{tagline}</p>
-            )}
-            {welcomeText && (
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-600">
-                {welcomeText}
-              </p>
-            )}
-          </div>
 
-          <MenuHeroSlider slides={slides} restaurantName={title} />
-        </div>
+        {welcomeText && <p className="menu-welcome">{welcomeText}</p>}
+
+        <MenuHeroSlider slides={slides} restaurantName={title} />
       </header>
 
-      {categories && categories.length > 0 && onCategoryClick && (
-        <div className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-lg">
-          <div className="mx-auto max-w-3xl overflow-x-auto px-4 py-3 sm:px-6">
-            <div className="flex gap-2">
-              {categories.map((category) => (
+      {showCategoryNav && categories && categories.length > 0 && onCategoryClick && (
+        <nav className="menu-category-nav" aria-label={t('common.menuEyebrow')}>
+          <div className="menu-category-nav__track">
+            {onBackToCategories && (
+              <button
+                type="button"
+                onClick={onBackToCategories}
+                className="menu-category-pill menu-category-pill--back"
+              >
+                ← {t('common.backToCategories')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onCategoryClick(ALL_PRODUCTS_VIEW)}
+              className={`menu-category-pill ${
+                activeCategoryId === ALL_PRODUCTS_VIEW ? 'menu-category-pill--active' : ''
+              }`}
+              aria-current={activeCategoryId === ALL_PRODUCTS_VIEW ? 'true' : undefined}
+            >
+              {t('common.allProducts')}
+            </button>
+            {categories.map((category) => {
+              const isActive = activeCategoryId === category.id
+
+              return (
                 <button
                   key={category.id}
                   type="button"
                   onClick={() => onCategoryClick(category.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeCategoryId === category.id
-                      ? 'bg-brand-700 text-white shadow-md shadow-brand-700/20'
-                      : 'bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-800'
-                  }`}
+                  className={`menu-category-pill ${isActive ? 'menu-category-pill--active' : ''}`}
+                  aria-current={isActive ? 'true' : undefined}
                 >
                   {category.name}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
-        </div>
+        </nav>
       )}
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <main className="menu-main">{children}</main>
 
       {!hideFooter &&
         (footer === undefined ? (
-          <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
-            {t('common.footerPoweredBy')}
+          <footer className="menu-footer">
+            <div className="menu-footer__ornament" aria-hidden>
+              <span />
+              <span />
+            </div>
+            <p>{t('common.footerPoweredBy')}</p>
           </footer>
         ) : (
           footer

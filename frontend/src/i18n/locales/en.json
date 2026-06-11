@@ -19,7 +19,10 @@
     "calories": "Calories",
     "allergens": "Allergens",
     "quantity": "Quantity",
-    "total": "Total"
+    "total": "Total",
+    "backToCategories": "Categories",
+    "allProducts": "All Products",
+    "products": "items"
   },
   "hero": {
     "digitalMenu": "Digital Menu",

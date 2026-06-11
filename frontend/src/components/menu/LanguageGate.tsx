@@ -26,32 +26,34 @@ export default function LanguageGate({ onSelect }: LanguageGateProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f7f8fb] px-4 py-10">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 shadow-panel">
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700">
-            Adistek
-          </p>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-slate-900">
-            {t('language.gateTitle')}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            {t('language.gateSubtitle')}
-          </p>
+    <div className="menu-theme menu-gate">
+      <div className="menu-page-bg" aria-hidden />
+      <div className="menu-gate__glow menu-gate__glow--top" aria-hidden />
+      <div className="menu-gate__glow menu-gate__glow--bottom" aria-hidden />
+
+      <div className="menu-gate__card">
+        <div className="menu-gate__emblem" aria-hidden>
+          <span />
+          <span />
+          <span />
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3">
+        <p className="menu-gate__brand">Adistek</p>
+        <h1 className="menu-gate__title">{t('language.gateTitle')}</h1>
+        <p className="menu-gate__subtitle">{t('language.gateSubtitle')}</p>
+
+        <div className="menu-gate__grid">
           {SUPPORTED_LANGUAGES.map((lang) => (
             <button
               key={lang}
               type="button"
               onClick={() => handleSelect(lang)}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-center transition hover:border-brand-300 hover:bg-brand-50 active:scale-[0.98]"
+              className="menu-gate__lang"
             >
-              <span className="text-3xl" aria-hidden>
+              <span className="menu-gate__flag" aria-hidden>
                 {LANGUAGE_FLAGS[lang]}
               </span>
-              <span className="text-sm font-bold text-slate-900">{LANGUAGE_LABELS[lang]}</span>
+              <span className="menu-gate__lang-label">{LANGUAGE_LABELS[lang]}</span>
             </button>
           ))}
         </div>

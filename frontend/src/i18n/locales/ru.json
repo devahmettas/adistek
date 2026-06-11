@@ -19,7 +19,10 @@
     "calories": "Калории",
     "allergens": "Аллергены",
     "quantity": "Количество",
-    "total": "Итого"
+    "total": "Итого",
+    "backToCategories": "Категории",
+    "allProducts": "Все блюда",
+    "products": "блюд"
   },
   "hero": {
     "digitalMenu": "Цифровое меню",

@@ -19,7 +19,10 @@
     "calories": "Kalorien",
     "allergens": "Allergene",
     "quantity": "Menge",
-    "total": "Gesamt"
+    "total": "Gesamt",
+    "backToCategories": "Kategorien",
+    "allProducts": "Alle Produkte",
+    "products": "Artikel"
   },
   "hero": {
     "digitalMenu": "Digitale Speisekarte",
