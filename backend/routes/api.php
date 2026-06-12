@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Jeweler\JewelryBarcodeController;
 use App\Http\Controllers\Api\Jeweler\JewelryCategoryController;
 use App\Http\Controllers\Api\Jeweler\JewelryCustomerController;
 use App\Http\Controllers\Api\Jeweler\JewelryGoldPriceController;
+use App\Http\Controllers\Api\Jeweler\MarketGoldPriceController;
 use App\Http\Controllers\Api\Jeweler\JewelryProductController;
 use App\Http\Controllers\Api\Jeweler\JewelryRepairController;
 use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
@@ -175,9 +176,11 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
 
     Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
 
-    Route::get('/gold-prices', [JewelryGoldPriceController::class, 'index']);
-    Route::post('/gold-prices', [JewelryGoldPriceController::class, 'store']);
-    Route::delete('/gold-prices/{goldPrice}', [JewelryGoldPriceController::class, 'destroy']);
+    Route::get('/gold-prices/live', [MarketGoldPriceController::class, 'live']);
+    Route::get('/gold-prices/wait', [MarketGoldPriceController::class, 'wait']);
+    Route::get('/gold-prices/latest', [MarketGoldPriceController::class, 'latest']);
+    Route::get('/gold-prices/history', [MarketGoldPriceController::class, 'history']);
+    Route::post('/gold-prices/sync', [MarketGoldPriceController::class, 'sync']);
 
     Route::get('/settings', [JewelrySettingController::class, 'show']);
     Route::patch('/settings', [JewelrySettingController::class, 'update']);

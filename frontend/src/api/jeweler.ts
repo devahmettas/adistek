@@ -106,16 +106,59 @@ export interface JewelryStockMovement {
   product?: JewelryProduct
 }
 
-export interface JewelryGoldPrice {
+export type MarketGoldPriceType =
+  | 'gram_altin'
+  | 'ceyrek_altin'
+  | 'yarim_altin'
+  | 'tam_altin'
+  | 'cumhuriyet_altini'
+  | 'ayar_14'
+  | 'ayar_18'
+  | 'ayar_22'
+  | 'ayar_24'
+
+export interface MarketGoldPriceRecord {
   id: number
-  restaurant_id: number
-  metal_type: string
-  karat: number
-  buy_price_per_gram: string
-  sell_price_per_gram: string
+  provider: string
+  type: MarketGoldPriceType
+  external_key: string
+  name: string
+  cash_sell_price: string
+  card_sell_price: string | null
+  has_gold_base: string | null
   source: string | null
-  effective_at: string
+  fetched_at: string
   created_at: string
+}
+
+export interface MarketGoldPriceLatestResponse {
+  prices: MarketGoldPriceRecord[]
+  last_sync_at: string | null
+  server_time: string
+  timezone: string
+  sync_interval_seconds: number
+  provider: string
+  source: string
+  changed?: boolean
+  stored_count?: number
+  has_gold_base?: number | null
+  version?: number
+  stream_source?: string
+  timed_out?: boolean
+}
+
+export interface MarketGoldPriceHistoryPoint {
+  fetched_at: string
+  cash_sell_price: number
+  card_sell_price: number | null
+  has_gold_base: number | null
+}
+
+export interface MarketGoldPriceHistoryResponse {
+  type: MarketGoldPriceType
+  label: string
+  period: '24h' | '7d' | '30d'
+  points: MarketGoldPriceHistoryPoint[]
 }
 
 export interface JewelrySettings {
@@ -247,15 +290,49 @@ export async function getJewelryStockMovements(): Promise<JewelryStockMovement[]
   return data.data
 }
 
-export async function getJewelryGoldPrices(): Promise<JewelryGoldPrice[]> {
-  const { data } = await apiClient.get<ApiResponse<JewelryGoldPrice[]>>('/jeweler/gold-prices')
+export async function getMarketGoldPricesLatest(): Promise<MarketGoldPriceLatestResponse> {
+  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/latest')
   return data.data
 }
 
-export async function createJewelryGoldPrice(
-  payload: Omit<JewelryGoldPrice, 'id' | 'restaurant_id' | 'created_at'>,
-): Promise<JewelryGoldPrice> {
-  const { data } = await apiClient.post<ApiResponse<JewelryGoldPrice>>('/jeweler/gold-prices', payload)
+export async function getMarketGoldPricesLive(): Promise<MarketGoldPriceLatestResponse> {
+  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/live')
+  return data.data
+}
+
+export async function waitForMarketGoldPrices(
+  sinceVersion: number,
+  timeout = 25,
+): Promise<MarketGoldPriceLatestResponse> {
+  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/wait', {
+    params: { since_version: sinceVersion, timeout },
+    timeout: (timeout + 5) * 1000,
+  })
+  return data.data
+}
+
+export async function getMarketGoldPriceHistory(
+  type: MarketGoldPriceType,
+  period: '24h' | '7d' | '30d' = '24h',
+): Promise<MarketGoldPriceHistoryResponse> {
+  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceHistoryResponse>>('/jeweler/gold-prices/history', {
+    params: { type, period },
+  })
+  return data.data
+}
+
+export async function syncMarketGoldPrices(): Promise<{
+  synced_count: number
+  has_gold_base: number | null
+  fetched_at: string
+  provider: string
+}> {
+  const { data } = await apiClient.post<ApiResponse<{
+    synced_count: number
+    has_gold_base: number | null
+    fetched_at: string
+    provider: string
+  }>>('/jeweler/gold-prices/sync')
   return data.data
 }
 
