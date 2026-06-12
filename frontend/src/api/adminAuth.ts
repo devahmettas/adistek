@@ -1,3 +1,4 @@
+import type { BusinessType } from '../constants/businessType'
 import adminApiClient from './adminClient'
 import type { Admin, AdminAuthResponse, ApiResponse, RestaurantListItem } from './types'
 
@@ -25,6 +26,7 @@ export const getAdminRestaurants = async (): Promise<RestaurantListItem[]> => {
 
 export interface CreateAdminRestaurantPayload {
   name: string
+  business_type?: BusinessType
   contact_person: string
   phone: string
   address: string

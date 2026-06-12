@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { isJewelerBusiness } from '../constants/businessType'
 import {
   canAccessRestaurantPath,
   getDefaultDashboardPath,
@@ -8,6 +9,10 @@ import { useAuth } from '../store/AuthStore'
 export default function RestaurantFeatureRoute() {
   const { restaurant } = useAuth()
   const location = useLocation()
+
+  if (isJewelerBusiness(restaurant?.business_type)) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   if (!canAccessRestaurantPath(restaurant, location.pathname)) {
     const fallback = getDefaultDashboardPath(restaurant)

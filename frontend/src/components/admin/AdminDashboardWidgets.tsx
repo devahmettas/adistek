@@ -33,31 +33,33 @@ interface AdminStatsGridProps {
 
 export function AdminStatsGrid({ stats }: AdminStatsGridProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <AdminStatCard
-        label="Restoran"
-        value={stats.restaurantCount}
-        hint="Sisteme kayıtlı işletme sayısı"
-        accent="brand"
-      />
-      <AdminStatCard
-        label="Kategori"
-        value={stats.categoryCount}
-        hint="Tüm restoranlardaki toplam kategori"
-        accent="emerald"
-      />
-      <AdminStatCard
-        label="Ürün"
-        value={stats.productCount}
-        hint="Menüde tanımlı toplam ürün"
-        accent="amber"
-      />
-      <AdminStatCard
-        label="Masa"
-        value={stats.tableCount}
-        hint="Aktif masa tanımı toplamı"
-        accent="violet"
-      />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard
+          label="Toplam İşletme"
+          value={stats.businessCount}
+          hint={`${stats.restaurantCount} restoran · ${stats.jewelerCount} kuyumcu`}
+          accent="brand"
+        />
+        <AdminStatCard
+          label="Restoran Ürünü"
+          value={stats.productCount}
+          hint={`${stats.categoryCount} kategori · ${stats.tableCount} masa`}
+          accent="emerald"
+        />
+        <AdminStatCard
+          label="Kuyumcu Ürünü"
+          value={stats.jewelryProductCount}
+          hint="Tüm kuyumculardaki ürün stoku"
+          accent="amber"
+        />
+        <AdminStatCard
+          label="Kuyumcu Satışı"
+          value={stats.jewelrySaleCount}
+          hint={`${stats.jewelryRepairCount} aktif tamir kaydı`}
+          accent="violet"
+        />
+      </div>
     </div>
   )
 }

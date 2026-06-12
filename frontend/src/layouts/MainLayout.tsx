@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import RestaurantSidebar from '../components/RestaurantSidebar'
+import { isJewelerBusiness } from '../constants/businessType'
 import { DashboardProvider } from '../context/DashboardContext'
+import { useAuth } from '../store/AuthStore'
 
 export default function MainLayout() {
+  const { restaurant } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const panelLabel = isJewelerBusiness(restaurant?.business_type) ? 'Kuyumcu Paneli' : 'Yönetim Paneli'
 
   return (
     <DashboardProvider>
@@ -38,7 +42,7 @@ export default function MainLayout() {
                 <span className="text-base leading-none">☰</span>
                 Menü
               </button>
-              <p className="hidden text-sm text-slate-500 sm:block">Yönetim Paneli</p>
+              <p className="hidden text-sm text-slate-500 sm:block">{panelLabel}</p>
             </div>
           </header>
 

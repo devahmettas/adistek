@@ -11,7 +11,16 @@ import KitchenDashboardPage from '../pages/KitchenDashboardPage'
 import KitchenLoginPage from '../pages/KitchenLoginPage'
 import LoginPage from '../pages/LoginPage'
 import CategoriesPage from '../pages/restaurant/CategoriesPage'
-import ManagementPanelPage from '../pages/restaurant/ManagementPanelPage'
+import DashboardPage from '../pages/DashboardPage'
+import JewelerBarcodePage from '../pages/jeweler/JewelerBarcodePage'
+import JewelerCustomersPage from '../pages/jeweler/JewelerCustomersPage'
+import JewelerGoldPricesPage from '../pages/jeweler/JewelerGoldPricesPage'
+import JewelerProductsPage from '../pages/jeweler/JewelerProductsPage'
+import JewelerRepairsPage from '../pages/jeweler/JewelerRepairsPage'
+import JewelerReportsPage from '../pages/jeweler/JewelerReportsPage'
+import JewelerSalesPage from '../pages/jeweler/JewelerSalesPage'
+import JewelerSettingsPage from '../pages/jeweler/JewelerSettingsPage'
+import JewelerStockPage from '../pages/jeweler/JewelerStockPage'
 import ProductsPage from '../pages/restaurant/ProductsPage'
 import StaffPage from '../pages/restaurant/StaffPage'
 import PublicMenuLayout from '../layouts/PublicMenuLayout'
@@ -27,6 +36,7 @@ import WaiterLoginPage from '../pages/WaiterLoginPage'
 import AdminProtectedRoute from './AdminProtectedRoute'
 import KitchenProtectedRoute from './KitchenProtectedRoute'
 import ProtectedRoute from './ProtectedRoute'
+import { JewelerOnlyRoute, RestaurantOnlyRoute } from './BusinessTypeRoute'
 import RestaurantFeatureRoute from './RestaurantFeatureRoute'
 import WaiterProtectedRoute from './WaiterProtectedRoute'
 
@@ -45,16 +55,29 @@ export default function AppRouter() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route element={<RestaurantFeatureRoute />}>
-            <Route path="/dashboard" element={<ManagementPanelPage />} />
-            <Route path="/dashboard/masalar" element={<TablesHomePage />} />
-            <Route path="/dashboard/stats" element={<StatsPage />} />
-            <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
-            <Route path="/dashboard/categories" element={<CategoriesPage />} />
-            <Route path="/dashboard/products" element={<ProductsPage />} />
-            <Route path="/dashboard/reservations" element={<ReservationsPage />} />
-            <Route path="/dashboard/tables" element={<TablesManagePage />} />
-            <Route path="/dashboard/staff" element={<StaffPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route element={<JewelerOnlyRoute />}>
+            <Route path="/dashboard/jeweler/products" element={<JewelerProductsPage />} />
+            <Route path="/dashboard/jeweler/stock" element={<JewelerStockPage />} />
+            <Route path="/dashboard/jeweler/sales" element={<JewelerSalesPage />} />
+            <Route path="/dashboard/jeweler/repairs" element={<JewelerRepairsPage />} />
+            <Route path="/dashboard/jeweler/customers" element={<JewelerCustomersPage />} />
+            <Route path="/dashboard/jeweler/barcode" element={<JewelerBarcodePage />} />
+            <Route path="/dashboard/jeweler/gold-prices" element={<JewelerGoldPricesPage />} />
+            <Route path="/dashboard/jeweler/reports" element={<JewelerReportsPage />} />
+            <Route path="/dashboard/jeweler/settings" element={<JewelerSettingsPage />} />
+          </Route>
+          <Route element={<RestaurantOnlyRoute />}>
+            <Route element={<RestaurantFeatureRoute />}>
+              <Route path="/dashboard/masalar" element={<TablesHomePage />} />
+              <Route path="/dashboard/stats" element={<StatsPage />} />
+              <Route path="/dashboard/menu" element={<PublicMenuSharePage />} />
+              <Route path="/dashboard/categories" element={<CategoriesPage />} />
+              <Route path="/dashboard/products" element={<ProductsPage />} />
+              <Route path="/dashboard/reservations" element={<ReservationsPage />} />
+              <Route path="/dashboard/tables" element={<TablesManagePage />} />
+              <Route path="/dashboard/staff" element={<StaffPage />} />
+            </Route>
           </Route>
         </Route>
       </Route>

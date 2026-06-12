@@ -27,7 +27,16 @@ class AdminRestaurantController extends Controller
         $restaurant = $this->service->create($request->validated());
 
         return response()->json([
-            'data' => $restaurant->loadCount(['categories', 'products', 'tables']),
+            'data' => $restaurant->loadCount([
+                'categories',
+                'products',
+                'tables',
+                'jewelryCategories',
+                'jewelryProducts',
+                'jewelryCustomers',
+                'jewelrySales',
+                'jewelryRepairs',
+            ]),
         ], 201);
     }
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BusinessType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreAdminRestaurantRequest extends FormRequest
 {
@@ -15,6 +17,7 @@ class StoreAdminRestaurantRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'business_type' => ['nullable', Rule::in(BusinessType::values())],
             'contact_person' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string', 'max:500'],

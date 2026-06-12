@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\BusinessType;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -14,6 +16,7 @@ class Restaurant extends Authenticatable
 
     protected $fillable = [
         'name',
+        'business_type',
         'slug',
         'contact_person',
         'phone',
@@ -36,6 +39,7 @@ class Restaurant extends Authenticatable
     ];
 
     protected $casts = [
+        'business_type' => BusinessType::class,
         'created_at' => 'datetime',
         'password' => 'hashed',
         'reservation_duration_minutes' => 'integer',
@@ -73,5 +77,56 @@ class Restaurant extends Authenticatable
     public function menuSlides(): HasMany
     {
         return $this->hasMany(MenuSlide::class);
+    }
+
+    public function jewelryCategories(): HasMany
+    {
+        return $this->hasMany(JewelryCategory::class);
+    }
+
+    public function jewelryProducts(): HasMany
+    {
+        return $this->hasMany(JewelryProduct::class);
+    }
+
+    public function jewelryCustomers(): HasMany
+    {
+        return $this->hasMany(JewelryCustomer::class);
+    }
+
+    public function jewelrySales(): HasMany
+    {
+        return $this->hasMany(JewelrySale::class);
+    }
+
+    public function jewelryRepairs(): HasMany
+    {
+        return $this->hasMany(JewelryRepair::class);
+    }
+
+    public function jewelryStockMovements(): HasMany
+    {
+        return $this->hasMany(JewelryStockMovement::class);
+    }
+
+    public function jewelryGoldPrices(): HasMany
+    {
+        return $this->hasMany(JewelryGoldPrice::class);
+    }
+
+    public function jewelrySettings(): HasOne
+    {
+        return $this->hasOne(JewelrySetting::class);
+    }
+
+    public function isJeweler(): bool
+    {
+        return $this->business_type === BusinessType::Jeweler;
+    }
+
+    public function isRestaurant(): bool
+    {
+        return $this->business_type === BusinessType::Restaurant
+            || $this->business_type === null;
     }
 }

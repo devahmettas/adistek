@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\BusinessType;
+use App\Models\JewelrySetting;
 use App\Models\Restaurant;
 use App\Repositories\RestaurantRepository;
 use App\Support\RestaurantSlugGenerator;
@@ -32,13 +34,28 @@ class AdminRestaurantService
 
     public function create(array $data): Restaurant
     {
-        return $this->repository->create([
+        $businessType = BusinessType::tryFrom($data['business_type'] ?? '') ?? BusinessType::Restaurant;
+        unset($data['business_type']);
+
+        $isJeweler = $businessType === BusinessType::Jeweler;
+
+        $restaurant = $this->repository->create([
             ...$data,
+            'business_type' => $businessType,
             'slug' => RestaurantSlugGenerator::generate($data['name']),
-            'feature_order_tracking' => true,
-            'feature_qr_menu' => true,
-            'feature_reservations' => true,
+            'feature_order_tracking' => ! $isJeweler,
+            'feature_qr_menu' => ! $isJeweler,
+            'feature_reservations' => ! $isJeweler,
         ]);
+
+        if ($isJeweler) {
+            JewelrySetting::create([
+                'restaurant_id' => $restaurant->id,
+                'default_karat' => 22,
+            ]);
+        }
+
+        return $restaurant;
     }
 
     public function updateFeatures(int $id, array $data): Restaurant

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { RestaurantListItem } from '../../api/types'
+import { BUSINESS_TYPE_LABELS, isJewelerBusiness } from '../../constants/businessType'
 import { displayAdminValue } from '../../utils/adminDashboard'
 
 interface AdminRestaurantCardProps {
@@ -7,6 +8,9 @@ interface AdminRestaurantCardProps {
 }
 
 export default function AdminRestaurantCard({ restaurant }: AdminRestaurantCardProps) {
+  const isJeweler = isJewelerBusiness(restaurant.business_type)
+  const typeLabel = BUSINESS_TYPE_LABELS[restaurant.business_type ?? 'restaurant']
+
   return (
     <Link
       to={`/admin/restaurants/${restaurant.id}`}
@@ -16,7 +20,7 @@ export default function AdminRestaurantCard({ restaurant }: AdminRestaurantCardP
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">
-              Restoran
+              {typeLabel}
             </p>
             <h3 className="mt-1 truncate text-xl font-bold text-slate-900">{restaurant.name}</h3>
           </div>
@@ -72,15 +76,31 @@ export default function AdminRestaurantCard({ restaurant }: AdminRestaurantCardP
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-            {restaurant.categories_count} kategori
-          </span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-            {restaurant.products_count} ürün
-          </span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-            {restaurant.tables_count} masa
-          </span>
+          {isJeweler ? (
+            <>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                {restaurant.jewelry_products_count ?? 0} ürün
+              </span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                {restaurant.jewelry_sales_count ?? 0} satış
+              </span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                {restaurant.jewelry_repairs_count ?? 0} tamir
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {restaurant.categories_count} kategori
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {restaurant.products_count} ürün
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {restaurant.tables_count} masa
+              </span>
+            </>
+          )}
         </div>
 
         <p className="text-xs text-slate-500">

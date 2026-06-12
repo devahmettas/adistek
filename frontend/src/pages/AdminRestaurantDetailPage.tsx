@@ -4,6 +4,7 @@ import { getAdminRestaurant, updateAdminRestaurant, updateAdminRestaurantFeature
 import type { RestaurantListItem } from '../api/types'
 import AdminRestaurantFeatureSettings from '../components/admin/AdminRestaurantFeatureSettings'
 import LoadingState from '../components/LoadingState'
+import { BUSINESS_TYPE_LABELS, isJewelerBusiness } from '../constants/businessType'
 import { displayAdminValue, getApiErrorMessage } from '../utils/adminDashboard'
 
 type EditableField = 'name' | 'contact_person' | 'phone' | 'address' | 'email' | 'password'
@@ -212,6 +213,9 @@ export default function AdminRestaurantDetailPage() {
       ? `tel:${restaurant.phone.replace(/\s/g, '')}`
       : undefined
 
+  const isJeweler = isJewelerBusiness(restaurant.business_type)
+  const typeLabel = BUSINESS_TYPE_LABELS[restaurant.business_type ?? 'restaurant']
+
   const rowProps = (field: EditableField) => ({
     isEditing: editingField === field,
     onEdit: () => startEdit(field, getFieldValue(restaurant, field)),
@@ -228,18 +232,33 @@ export default function AdminRestaurantDetailPage() {
           to="/admin/restaurants"
           className="text-sm font-medium text-slate-500 transition hover:text-brand-700"
         >
-          ← Restoranlar
+          ← İşletmeler
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{restaurant.name}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span className="rounded-md bg-brand-50 px-2 py-1 font-semibold text-brand-800">
+            {typeLabel}
+          </span>
           <span className="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700">
             #{restaurant.id}
           </span>
-          <span>{restaurant.categories_count} kategori</span>
-          <span>·</span>
-          <span>{restaurant.products_count} ürün</span>
-          <span>·</span>
-          <span>{restaurant.tables_count} masa</span>
+          {isJeweler ? (
+            <>
+              <span>{restaurant.jewelry_products_count ?? 0} ürün</span>
+              <span>·</span>
+              <span>{restaurant.jewelry_sales_count ?? 0} satış</span>
+              <span>·</span>
+              <span>{restaurant.jewelry_repairs_count ?? 0} tamir</span>
+            </>
+          ) : (
+            <>
+              <span>{restaurant.categories_count} kategori</span>
+              <span>·</span>
+              <span>{restaurant.products_count} ürün</span>
+              <span>·</span>
+              <span>{restaurant.tables_count} masa</span>
+            </>
+          )}
           <span>·</span>
           <span>{new Date(restaurant.created_at).toLocaleDateString('tr-TR')}</span>
         </div>
@@ -336,7 +355,7 @@ export default function AdminRestaurantDetailPage() {
               />
             }
           />
-          {restaurant.slug && (
+          {!isJeweler && restaurant.slug && (
             <DetailListRow
               label="Menü Linki"
               value={restaurant.slug}
@@ -352,13 +371,15 @@ export default function AdminRestaurantDetailPage() {
         </dl>
       </section>
 
-      <AdminRestaurantFeatureSettings
-        restaurant={restaurant}
-        onUpdate={async (payload) => {
-          const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
-          setRestaurant(updated)
-        }}
-      />
+      {!isJeweler && (
+        <AdminRestaurantFeatureSettings
+          restaurant={restaurant}
+          onUpdate={async (payload) => {
+            const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
+            setRestaurant(updated)
+          }}
+        />
+      )}
     </div>
   )
 }

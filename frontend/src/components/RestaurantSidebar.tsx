@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import BrandLogo from './BrandLogo'
 import Button from './Button'
+import { isJewelerBusiness } from '../constants/businessType'
+import { JEWELER_NAV_ITEMS } from '../constants/jewelerNav'
 import {
   RESTAURANT_NAV_ITEMS,
   canAccessRestaurantNavItem,
@@ -23,9 +25,10 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
 
 export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: RestaurantSidebarProps) {
   const { restaurant, logout } = useAuth()
-  const visibleNavItems = RESTAURANT_NAV_ITEMS.filter((item) =>
-    canAccessRestaurantNavItem(restaurant, item),
-  )
+  const isJeweler = isJewelerBusiness(restaurant?.business_type)
+  const visibleNavItems = isJeweler
+    ? JEWELER_NAV_ITEMS
+    : RESTAURANT_NAV_ITEMS.filter((item) => canAccessRestaurantNavItem(restaurant, item))
 
   const handleLogout = async () => {
     await logout()

@@ -50,8 +50,8 @@ export default function AdminRestaurantsPage() {
               Hoş geldiniz, {admin?.name ?? 'Admin'}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-100">
-              Platformdaki tüm restoranları buradan yönetin. Yeni işletme eklemek için sağ üstteki
-              veya aşağıdaki butonu kullanın.
+              Platformdaki tüm restoran ve kuyumcu işletmelerini buradan yönetin. Yeni işletme eklemek
+              için sağ üstteki veya aşağıdaki butonu kullanın.
             </p>
           </div>
 
@@ -60,7 +60,7 @@ export default function AdminRestaurantsPage() {
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-brand-800 shadow-sm transition hover:bg-brand-50"
           >
             <span aria-hidden>＋</span>
-            Restoran Ekle
+            İşletme Ekle
           </Link>
         </div>
       </section>
@@ -68,17 +68,17 @@ export default function AdminRestaurantsPage() {
       {!loading && !error && restaurants.length > 0 && <AdminStatsGrid stats={stats} />}
 
       <PageHeader
-        title="Restoranlar"
+        title="İşletmeler"
         description={`${restaurants.length} kayıtlı işletme`}
       />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
         <Input
-          label="Restoran Ara"
+          label="İşletme Ara"
           name="restaurantSearch"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Restoran adı, yetkili, telefon, adres veya e-posta"
+          placeholder="İşletme adı, yetkili, telefon, adres veya e-posta"
         />
       </div>
 

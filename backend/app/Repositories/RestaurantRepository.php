@@ -17,7 +17,16 @@ class RestaurantRepository
     public function allWithStats(): Collection
     {
         return Restaurant::query()
-            ->withCount(['categories', 'products', 'tables'])
+            ->withCount([
+                'categories',
+                'products',
+                'tables',
+                'jewelryCategories',
+                'jewelryProducts',
+                'jewelryCustomers',
+                'jewelrySales',
+                'jewelryRepairs',
+            ])
             ->orderByDesc('created_at')
             ->get();
     }
@@ -35,7 +44,16 @@ class RestaurantRepository
     public function findWithStats(int $id): ?Restaurant
     {
         return Restaurant::query()
-            ->withCount(['categories', 'products', 'tables'])
+            ->withCount([
+                'categories',
+                'products',
+                'tables',
+                'jewelryCategories',
+                'jewelryProducts',
+                'jewelryCustomers',
+                'jewelrySales',
+                'jewelryRepairs',
+            ])
             ->find($id);
     }
 

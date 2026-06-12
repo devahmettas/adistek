@@ -19,6 +19,16 @@ use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\TableReservationController;
 use App\Http\Controllers\Api\WaiterAuthController;
 use App\Http\Controllers\Api\WaiterController;
+use App\Http\Controllers\Api\Jeweler\JewelerStatisticsController;
+use App\Http\Controllers\Api\Jeweler\JewelryBarcodeController;
+use App\Http\Controllers\Api\Jeweler\JewelryCategoryController;
+use App\Http\Controllers\Api\Jeweler\JewelryCustomerController;
+use App\Http\Controllers\Api\Jeweler\JewelryGoldPriceController;
+use App\Http\Controllers\Api\Jeweler\JewelryProductController;
+use App\Http\Controllers\Api\Jeweler\JewelryRepairController;
+use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
+use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
+use App\Http\Controllers\Api\Jeweler\JewelryStockController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -130,6 +140,47 @@ Route::middleware(['auth:sanctum', 'kitchen'])->prefix('kitchen')->group(functio
         Route::patch('/orders/{pivotId}/ready', [KitchenOrderController::class, 'markReady']);
         Route::patch('/orders/{pivotId}/dismiss', [KitchenOrderController::class, 'dismissCancelled']);
     });
+});
+
+Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')->group(function () {
+    Route::get('/stats', [JewelerStatisticsController::class, 'index']);
+
+    Route::get('/categories', [JewelryCategoryController::class, 'index']);
+    Route::post('/categories', [JewelryCategoryController::class, 'store']);
+    Route::put('/categories/{category}', [JewelryCategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [JewelryCategoryController::class, 'destroy']);
+
+    Route::get('/products', [JewelryProductController::class, 'index']);
+    Route::post('/products', [JewelryProductController::class, 'store']);
+    Route::get('/products/{product}', [JewelryProductController::class, 'show']);
+    Route::put('/products/{product}', [JewelryProductController::class, 'update']);
+    Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
+    Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
+
+    Route::get('/stock-movements', [JewelryStockController::class, 'index']);
+
+    Route::get('/sales', [JewelrySaleController::class, 'index']);
+    Route::post('/sales', [JewelrySaleController::class, 'store']);
+    Route::get('/sales/{sale}', [JewelrySaleController::class, 'show']);
+
+    Route::get('/repairs', [JewelryRepairController::class, 'index']);
+    Route::post('/repairs', [JewelryRepairController::class, 'store']);
+    Route::put('/repairs/{repair}', [JewelryRepairController::class, 'update']);
+    Route::delete('/repairs/{repair}', [JewelryRepairController::class, 'destroy']);
+
+    Route::get('/customers', [JewelryCustomerController::class, 'index']);
+    Route::post('/customers', [JewelryCustomerController::class, 'store']);
+    Route::put('/customers/{customer}', [JewelryCustomerController::class, 'update']);
+    Route::delete('/customers/{customer}', [JewelryCustomerController::class, 'destroy']);
+
+    Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
+
+    Route::get('/gold-prices', [JewelryGoldPriceController::class, 'index']);
+    Route::post('/gold-prices', [JewelryGoldPriceController::class, 'store']);
+    Route::delete('/gold-prices/{goldPrice}', [JewelryGoldPriceController::class, 'destroy']);
+
+    Route::get('/settings', [JewelrySettingController::class, 'show']);
+    Route::patch('/settings', [JewelrySettingController::class, 'update']);
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

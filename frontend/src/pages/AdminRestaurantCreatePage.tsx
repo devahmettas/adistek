@@ -5,6 +5,8 @@ import Card from '../components/Card'
 import Input from '../components/Input'
 import PageHeader from '../components/PageHeader'
 import Textarea from '../components/Textarea'
+import type { BusinessType } from '../constants/businessType'
+import { BUSINESS_TYPE_LABELS } from '../constants/businessType'
 import useAdminRestaurants from '../hooks/useAdminRestaurants'
 import { getApiErrorMessage } from '../utils/adminDashboard'
 
@@ -13,6 +15,7 @@ export default function AdminRestaurantCreatePage() {
   const { addRestaurant } = useAdminRestaurants()
 
   const [name, setName] = useState('')
+  const [businessType, setBusinessType] = useState<BusinessType>('restaurant')
   const [contactPerson, setContactPerson] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -29,6 +32,7 @@ export default function AdminRestaurantCreatePage() {
     try {
       await addRestaurant({
         name: name.trim(),
+        business_type: businessType,
         contact_person: contactPerson.trim(),
         phone: phone.trim(),
         address: address.trim(),
@@ -47,8 +51,8 @@ export default function AdminRestaurantCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Restoran Ekle"
-        description="Yeni işletmeyi sisteme kaydedin. Restoran, verdiğiniz e-posta ve şifre ile panele giriş yapabilir."
+        title="İşletme Ekle"
+        description="Yeni restoran veya kuyumcu işletmesini sisteme kaydedin. İşletme sahibi verdiğiniz e-posta ve şifre ile panele giriş yapabilir."
         actions={
           <Link
             to="/admin/restaurants"
@@ -62,12 +66,26 @@ export default function AdminRestaurantCreatePage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="İşletme Bilgileri">
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">İşletme Türü</label>
+              <select
+                value={businessType}
+                onChange={(event) => setBusinessType(event.target.value as BusinessType)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              >
+                {(Object.entries(BUSINESS_TYPE_LABELS) as Array<[BusinessType, string]>).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <Input
-              label="Restoran Adı"
+              label="İşletme Adı"
               name="restaurantName"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Örn: Adistek Cafe"
+              placeholder={businessType === 'jeweler' ? 'Örn: Altın Dünyası Kuyumculuk' : 'Örn: Adistek Cafe'}
               required
             />
             <Input
@@ -122,7 +140,7 @@ export default function AdminRestaurantCreatePage() {
 
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Kaydediliyor...' : 'Restoranı Kaydet'}
+                {submitting ? 'Kaydediliyor...' : 'İşletmeyi Kaydet'}
               </Button>
               <Link
                 to="/admin/restaurants"
@@ -138,9 +156,13 @@ export default function AdminRestaurantCreatePage() {
           <div className="rounded-2xl border border-brand-100 bg-brand-50/70 p-5">
             <p className="text-sm font-semibold text-brand-900">Kayıt sonrası</p>
             <ul className="mt-3 space-y-2 text-sm text-brand-900/80">
-              <li>Restoran hemen listeye eklenir.</li>
+              <li>İşletme hemen listeye eklenir.</li>
               <li>İşletme sahibi giriş e-postası ve şifre ile panele girebilir.</li>
-              <li>Kategori, ürün ve masa tanımlarını restoran kendisi yapar.</li>
+              <li>
+                {businessType === 'jeweler'
+                  ? 'Kuyumcu panelinde ürün, stok, satış ve tamir modülleri açılır.'
+                  : 'Kategori, ürün ve masa tanımlarını restoran kendisi yapar.'}
+              </li>
             </ul>
           </div>
 

@@ -1,6 +1,9 @@
+import type { BusinessType } from '../constants/businessType'
+
 export interface Restaurant {
   id: number
   name: string
+  business_type?: BusinessType
   slug?: string | null
   contact_person?: string | null
   phone?: string | null
@@ -106,6 +109,11 @@ export interface RestaurantListItem extends Restaurant {
   categories_count: number
   products_count: number
   tables_count: number
+  jewelry_categories_count?: number
+  jewelry_products_count?: number
+  jewelry_customers_count?: number
+  jewelry_sales_count?: number
+  jewelry_repairs_count?: number
 }
 
 export interface Waiter {
