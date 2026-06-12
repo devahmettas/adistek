@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\GoldPriceRecordRepository;
 use App\Services\GoldPrices\GoldPriceStreamService;
 use App\Services\GoldPrices\GoldPriceSyncService;
+use App\Support\MarketGoldPricePresenter;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class MarketGoldPriceController extends Controller
 
         return response()->json([
             'data' => [
-                'prices' => $sync['prices'],
+                'prices' => MarketGoldPricePresenter::formatCollection($sync['prices']),
                 'changed' => $sync['changed'],
                 'stored_count' => $sync['stored_count'],
                 'has_gold_base' => $result->hasGoldBase,
@@ -78,7 +79,7 @@ class MarketGoldPriceController extends Controller
 
         return response()->json([
             'data' => [
-                'prices' => $records,
+                'prices' => MarketGoldPricePresenter::formatCollection($records),
                 'last_sync_at' => $lastSync?->timezone($timezone)->toIso8601String(),
                 'server_time' => Carbon::now($timezone)->toIso8601String(),
                 'timezone' => $timezone,
@@ -139,7 +140,7 @@ class MarketGoldPriceController extends Controller
                 'has_gold_base' => $result->hasGoldBase,
                 'fetched_at' => Carbon::now($timezone)->toIso8601String(),
                 'provider' => $result->provider,
-                'prices' => $sync['prices'],
+                'prices' => MarketGoldPricePresenter::formatCollection($sync['prices']),
             ],
         ]);
     }

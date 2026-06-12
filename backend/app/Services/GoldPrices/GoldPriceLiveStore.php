@@ -2,6 +2,7 @@
 
 namespace App\Services\GoldPrices;
 
+use App\Support\MarketGoldPricePresenter;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -30,7 +31,7 @@ class GoldPriceLiveStore
         $version = $this->getVersion() + 1;
 
         $snapshot = [
-            'prices' => $prices->values()->all(),
+            'prices' => MarketGoldPricePresenter::formatCollection($prices),
             'has_gold_base' => $hasGoldBase,
             'last_sync_at' => $now->toIso8601String(),
             'server_time' => $now->toIso8601String(),
@@ -112,6 +113,7 @@ class GoldPriceLiveStore
         if (is_array($snapshot)) {
             $snapshot['server_time'] = Carbon::now($timezone)->toIso8601String();
             $snapshot['stream_source'] ??= config('gold_prices.stream_source', 'izko');
+            $snapshot['prices'] = MarketGoldPricePresenter::formatCollection($snapshot['prices'] ?? []);
 
             return $snapshot;
         }

@@ -107,14 +107,19 @@ export interface JewelryStockMovement {
 }
 
 export type MarketGoldPriceType =
-  | 'gram_altin'
-  | 'ceyrek_altin'
-  | 'yarim_altin'
-  | 'tam_altin'
-  | 'cumhuriyet_altini'
-  | 'ayar_14'
-  | 'ayar_18'
   | 'ayar_22'
+  | 'ayar_18'
+  | 'ayar_14'
+  | 'ayar_8'
+  | 'gram_altin'
+  | 'cumhuriyet_altini'
+  | 'eski_ceyrek_altin'
+  | 'ceyrek_altin'
+  | 'eski_yarim_altin'
+  | 'yarim_altin'
+  | 'eski_ziynet'
+  | 'tam_altin'
+  | 'paketli_has'
   | 'ayar_24'
 
 export interface MarketGoldPriceRecord {

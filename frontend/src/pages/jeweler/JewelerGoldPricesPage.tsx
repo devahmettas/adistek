@@ -17,15 +17,20 @@ const HISTORY_REFRESH_MS = 30_000
 const DISPLAY_TIMEZONE = 'Europe/Istanbul'
 
 const GOLD_TYPE_OPTIONS: Array<{ value: MarketGoldPriceType; label: string }> = [
-  { value: 'gram_altin', label: 'Gram Altın' },
-  { value: 'ceyrek_altin', label: 'Çeyrek Altın' },
-  { value: 'yarim_altin', label: 'Yarım Altın' },
-  { value: 'tam_altin', label: 'Tam Altın' },
-  { value: 'cumhuriyet_altini', label: 'Cumhuriyet Altını' },
-  { value: 'ayar_14', label: '14 Ayar' },
-  { value: 'ayar_18', label: '18 Ayar' },
   { value: 'ayar_22', label: '22 Ayar' },
-  { value: 'ayar_24', label: '24 Ayar' },
+  { value: 'ayar_18', label: '18 Ayar' },
+  { value: 'ayar_14', label: '14 Ayar' },
+  { value: 'ayar_8', label: '8 Ayar' },
+  { value: 'gram_altin', label: 'Gram Altın' },
+  { value: 'cumhuriyet_altini', label: 'Ata Altın' },
+  { value: 'eski_ceyrek_altin', label: 'Eski Çeyrek' },
+  { value: 'ceyrek_altin', label: 'Yeni Çeyrek' },
+  { value: 'eski_yarim_altin', label: 'Eski Yarım' },
+  { value: 'yarim_altin', label: 'Yeni Yarım' },
+  { value: 'eski_ziynet', label: 'Eski Ziynet' },
+  { value: 'tam_altin', label: 'Yeni Ziynet' },
+  { value: 'paketli_has', label: 'Paketli Has' },
+  { value: 'ayar_24', label: 'Has Altın' },
 ]
 
 const PERIOD_OPTIONS = [
@@ -58,8 +63,49 @@ function formatTurkeyDateTime(value: string | null | undefined): string {
   })
 }
 
+function normalizePriceType(type: unknown): MarketGoldPriceType | null {
+  if (typeof type === 'string') {
+    return GOLD_TYPE_OPTIONS.some((option) => option.value === type)
+      ? (type as MarketGoldPriceType)
+      : null
+  }
+
+  if (type && typeof type === 'object' && 'value' in type) {
+    const value = (type as { value?: unknown }).value
+    return typeof value === 'string' ? normalizePriceType(value) : null
+  }
+
+  return null
+}
+
+function normalizePrices(prices: MarketGoldPriceRecord[] | undefined): MarketGoldPriceRecord[] {
+  if (!prices?.length) {
+    return []
+  }
+
+  const byType = new Map<MarketGoldPriceType, MarketGoldPriceRecord>()
+
+  for (const price of prices) {
+    const type = normalizePriceType(price.type)
+
+    if (!type || price.cash_sell_price === null || price.cash_sell_price === undefined || price.cash_sell_price === '') {
+      continue
+    }
+
+    byType.set(type, {
+      ...price,
+      type,
+      name: price.name || GOLD_TYPE_OPTIONS.find((option) => option.value === type)?.label || type,
+    })
+  }
+
+  return GOLD_TYPE_OPTIONS
+    .map((option) => byType.get(option.value))
+    .filter((price): price is MarketGoldPriceRecord => Boolean(price))
+}
+
 function pricesSignature(prices: MarketGoldPriceRecord[]): string {
-  return prices
+  return normalizePrices(prices)
     .map((price) => `${price.type}:${price.cash_sell_price}:${price.card_sell_price}`)
     .join('|')
 }
@@ -72,7 +118,7 @@ function sleep(ms: number): Promise<void> {
 
 export default function JewelerGoldPricesPage() {
   const [latest, setLatest] = useState<MarketGoldPriceLatestResponse | null>(null)
-  const [selectedType, setSelectedType] = useState<MarketGoldPriceType>('gram_altin')
+  const [selectedType, setSelectedType] = useState<MarketGoldPriceType>('ayar_22')
   const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h')
   const [chartPoints, setChartPoints] = useState<Array<{
     fetched_at: string
@@ -96,9 +142,13 @@ export default function JewelerGoldPricesPage() {
   const consecutiveFailures = useRef(0)
 
   const applyLiveData = useCallback((data: MarketGoldPriceLatestResponse) => {
-    const signature = pricesSignature(data.prices)
+    const normalizedPrices = normalizePrices(data.prices)
+    const signature = pricesSignature(normalizedPrices)
 
-    setLatest(data)
+    setLatest({
+      ...data,
+      prices: normalizedPrices,
+    })
     setNowLabel(formatTurkeyDateTime(data.server_time))
     setLastDisplayedAt(data.last_sync_at ?? data.server_time)
     setHasGoldBase(data.has_gold_base ?? null)
@@ -235,16 +285,14 @@ export default function JewelerGoldPricesPage() {
     }
   }
 
-  const sortedPrices = useMemo(() => {
-    if (!latest?.prices) {
-      return [] as MarketGoldPriceRecord[]
+  const pricesByType = useMemo(() => {
+    const map = new Map<MarketGoldPriceType, MarketGoldPriceRecord>()
+
+    for (const price of latest?.prices ?? []) {
+      map.set(price.type, price)
     }
 
-    const order = GOLD_TYPE_OPTIONS.map((option) => option.value)
-
-    return [...latest.prices].sort(
-      (a, b) => order.indexOf(a.type) - order.indexOf(b.type),
-    )
+    return map
   }, [latest])
 
   return (
@@ -331,22 +379,26 @@ export default function JewelerGoldPricesPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedPrices.map((price) => (
-                <tr
-                  key={`${price.type}-${price.cash_sell_price}-${price.fetched_at}`}
-                  className={`border-b border-slate-100 transition-colors duration-300 ${
-                    justUpdated ? 'bg-emerald-50/70' : ''
-                  }`}
-                >
-                  <td className="px-3 py-3 font-medium text-slate-900">{price.name}</td>
-                  <td className="px-3 py-3 font-semibold text-brand-700">{formatMoney(price.cash_sell_price)}</td>
-                  <td className="px-3 py-3 text-slate-700">{formatMoney(price.card_sell_price)}</td>
-                  <td className="px-3 py-3 text-xs text-slate-500">
-                    {formatTurkeyDateTime(price.fetched_at)}
-                  </td>
-                </tr>
-              ))}
-              {sortedPrices.length === 0 && !loading && (
+              {GOLD_TYPE_OPTIONS.map((option) => {
+                const price = pricesByType.get(option.value)
+
+                return (
+                  <tr
+                    key={option.value}
+                    className={`border-b border-slate-100 transition-colors duration-300 ${
+                      justUpdated ? 'bg-emerald-50/70' : ''
+                    }`}
+                  >
+                    <td className="px-3 py-3 font-medium text-slate-900">{price?.name ?? option.label}</td>
+                    <td className="px-3 py-3 font-semibold text-brand-700">{formatMoney(price?.cash_sell_price)}</td>
+                    <td className="px-3 py-3 text-slate-700">{formatMoney(price?.card_sell_price)}</td>
+                    <td className="px-3 py-3 text-xs text-slate-500">
+                      {formatTurkeyDateTime(price?.fetched_at)}
+                    </td>
+                  </tr>
+                )
+              })}
+              {pricesByType.size === 0 && !loading && (
                 <tr>
                   <td colSpan={4} className="px-3 py-8 text-center text-slate-500">
                     Fiyatlar yükleniyor...
