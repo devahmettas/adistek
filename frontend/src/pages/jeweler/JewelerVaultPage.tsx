@@ -64,23 +64,27 @@ export default function JewelerVaultPage() {
       <PageHeader
         title="Kasa Yönetimi"
         description="Ürün kategorilerine göre stok takibi ve nakit işlemleri. Stok değerleri ürün yönetiminden, nakit hareketleri buradan yönetilir."
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-              Yenile
-            </Button>
-            <Button type="button" size="sm" onClick={() => setCashModalType('in')}>
-              Nakit Girişi
-            </Button>
-            <Button type="button" variant="danger" size="sm" onClick={() => setCashModalType('out')}>
-              Nakit Çıkışı
-            </Button>
-            <Link to="/dashboard/jeweler/products">
-              <Button type="button" variant="secondary" size="sm">Ürün Yönetimi</Button>
-            </Link>
-          </div>
-        )}
       />
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full py-4 text-base"
+          onClick={() => setCashModalType('in')}
+        >
+          Nakit Girişi
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          size="lg"
+          className="w-full py-4 text-base"
+          onClick={() => setCashModalType('out')}
+        >
+          Nakit Çıkışı
+        </Button>
+      </section>
 
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
