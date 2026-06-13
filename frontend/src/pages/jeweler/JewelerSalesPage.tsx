@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import Button from '../../components/Button'
 import Card from '../../components/Card'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import { getJewelrySales, type JewelrySale } from '../../api/jeweler'
+import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
 import { formatPanelMoney } from '../../components/restaurant/ManagementPanelWidgets'
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -13,6 +15,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 }
 
 export default function JewelerSalesPage() {
+  const { itemCount, openCheckout, saleVersion } = useJewelrySaleCart()
   const [sales, setSales] = useState<JewelrySale[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,13 +34,32 @@ export default function JewelerSalesPage() {
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, saleVersion])
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Satış Yönetimi" description="Tamamlanan satış kayıtları" />
+      <PageHeader
+        title="Satış Yönetimi"
+        description="Çoklu ürün satışı için sepeti kullanın, tamamlanan kayıtları buradan takip edin."
+        actions={(
+          <Button type="button" onClick={openCheckout}>
+            {itemCount > 0 ? `Sepeti Aç (${itemCount})` : 'Yeni Satış'}
+          </Button>
+        )}
+      />
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
+
+      {itemCount > 0 && (
+        <Card title="Aktif Sepet">
+          <p className="text-sm text-slate-600">
+            Sepetinizde {itemCount} ürün bekliyor. Ödeme ve indirim ayarlarını yapıp tek seferde satışı tamamlayabilirsiniz.
+          </p>
+          <Button type="button" className="mt-3" onClick={openCheckout}>
+            Sepeti Aç
+          </Button>
+        </Card>
+      )}
 
       <Card title={`Satış Listesi (${sales.length})`}>
         <ul className="divide-y divide-slate-100">

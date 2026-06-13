@@ -83,11 +83,26 @@ class JewelryProductService
     public function update(int $restaurantId, int $id, array $data): JewelryProduct
     {
         $product = $this->findForRestaurant($restaurantId, $id);
-        unset($data['stock_quantity'], $data['barcode']);
+        unset($data['barcode']);
+
+        $newStock = null;
+        if (array_key_exists('stock_quantity', $data)) {
+            $newStock = max(0, (int) $data['stock_quantity']);
+            unset($data['stock_quantity']);
+        }
 
         $data = $this->applySalePrice($data, $product);
-
         $product->update($data);
+
+        if ($newStock !== null && $newStock !== $product->stock_quantity) {
+            $this->adjustStock(
+                $restaurantId,
+                $product->id,
+                $newStock,
+                JewelryStockMovementType::Adjustment,
+                'Ürün düzenleme ile stok güncellemesi',
+            );
+        }
 
         return $product->refresh()->load('category');
     }

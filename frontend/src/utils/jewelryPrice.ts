@@ -143,3 +143,59 @@ export function calculateJewelrySaleProfit(
     priceDifference,
   }
 }
+
+export interface JewelryCartTotals {
+  subtotal: number
+  discount: number
+  totalRevenue: number
+  totalCost: number
+  totalProfit: number
+  profitMarginPercent: number
+}
+
+export function calculateJewelryCartTotals(
+  lines: Array<{
+    unit_price: number
+    weight_gram: number
+    karat: number
+    labor_cost: number
+    quantity: number
+    catalog_price: number
+  }>,
+  discount: number,
+  prices: MarketGoldPriceRecord[],
+): JewelryCartTotals {
+  let subtotal = 0
+  let totalCost = 0
+
+  for (const line of lines) {
+    const lineProfit = calculateJewelrySaleProfit(
+      line.unit_price,
+      line.weight_gram,
+      line.karat,
+      line.labor_cost,
+      line.quantity,
+      0,
+      line.catalog_price,
+      prices,
+    )
+    subtotal += lineProfit.subtotal
+    totalCost += lineProfit.totalCost
+  }
+
+  const discountValue = Math.max(0, discount)
+  const totalRevenue = Math.round(Math.max(0, subtotal - discountValue) * 100) / 100
+  const totalProfit = Math.round((totalRevenue - totalCost) * 100) / 100
+  const profitMarginPercent = totalRevenue > 0
+    ? Math.round((totalProfit / totalRevenue) * 10000) / 100
+    : 0
+
+  return {
+    subtotal: Math.round(subtotal * 100) / 100,
+    discount: discountValue,
+    totalRevenue,
+    totalCost: Math.round(totalCost * 100) / 100,
+    totalProfit,
+    profitMarginPercent,
+  }
+}

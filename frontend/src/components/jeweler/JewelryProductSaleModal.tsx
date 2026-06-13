@@ -13,6 +13,7 @@ import {
 } from '../../utils/jewelryPrice'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
 
 const PAYMENT_OPTIONS = [
   { value: 'cash', label: 'Nakit' },
@@ -35,9 +36,12 @@ export default function JewelryProductSaleModal({
   onSuccess,
 }: JewelryProductSaleModalProps) {
   useBodyScrollLock(true)
+  const { addItem, getReservedQuantity, notifySaleCompleted } = useJewelrySaleCart()
 
   const catalogPrice = Number(product.sale_price)
   const previewUrl = resolveMenuAssetUrl(null, product.image_path)
+  const reservedInCart = getReservedQuantity(product.id)
+  const availableStock = Math.max(0, product.stock_quantity - reservedInCart)
 
   const [quantity, setQuantity] = useState('1')
   const [salePrice, setSalePrice] = useState('')
@@ -74,8 +78,12 @@ export default function JewelryProductSaleModal({
       return
     }
 
-    if (product.stock_quantity < qty) {
-      setError(`Yetersiz stok. Mevcut: ${product.stock_quantity} adet`)
+    if (availableStock < qty) {
+      setError(
+        reservedInCart > 0
+          ? `Yetersiz stok. Sepette ${reservedInCart} adet var, en fazla ${availableStock} adet daha eklenebilir.`
+          : `Yetersiz stok. Mevcut: ${product.stock_quantity} adet`,
+      )
       return
     }
 
@@ -97,6 +105,7 @@ export default function JewelryProductSaleModal({
           },
         ],
       })
+      notifySaleCompleted()
       onSuccess()
       onClose()
     } catch {
@@ -104,6 +113,28 @@ export default function JewelryProductSaleModal({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleAddToCart = () => {
+    setError(null)
+
+    if (!hasSalePrice || unitSalePrice <= 0) {
+      setError('Satış fiyatını girin.')
+      return
+    }
+
+    const cartError = addItem({
+      product,
+      quantity: qty,
+      unit_price: unitSalePrice,
+    })
+
+    if (cartError) {
+      setError(cartError)
+      return
+    }
+
+    onClose()
   }
 
   const profitPositive = profitSummary.totalProfit >= 0
@@ -167,7 +198,12 @@ export default function JewelryProductSaleModal({
                 </div>
                 <div>
                   <dt className="text-slate-500">Stok</dt>
-                  <dd className="font-medium text-slate-900">{product.stock_quantity} adet</dd>
+                  <dd className="font-medium text-slate-900">
+                    {availableStock} adet
+                    {reservedInCart > 0 && (
+                      <span className="text-slate-500"> ({reservedInCart} sepette)</span>
+                    )}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -203,7 +239,7 @@ export default function JewelryProductSaleModal({
                       label="Adet"
                       type="number"
                       min="1"
-                      max={product.stock_quantity}
+                      max={availableStock || undefined}
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                       className="lg:py-2 lg:text-sm"
@@ -319,12 +355,20 @@ export default function JewelryProductSaleModal({
 
               <div className="flex shrink-0 flex-wrap gap-2 border-t border-slate-100 p-4 lg:px-5 lg:py-3">
                 <Button
-                  type="submit"
-                  disabled={submitting || product.stock_quantity < 1 || !hasSalePrice}
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={availableStock < 1 || !hasSalePrice}
                 >
-                  {submitting ? 'Kaydediliyor...' : 'Satışı Tamamla'}
+                  Sepete Ekle
                 </Button>
-                <Button type="button" variant="secondary" className="lg:w-auto" onClick={onClose}>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={submitting || availableStock < 1 || !hasSalePrice}
+                >
+                  {submitting ? 'Kaydediliyor...' : 'Hemen Sat'}
+                </Button>
+                <Button type="button" variant="ghost" className="lg:w-auto" onClick={onClose}>
                   İptal
                 </Button>
               </div>

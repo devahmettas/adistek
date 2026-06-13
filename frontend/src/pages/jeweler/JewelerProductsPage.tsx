@@ -243,15 +243,13 @@ function ProductForm({
             }}
           />
 
-          {!editingId && (
-            <Input
-              label="Başlangıç Stok"
-              type="number"
-              min="0"
-              value={stockQuantity}
-              onChange={(e) => setStockQuantity(e.target.value)}
-            />
-          )}
+          <Input
+            label={editingId ? 'Stok' : 'Başlangıç Stok'}
+            type="number"
+            min="0"
+            value={stockQuantity}
+            onChange={(e) => setStockQuantity(e.target.value)}
+          />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <label className="flex cursor-pointer items-center gap-2">
@@ -555,7 +553,7 @@ export default function JewelerProductsPage() {
       is_manual_price: isManualPrice,
       sale_price: isManualPrice ? manualPrice : String(priceBreakdown?.salePrice ?? 0),
       metal_type: 'gold' as const,
-      ...(editingId ? {} : { stock_quantity: Number(stockQuantity) || 0 }),
+      stock_quantity: Number(stockQuantity) || 0,
     }
 
     try {

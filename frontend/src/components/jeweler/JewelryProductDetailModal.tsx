@@ -150,7 +150,7 @@ export default function JewelryProductDetailModal({
                 onClick={onSell}
                 disabled={product.stock_quantity < 1}
               >
-                Satış Yap
+                Satış / Sepete Ekle
               </Button>
               <Button type="button" variant="secondary" className="lg:w-auto" onClick={onClose}>
                 Kapat
