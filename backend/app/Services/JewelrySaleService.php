@@ -18,7 +18,7 @@ class JewelrySaleService
     public function listByRestaurant(int $restaurantId): Collection
     {
         return JewelrySale::query()
-            ->with(['customer', 'items.product'])
+            ->with(['customer', 'items.product.category'])
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('sold_at')
             ->get();
