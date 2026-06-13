@@ -12,6 +12,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class JewelryProductService
 {
+    public function __construct(
+        private readonly JewelryProductPriceService $priceService,
+    ) {}
+
     public function listByRestaurant(int $restaurantId): Collection
     {
         return JewelryProduct::query()
@@ -54,6 +58,8 @@ class JewelryProductService
             $initialStock = (int) ($data['stock_quantity'] ?? 0);
             unset($data['stock_quantity']);
 
+            $data = $this->applySalePrice($data);
+
             $product = JewelryProduct::create([
                 ...$data,
                 'restaurant_id' => $restaurantId,
@@ -78,6 +84,8 @@ class JewelryProductService
     {
         $product = $this->findForRestaurant($restaurantId, $id);
         unset($data['stock_quantity'], $data['barcode']);
+
+        $data = $this->applySalePrice($data, $product);
 
         $product->update($data);
 
@@ -146,5 +154,27 @@ class JewelryProductService
         $sequence = JewelryProduct::where('restaurant_id', $restaurantId)->count() + 1;
 
         return sprintf('%s%06d', strtoupper($prefix), $sequence);
+    }
+
+    private function applySalePrice(array $data, ?JewelryProduct $existing = null): array
+    {
+        $isManual = (bool) ($data['is_manual_price'] ?? $existing?->is_manual_price ?? false);
+
+        if ($isManual) {
+            return $data;
+        }
+
+        $weightGram = (float) ($data['weight_gram'] ?? $existing?->weight_gram ?? 0);
+        $karat = (int) ($data['karat'] ?? $existing?->karat ?? 22);
+        $laborCost = (float) ($data['labor_cost'] ?? $existing?->labor_cost ?? 0);
+        $profitRate = (float) ($data['profit_rate'] ?? $existing?->profit_rate ?? 0);
+
+        $calculation = $this->priceService->calculate($weightGram, $karat, $laborCost, $profitRate);
+
+        if ($calculation !== null) {
+            $data['sale_price'] = $calculation['sale_price'];
+        }
+
+        return $data;
     }
 }

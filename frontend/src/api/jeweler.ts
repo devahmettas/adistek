@@ -24,7 +24,9 @@ export interface JewelryProduct {
   stone_carat: string | null
   purchase_price: string
   labor_cost: string
+  profit_rate: string
   sale_price: string
+  is_manual_price: boolean
   stock_quantity: number
   description: string | null
   image_path: string | null
@@ -226,6 +228,28 @@ export async function createJewelryCategory(payload: {
 
 export async function getJewelryProducts(): Promise<JewelryProduct[]> {
   const { data } = await apiClient.get<ApiResponse<JewelryProduct[]>>('/jeweler/products')
+  return data.data
+}
+
+export interface JewelryPriceCalculation {
+  gold_price_per_gram: number
+  metal_value: number
+  labor_cost: number
+  profit_rate: number
+  profit_amount: number
+  sale_price: number
+}
+
+export async function calculateJewelryProductPrice(payload: {
+  weight_gram: number | string
+  karat: number
+  labor_cost?: number | string
+  profit_rate?: number | string
+}): Promise<JewelryPriceCalculation> {
+  const { data } = await apiClient.post<ApiResponse<JewelryPriceCalculation>>(
+    '/jeweler/products/calculate-price',
+    payload,
+  )
   return data.data
 }
 

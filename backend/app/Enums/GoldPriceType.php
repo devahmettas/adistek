@@ -74,4 +74,16 @@ enum GoldPriceType: string
 
         return null;
     }
+
+    public static function fromKarat(int $karat): ?self
+    {
+        return match ($karat) {
+            22 => self::Ayar22,
+            18 => self::Ayar18,
+            14 => self::Ayar14,
+            8 => self::Ayar8,
+            24 => self::Ayar24,
+            default => null,
+        };
+    }
 }

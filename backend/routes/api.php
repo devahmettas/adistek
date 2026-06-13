@@ -152,6 +152,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::delete('/categories/{category}', [JewelryCategoryController::class, 'destroy']);
 
     Route::get('/products', [JewelryProductController::class, 'index']);
+    Route::post('/products/calculate-price', [JewelryProductController::class, 'calculatePrice']);
     Route::post('/products', [JewelryProductController::class, 'store']);
     Route::get('/products/{product}', [JewelryProductController::class, 'show']);
     Route::put('/products/{product}', [JewelryProductController::class, 'update']);

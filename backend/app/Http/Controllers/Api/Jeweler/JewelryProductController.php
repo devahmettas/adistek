@@ -7,6 +7,7 @@ use App\Enums\JewelryStockMovementType;
 use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
 use App\Models\JewelryProduct;
+use App\Services\JewelryProductPriceService;
 use App\Services\JewelryProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class JewelryProductController extends Controller
 
     public function __construct(
         private readonly JewelryProductService $service,
+        private readonly JewelryProductPriceService $priceService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -84,6 +86,31 @@ class JewelryProductController extends Controller
         return response()->json(['data' => $updated]);
     }
 
+    public function calculatePrice(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'weight_gram' => ['required', 'numeric', 'min:0'],
+            'karat' => ['required', 'integer', 'min:1', 'max:24'],
+            'labor_cost' => ['nullable', 'numeric', 'min:0'],
+            'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $calculation = $this->priceService->calculate(
+            (float) $data['weight_gram'],
+            (int) $data['karat'],
+            (float) ($data['labor_cost'] ?? 0),
+            (float) ($data['profit_rate'] ?? 0),
+        );
+
+        if ($calculation === null) {
+            return response()->json([
+                'message' => 'Güncel altın fiyatı bulunamadı.',
+            ], 422);
+        }
+
+        return response()->json(['data' => $calculation]);
+    }
+
     private function validateProduct(Request $request, bool $partial = false): array
     {
         $rules = [
@@ -98,7 +125,9 @@ class JewelryProductController extends Controller
             'stone_carat' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'labor_cost' => ['nullable', 'numeric', 'min:0'],
+            'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
+            'is_manual_price' => ['boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'image_path' => ['nullable', 'string'],
