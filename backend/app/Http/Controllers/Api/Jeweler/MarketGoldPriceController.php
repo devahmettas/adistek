@@ -124,20 +124,33 @@ class MarketGoldPriceController extends Controller
 
     public function sync(): JsonResponse
     {
-        $sync = $this->syncService->sync();
-        $result = $sync['result'];
-        $timezone = config('gold_prices.timezone', 'Europe/Istanbul');
+        try {
+            $sync = $this->syncService->sync();
+            $result = $sync['result'];
+            $timezone = config('gold_prices.timezone', 'Europe/Istanbul');
+            $lastChangeAt = $this->repository->getLastSyncAt();
 
-        return response()->json([
-            'data' => [
-                'synced_count' => count($result->quotes),
-                'stored_count' => $sync['stored_count'],
-                'changed' => $sync['changed'],
-                'has_gold_base' => $result->hasGoldBase,
-                'fetched_at' => Carbon::now($timezone)->toIso8601String(),
-                'provider' => $result->provider,
-                'prices' => MarketGoldPricePresenter::formatCollection($sync['prices']),
-            ],
-        ]);
+            return response()->json([
+                'data' => [
+                    'synced_count' => count($result->quotes),
+                    'stored_count' => $sync['stored_count'],
+                    'changed' => $sync['changed'],
+                    'has_gold_base' => $result->hasGoldBase,
+                    'fetched_at' => $lastChangeAt
+                        ? $lastChangeAt->timezone($timezone)->toIso8601String()
+                        : Carbon::now($timezone)->toIso8601String(),
+                    'provider' => $result->provider,
+                    'source' => $result->source,
+                    'version' => $sync['version'],
+                    'prices' => MarketGoldPricePresenter::formatCollection($sync['prices']),
+                ],
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => $exception->getMessage() ?: 'Altın fiyatları güncellenemedi.',
+            ], 422);
+        }
     }
 }

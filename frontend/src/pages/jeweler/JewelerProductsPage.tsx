@@ -692,59 +692,68 @@ export default function JewelerProductsPage() {
               return (
                 <article
                   key={product.id}
-                  className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md"
-                  onClick={() => setDetailProduct(product)}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md"
                 >
-                  <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt={product.name}
-                        className="max-h-full max-w-full object-contain object-center transition group-hover:scale-[1.02]"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400">
-                        Fotoğraf yok
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{product.name}</h3>
-                        {categoryName && (
-                          <p className="text-xs text-slate-500">{categoryName}</p>
-                        )}
-                      </div>
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
-                        {product.karat} ayar
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetailProduct(product)}
+                    className="flex flex-1 cursor-pointer flex-col text-left"
+                  >
+                    <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt={product.name}
+                          className="max-h-full max-w-full object-contain object-center transition group-hover:scale-[1.02]"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400">
+                          Fotoğraf yok
+                        </div>
+                      )}
                     </div>
-                    <p className="line-clamp-2 text-xs text-slate-500">
-                      {product.description || `${product.weight_gram} gr · Stok: ${product.stock_quantity}`}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold text-brand-700">
-                        {formatJewelryMoney(product.sale_price)}
+                    <div className="space-y-2 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold text-slate-900">{product.name}</h3>
+                          {categoryName && (
+                            <p className="text-xs text-slate-500">{categoryName}</p>
+                          )}
+                        </div>
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          {product.karat} ayar
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-xs text-slate-500">
+                        {product.description || `${product.weight_gram} gr · Stok: ${product.stock_quantity}`}
                       </p>
-                      <p className="text-xs text-slate-500">Stok: {product.stock_quantity}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-semibold text-brand-700">
+                          {formatJewelryMoney(product.sale_price)}
+                        </p>
+                        <p className="text-xs text-slate-500">Stok: {product.stock_quantity}</p>
+                      </div>
                     </div>
-                    <div className="flex gap-2 pt-1" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(product)}
-                        className="text-xs font-medium text-brand-700 hover:underline"
-                      >
-                        Düzenle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(product.id)}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        Sil
-                      </button>
-                    </div>
+                  </button>
+                  <div className="flex gap-2 border-t border-slate-100 p-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => startEdit(product)}
+                    >
+                      Düzenle
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      className="flex-1"
+                      onClick={() => void handleDelete(product.id)}
+                    >
+                      Sil
+                    </Button>
                   </div>
                 </article>
               )
@@ -825,8 +834,6 @@ export default function JewelerProductsPage() {
               : null
           }
           onClose={() => setDetailProduct(null)}
-          onEdit={() => startEdit(detailProduct)}
-          onDelete={() => void handleDelete(detailProduct.id)}
         />
       )}
     </div>

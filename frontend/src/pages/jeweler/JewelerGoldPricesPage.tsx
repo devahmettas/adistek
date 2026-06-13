@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import GoldPriceChart from '../../components/jeweler/GoldPriceChart'
@@ -180,6 +181,7 @@ export default function JewelerGoldPricesPage() {
   const [syncing, setSyncing] = useState(false)
   const [listening, setListening] = useState(false)
   const [justUpdated, setJustUpdated] = useState(false)
+  const [syncNotice, setSyncNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nowLabel, setNowLabel] = useState(formatTurkeyDateTime(new Date().toISOString()))
   const [lastDisplayedAt, setLastDisplayedAt] = useState<string | null>(null)
@@ -189,11 +191,15 @@ export default function JewelerGoldPricesPage() {
   const versionRef = useRef(initialState.version)
   const previousSignature = useRef<string | null>(initialState.signature)
   const flashTimer = useRef<number | null>(null)
+  const noticeTimer = useRef<number | null>(null)
   const pollInFlightRef = useRef(false)
 
-  const applyLiveData = useCallback((data: MarketGoldPriceLatestResponse, options?: { silent?: boolean }) => {
+  const applyLiveData = useCallback((
+    data: MarketGoldPriceLatestResponse,
+    options?: { silent?: boolean; forceFlash?: boolean },
+  ) => {
     if (!data.prices?.length) {
-      return
+      return false
     }
 
     const normalizedPrices = normalizePrices(data.prices)
@@ -212,9 +218,12 @@ export default function JewelerGoldPricesPage() {
     setHasGoldBase(data.has_gold_base ?? null)
 
     if (
-      !options?.silent
-      && previousSignature.current !== null
-      && previousSignature.current !== signature
+      options?.forceFlash
+      || (
+        !options?.silent
+        && previousSignature.current !== null
+        && previousSignature.current !== signature
+      )
     ) {
       setJustUpdated(true)
       if (flashTimer.current) {
@@ -228,6 +237,8 @@ export default function JewelerGoldPricesPage() {
       ...data,
       prices: normalizedPrices,
     })
+
+    return true
   }, [])
 
   const pollLiveOnce = useCallback(async (): Promise<void> => {
@@ -316,6 +327,9 @@ export default function JewelerGoldPricesPage() {
       if (flashTimer.current) {
         window.clearTimeout(flashTimer.current)
       }
+      if (noticeTimer.current) {
+        window.clearTimeout(noticeTimer.current)
+      }
     }
   }, [applyLiveData, loadHistory, pollLiveOnce, startLivePoll])
 
@@ -326,14 +340,60 @@ export default function JewelerGoldPricesPage() {
   const handleManualSync = async () => {
     setSyncing(true)
     setError(null)
+    setSyncNotice(null)
 
     try {
-      await syncMarketGoldPrices()
-      const data = await getMarketGoldPricesLive()
-      applyLiveData(data)
-      await loadHistory()
-    } catch {
-      setError('Fiyat güncellenemedi.')
+      const syncResult = await syncMarketGoldPrices()
+
+      if (!syncResult.prices?.length) {
+        throw new Error('Güncel fiyat verisi alınamadı.')
+      }
+
+      const applied = applyLiveData(
+        {
+          prices: syncResult.prices,
+          last_sync_at: syncResult.fetched_at,
+          server_time: syncResult.fetched_at,
+          timezone: latest?.timezone ?? DISPLAY_TIMEZONE,
+          sync_interval_seconds: latest?.sync_interval_seconds ?? 1,
+          provider: syncResult.provider,
+          source: syncResult.source,
+          has_gold_base: syncResult.has_gold_base,
+          version: syncResult.version,
+        },
+        { forceFlash: true },
+      )
+
+      if (!applied) {
+        throw new Error('Güncel fiyat verisi işlenemedi.')
+      }
+
+      setSyncNotice(syncResult.changed ? 'Güncellendi' : 'Güncellendi · Fiyat değişikliği yok')
+      if (noticeTimer.current) {
+        window.clearTimeout(noticeTimer.current)
+      }
+      noticeTimer.current = window.setTimeout(() => setSyncNotice(null), 4000)
+
+      try {
+        await loadHistory()
+      } catch {
+        // Grafik yenilemesi başarısız olsa da manuel güncelleme tamamlandı.
+      }
+    } catch (syncError) {
+      if (axios.isAxiosError(syncError)) {
+        const serverMessage = syncError.response?.data?.message
+        if (serverMessage) {
+          setError(serverMessage)
+        } else if (syncError.code === 'ECONNABORTED') {
+          setError('Güncelleme zaman aşımına uğradı. Lütfen tekrar deneyin.')
+        } else {
+          setError('Fiyat güncellenemedi.')
+        }
+      } else if (syncError instanceof Error) {
+        setError(syncError.message)
+      } else {
+        setError('Fiyat güncellenemedi.')
+      }
     } finally {
       setSyncing(false)
     }
@@ -369,6 +429,11 @@ export default function JewelerGoldPricesPage() {
 
       {loading && <LoadingState label="Fiyatlar yükleniyor..." />}
       {error && <p className="alert-error">{error}</p>}
+      {syncNotice && (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          {syncNotice}
+        </p>
+      )}
 
       {latest && (
         <div
@@ -397,7 +462,7 @@ export default function JewelerGoldPricesPage() {
           <p className="mt-1 text-xs opacity-90">
             Anlık saat (Türkiye): <strong>{nowLabel}</strong>
             {' · '}
-            Son veri: <strong>{formatTurkeyDateTime(lastDisplayedAt)}</strong>
+            Son fiyat değişikliği: <strong>{formatTurkeyDateTime(lastDisplayedAt)}</strong>
             {' · '}
             Güncelleme: fiyat değişince anında
           </p>
@@ -433,7 +498,7 @@ export default function JewelerGoldPricesPage() {
                 <th className="px-3 py-2">Ürün</th>
                 <th className="px-3 py-2">Nakit Satış (N.)</th>
                 <th className="px-3 py-2">Kredi Kartı (K.K)</th>
-                <th className="px-3 py-2">Kayıt Saati (TR)</th>
+                <th className="px-3 py-2">Son Değişiklik (TR)</th>
               </tr>
             </thead>
             <tbody>

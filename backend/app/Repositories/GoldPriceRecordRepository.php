@@ -18,8 +18,12 @@ class GoldPriceRecordRepository
         return collect($result->quotes)->map(function ($quote) use ($result, $latestByType) {
             $latest = $latestByType->get($quote->type->value);
 
+            if ($latest !== null) {
+                return $latest;
+            }
+
             return new GoldPriceRecord([
-                'id' => $latest?->id ?? 0,
+                'id' => 0,
                 'provider' => $result->provider,
                 'type' => $quote->type,
                 'external_key' => $quote->externalKey,

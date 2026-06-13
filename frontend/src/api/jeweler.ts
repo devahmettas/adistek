@@ -355,18 +355,24 @@ export async function getMarketGoldPriceHistory(
   return data.data
 }
 
-export async function syncMarketGoldPrices(): Promise<{
+export interface SyncMarketGoldPricesResponse {
   synced_count: number
+  stored_count: number
+  changed: boolean
   has_gold_base: number | null
   fetched_at: string
   provider: string
-}> {
-  const { data } = await apiClient.post<ApiResponse<{
-    synced_count: number
-    has_gold_base: number | null
-    fetched_at: string
-    provider: string
-  }>>('/jeweler/gold-prices/sync')
+  source: string
+  version: number
+  prices: MarketGoldPriceRecord[]
+}
+
+export async function syncMarketGoldPrices(): Promise<SyncMarketGoldPricesResponse> {
+  const { data } = await apiClient.post<ApiResponse<SyncMarketGoldPricesResponse>>(
+    '/jeweler/gold-prices/sync',
+    undefined,
+    { timeout: 60_000 },
+  )
   return data.data
 }
 
