@@ -173,6 +173,7 @@ export interface JewelrySettings {
   restaurant_id: number
   default_karat: number
   tax_rate: string
+  card_commission_rate: string
   currency: string
   barcode_prefix: string | null
   company_name: string | null

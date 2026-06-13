@@ -36,6 +36,7 @@ export default function JewelerSettingsPage() {
       const updated = await updateJewelrySettings({
         default_karat: settings.default_karat,
         tax_rate: settings.tax_rate,
+        card_commission_rate: settings.card_commission_rate,
         barcode_prefix: settings.barcode_prefix,
         company_name: settings.company_name,
         receipt_footer: settings.receipt_footer,
@@ -57,18 +58,72 @@ export default function JewelerSettingsPage() {
       <PageHeader title="Ayarlar" description="Kuyumcu panel yapılandırması" />
       {error && <p className="alert-error">{error}</p>}
 
+      <Card title="Satış & Karlılık">
+        <form onSubmit={handleSubmit} className="grid max-w-lg gap-4">
+          <Input
+            label="Kart Komisyonu (%)"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={settings.card_commission_rate ?? '0'}
+            onChange={(e) => setSettings({ ...settings, card_commission_rate: e.target.value })}
+          />
+          <p className="-mt-2 text-xs text-slate-500">
+            Kart ile ödeme seçildiğinde satış tutarından düşülür ve net kar buna göre hesaplanır.
+          </p>
+          <Input
+            label="Ek Vergi (%)"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={settings.tax_rate}
+            onChange={(e) => setSettings({ ...settings, tax_rate: e.target.value })}
+          />
+          <p className="-mt-2 text-xs text-slate-500">
+            Tüm satışlarda tahsilat üzerinden ek maliyet olarak kar marjı hesabına yansır.
+          </p>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? 'Kaydediliyor...' : 'Kaydet'}
+          </Button>
+        </form>
+      </Card>
+
       <Card title="Genel Ayarlar">
         <form onSubmit={handleSubmit} className="grid max-w-lg gap-4">
-          <Input label="Varsayılan Ayar" type="number" value={String(settings.default_karat)} onChange={(e) => setSettings({ ...settings, default_karat: Number(e.target.value) })} />
-          <Input label="KDV Oranı (%)" type="number" step="0.01" value={settings.tax_rate} onChange={(e) => setSettings({ ...settings, tax_rate: e.target.value })} />
-          <Input label="Barkod Öneki" value={settings.barcode_prefix ?? ''} onChange={(e) => setSettings({ ...settings, barcode_prefix: e.target.value })} />
-          <Input label="Firma Adı" value={settings.company_name ?? ''} onChange={(e) => setSettings({ ...settings, company_name: e.target.value })} />
-          <Input label="Fiş Alt Bilgi" value={settings.receipt_footer ?? ''} onChange={(e) => setSettings({ ...settings, receipt_footer: e.target.value })} />
+          <Input
+            label="Varsayılan Ayar"
+            type="number"
+            value={String(settings.default_karat)}
+            onChange={(e) => setSettings({ ...settings, default_karat: Number(e.target.value) })}
+          />
+          <Input
+            label="Barkod Öneki"
+            value={settings.barcode_prefix ?? ''}
+            onChange={(e) => setSettings({ ...settings, barcode_prefix: e.target.value })}
+          />
+          <Input
+            label="Firma Adı"
+            value={settings.company_name ?? ''}
+            onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
+          />
+          <Input
+            label="Fiş Alt Bilgi"
+            value={settings.receipt_footer ?? ''}
+            onChange={(e) => setSettings({ ...settings, receipt_footer: e.target.value })}
+          />
           <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={settings.auto_generate_barcode} onChange={(e) => setSettings({ ...settings, auto_generate_barcode: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={settings.auto_generate_barcode}
+              onChange={(e) => setSettings({ ...settings, auto_generate_barcode: e.target.checked })}
+            />
             Otomatik barkod oluştur
           </label>
-          <Button type="submit" disabled={submitting}>{submitting ? 'Kaydediliyor...' : 'Kaydet'}</Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? 'Kaydediliyor...' : 'Kaydet'}
+          </Button>
         </form>
       </Card>
     </div>

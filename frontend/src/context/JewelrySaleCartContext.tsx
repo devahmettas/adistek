@@ -26,12 +26,16 @@ interface AddCartItemInput {
   product: JewelryProduct
   quantity: number
   unit_price: number
+  payment_method?: string
 }
 
 interface JewelrySaleCartContextValue {
   items: JewelrySaleCartLine[]
   itemCount: number
   saleVersion: number
+  saleMessage: string
+  paymentMethod: string
+  setPaymentMethod: (method: string) => void
   isCheckoutOpen: boolean
   openCheckout: () => void
   closeCheckout: () => void
@@ -40,7 +44,7 @@ interface JewelrySaleCartContextValue {
   removeItem: (id: string) => void
   clearCart: () => void
   getReservedQuantity: (productId: number, excludeLineId?: string) => number
-  notifySaleCompleted: () => void
+  notifySaleCompleted: (message?: string) => void
 }
 
 const JewelrySaleCartContext = createContext<JewelrySaleCartContextValue | null>(null)
@@ -81,8 +85,10 @@ function validateQuantity(
 
 export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<JewelrySaleCartLine[]>([])
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [saleVersion, setSaleVersion] = useState(0)
+  const [saleMessage, setSaleMessage] = useState('Satış yapıldı.')
 
   const getReservedQuantityForProduct = useCallback(
     (productId: number, excludeLineId?: string) => getReservedQuantity(items, productId, excludeLineId),
@@ -90,8 +96,12 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
   )
 
   const addItem = useCallback((input: AddCartItemInput): string | null => {
-    const { product, quantity, unit_price } = input
+    const { product, quantity, unit_price, payment_method } = input
     const qty = Math.max(1, quantity)
+
+    if (payment_method) {
+      setPaymentMethod(payment_method)
+    }
 
     const stockError = validateQuantity(items, product.id, product.stock_quantity, qty)
     if (stockError) {
@@ -181,6 +191,7 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([])
+    setPaymentMethod('cash')
   }, [])
 
   const openCheckout = useCallback(() => {
@@ -191,7 +202,8 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
     setIsCheckoutOpen(false)
   }, [])
 
-  const notifySaleCompleted = useCallback(() => {
+  const notifySaleCompleted = useCallback((message = 'Satış yapıldı.') => {
+    setSaleMessage(message)
     setSaleVersion((value) => value + 1)
   }, [])
 
@@ -199,6 +211,9 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
     items,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
     saleVersion,
+    saleMessage,
+    paymentMethod,
+    setPaymentMethod,
     isCheckoutOpen,
     openCheckout,
     closeCheckout,
@@ -211,6 +226,8 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
   }), [
     items,
     saleVersion,
+    saleMessage,
+    paymentMethod,
     isCheckoutOpen,
     openCheckout,
     closeCheckout,

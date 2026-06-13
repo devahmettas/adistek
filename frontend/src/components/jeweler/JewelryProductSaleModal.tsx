@@ -1,15 +1,19 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Button from '../Button'
 import Input from '../Input'
 import Select from '../Select'
+import { JewelrySaleProfitBreakdown } from './JewelrySaleProfitBreakdown'
 import {
   createJewelrySale,
+  getJewelrySettings,
   type JewelryProduct,
+  type JewelrySettings,
   type MarketGoldPriceRecord,
 } from '../../api/jeweler'
 import {
   calculateJewelrySaleProfit,
   formatJewelryMoney,
+  type JewelrySaleFinancialSettings,
 } from '../../utils/jewelryPrice'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
@@ -49,6 +53,21 @@ export default function JewelryProductSaleModal({
   const [discount, setDiscount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [jewelrySettings, setJewelrySettings] = useState<JewelrySettings | null>(null)
+
+  useEffect(() => {
+    void getJewelrySettings()
+      .then(setJewelrySettings)
+      .catch(() => setJewelrySettings(null))
+  }, [])
+
+  const financialSettings = useMemo<JewelrySaleFinancialSettings | undefined>(() => {
+    if (!jewelrySettings) return undefined
+    return {
+      card_commission_rate: Number(jewelrySettings.card_commission_rate) || 0,
+      tax_rate: Number(jewelrySettings.tax_rate) || 0,
+    }
+  }, [jewelrySettings])
 
   const hasSalePrice = salePrice.trim() !== ''
   const unitSalePrice = hasSalePrice ? Number(salePrice) : 0
@@ -65,8 +84,10 @@ export default function JewelryProductSaleModal({
       discountValue,
       catalogPrice,
       goldPrices,
+      paymentMethod,
+      financialSettings,
     ),
-    [unitSalePrice, product, qty, discountValue, catalogPrice, goldPrices],
+    [unitSalePrice, product, qty, discountValue, catalogPrice, goldPrices, paymentMethod, financialSettings],
   )
 
   const handleSubmit = async (event: FormEvent) => {
@@ -127,6 +148,7 @@ export default function JewelryProductSaleModal({
       product,
       quantity: qty,
       unit_price: unitSalePrice,
+      payment_method: paymentMethod,
     })
 
     if (cartError) {
@@ -183,19 +205,24 @@ export default function JewelryProductSaleModal({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Liste: {formatJewelryMoney(catalogPrice)}
-                  </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
                   {product.karat} ayar
                 </span>
               </div>
-              <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <dt className="text-slate-500">Gram</dt>
-                  <dd className="font-medium text-slate-900">{product.weight_gram} gr</dd>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                <div className="rounded-lg border border-brand-200 bg-brand-50/70 px-2.5 py-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-brand-600">Liste Fiyatı</p>
+                  <p className="text-sm font-bold text-brand-700">{formatJewelryMoney(catalogPrice)}</p>
                 </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-amber-700">Gram</p>
+                  <p className="text-sm font-bold text-amber-900">{product.weight_gram} gr</p>
+                </div>
+              </div>
+
+              <dl className="mt-2 text-xs">
                 <div>
                   <dt className="text-slate-500">Stok</dt>
                   <dd className="font-medium text-slate-900">
@@ -321,20 +348,11 @@ export default function JewelryProductSaleModal({
                           </dd>
                         </div>
                         <div className="col-span-2 border-t border-slate-200/80 pt-1">
-                          <div className="flex justify-between gap-3">
-                            <dt className="font-semibold text-slate-900">Toplam kar</dt>
-                            <dd className={`font-bold ${profitPositive ? 'text-emerald-700' : 'text-red-600'}`}>
-                              {formatJewelryMoney(profitSummary.totalProfit)}
-                            </dd>
-                          </div>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="flex justify-between gap-3">
-                            <dt className="text-slate-500">Kar marjı</dt>
-                            <dd className={`font-semibold ${profitPositive ? 'text-emerald-700' : 'text-red-600'}`}>
-                              %{profitSummary.profitMarginPercent.toLocaleString('tr-TR')}
-                            </dd>
-                          </div>
+                          <JewelrySaleProfitBreakdown
+                            summary={profitSummary}
+                            paymentMethod={paymentMethod}
+                            compact
+                          />
                         </div>
                       </dl>
                       {!profitPositive && (

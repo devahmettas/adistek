@@ -13,6 +13,7 @@ class JewelrySetting extends Model
         'restaurant_id',
         'default_karat',
         'tax_rate',
+        'card_commission_rate',
         'currency',
         'barcode_prefix',
         'company_name',
@@ -23,6 +24,7 @@ class JewelrySetting extends Model
     protected $casts = [
         'default_karat' => 'integer',
         'tax_rate' => 'decimal:2',
+        'card_commission_rate' => 'decimal:2',
         'auto_generate_barcode' => 'boolean',
         'created_at' => 'datetime',
     ];

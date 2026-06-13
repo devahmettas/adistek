@@ -79,6 +79,11 @@ export const KARAT_OPTIONS = [
   { value: 24, label: '24 Ayar (Has)' },
 ]
 
+export interface JewelrySaleFinancialSettings {
+  card_commission_rate: number
+  tax_rate: number
+}
+
 export interface JewelrySaleProfitSummary {
   goldPricePerGram: number | null
   metalValue: number
@@ -91,10 +96,43 @@ export interface JewelrySaleProfitSummary {
   discount: number
   totalRevenue: number
   totalCost: number
+  grossProfit: number
+  cardCommission: number
+  additionalTax: number
+  netRevenue: number
   totalProfit: number
   profitMarginPercent: number
   catalogPrice: number
   priceDifference: number
+}
+
+function applySaleFinancialDeductions(
+  totalRevenue: number,
+  totalCost: number,
+  paymentMethod: string,
+  financialSettings?: JewelrySaleFinancialSettings,
+) {
+  const cardCommissionRate = Number(financialSettings?.card_commission_rate) || 0
+  const taxRate = Number(financialSettings?.tax_rate) || 0
+  const grossProfit = Math.round((totalRevenue - totalCost) * 100) / 100
+  const cardCommission = paymentMethod === 'card'
+    ? Math.round(totalRevenue * cardCommissionRate / 100 * 100) / 100
+    : 0
+  const additionalTax = Math.round(totalRevenue * taxRate / 100 * 100) / 100
+  const netRevenue = Math.round((totalRevenue - cardCommission - additionalTax) * 100) / 100
+  const totalProfit = Math.round((netRevenue - totalCost) * 100) / 100
+  const profitMarginPercent = totalRevenue > 0
+    ? Math.round((totalProfit / totalRevenue) * 10000) / 100
+    : 0
+
+  return {
+    grossProfit,
+    cardCommission,
+    additionalTax,
+    netRevenue,
+    totalProfit,
+    profitMarginPercent,
+  }
 }
 
 export function calculateJewelrySaleProfit(
@@ -106,6 +144,8 @@ export function calculateJewelrySaleProfit(
   discount: number,
   catalogPrice: number,
   prices: MarketGoldPriceRecord[],
+  paymentMethod = 'cash',
+  financialSettings?: JewelrySaleFinancialSettings,
 ): JewelrySaleProfitSummary {
   const goldPricePerGram = getGoldPricePerGram(karat, prices)
   const metalValue = goldPricePerGram !== null
@@ -118,12 +158,14 @@ export function calculateJewelrySaleProfit(
   const discountValue = Math.max(0, discount)
   const totalRevenue = Math.round(Math.max(0, subtotal - discountValue) * 100) / 100
   const totalCost = Math.round(unitCost * qty * 100) / 100
-  const totalProfit = Math.round((totalRevenue - totalCost) * 100) / 100
   const unitProfit = Math.round((unitSalePrice - unitCost) * 100) / 100
-  const profitMarginPercent = totalRevenue > 0
-    ? Math.round((totalProfit / totalRevenue) * 10000) / 100
-    : 0
   const priceDifference = Math.round((unitSalePrice - catalogPrice) * 100) / 100
+  const financials = applySaleFinancialDeductions(
+    totalRevenue,
+    totalCost,
+    paymentMethod,
+    financialSettings,
+  )
 
   return {
     goldPricePerGram,
@@ -137,8 +179,7 @@ export function calculateJewelrySaleProfit(
     discount: discountValue,
     totalRevenue,
     totalCost,
-    totalProfit,
-    profitMarginPercent,
+    ...financials,
     catalogPrice,
     priceDifference,
   }
@@ -149,6 +190,10 @@ export interface JewelryCartTotals {
   discount: number
   totalRevenue: number
   totalCost: number
+  grossProfit: number
+  cardCommission: number
+  additionalTax: number
+  netRevenue: number
   totalProfit: number
   profitMarginPercent: number
 }
@@ -164,6 +209,8 @@ export function calculateJewelryCartTotals(
   }>,
   discount: number,
   prices: MarketGoldPriceRecord[],
+  paymentMethod = 'cash',
+  financialSettings?: JewelrySaleFinancialSettings,
 ): JewelryCartTotals {
   let subtotal = 0
   let totalCost = 0
@@ -185,17 +232,18 @@ export function calculateJewelryCartTotals(
 
   const discountValue = Math.max(0, discount)
   const totalRevenue = Math.round(Math.max(0, subtotal - discountValue) * 100) / 100
-  const totalProfit = Math.round((totalRevenue - totalCost) * 100) / 100
-  const profitMarginPercent = totalRevenue > 0
-    ? Math.round((totalProfit / totalRevenue) * 10000) / 100
-    : 0
+  const financials = applySaleFinancialDeductions(
+    totalRevenue,
+    Math.round(totalCost * 100) / 100,
+    paymentMethod,
+    financialSettings,
+  )
 
   return {
     subtotal: Math.round(subtotal * 100) / 100,
     discount: discountValue,
     totalRevenue,
     totalCost: Math.round(totalCost * 100) / 100,
-    totalProfit,
-    profitMarginPercent,
+    ...financials,
   }
 }

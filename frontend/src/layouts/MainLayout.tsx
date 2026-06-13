@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import JewelrySaleCartButton from '../components/jeweler/JewelrySaleCartButton'
 import JewelrySaleCartCheckoutModal from '../components/jeweler/JewelrySaleCartCheckoutModal'
+import JewelrySaleToastListener from '../components/jeweler/JewelrySaleToastListener'
 import RestaurantSidebar from '../components/RestaurantSidebar'
 import { isJewelerBusiness } from '../constants/businessType'
 import { DashboardProvider } from '../context/DashboardContext'
@@ -60,6 +61,7 @@ function MainLayoutContent() {
       </div>
 
       {isJeweler && <JewelrySaleCartCheckoutModal />}
+      {isJeweler && <JewelrySaleToastListener />}
     </div>
   )
 }

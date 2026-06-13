@@ -27,6 +27,7 @@ class JewelrySettingController extends Controller
         $data = $request->validate([
             'default_karat' => ['sometimes', 'integer', 'min:1', 'max:24'],
             'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'card_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'currency' => ['nullable', 'string', 'size:3'],
             'barcode_prefix' => ['nullable', 'string', 'max:10'],
             'company_name' => ['nullable', 'string', 'max:255'],
