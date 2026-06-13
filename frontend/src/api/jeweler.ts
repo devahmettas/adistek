@@ -185,23 +185,60 @@ export interface JewelerStats {
   summary: {
     today_revenue: number
     today_sales_count: number
+    week_revenue: number
+    week_sales_count: number
     month_revenue: number
     month_sales_count: number
     average_sale: number
+    month_average_sale: number
   }
   inventory: {
     total_products: number
+    total_stock_units: number
     low_stock_count: number
+    out_of_stock_count: number
+    total_weight_gram: number
+    inventory_sale_value: number
   }
   repairs: {
     active_count: number
+    received_count: number
+    in_progress_count: number
+    completed_count: number
+    delivered_count: number
   }
+  customers: {
+    total_count: number
+    month_sales_with_customer: number
+  }
+  revenue_trend: Array<{
+    date: string
+    label: string
+    revenue: number
+    sales_count: number
+  }>
   top_products: Array<{
     product_name: string
     quantity: number
     revenue: number
   }>
+  category_breakdown: Array<{
+    category_name: string
+    quantity: number
+    revenue: number
+  }>
+  karat_breakdown: Array<{
+    karat: number
+    product_count: number
+    stock_units: number
+    total_weight_gram: number
+  }>
   payment_breakdown: Array<{
+    payment_method: string
+    total: number
+    count: number
+  }>
+  month_payment_breakdown: Array<{
     payment_method: string
     total: number
     count: number
@@ -291,6 +328,25 @@ export async function createJewelryCustomer(
 
 export async function getJewelrySales(): Promise<JewelrySale[]> {
   const { data } = await apiClient.get<ApiResponse<JewelrySale[]>>('/jeweler/sales')
+  return data.data
+}
+
+export async function createJewelrySale(payload: {
+  customer_id?: number | null
+  payment_method: string
+  discount?: number
+  notes?: string
+  items: Array<{
+    product_id?: number | null
+    product_name: string
+    quantity: number
+    unit_price: number | string
+    weight_gram?: number | string | null
+    labor_cost?: number | string
+    line_total: number | string
+  }>
+}): Promise<JewelrySale> {
+  const { data } = await apiClient.post<ApiResponse<JewelrySale>>('/jeweler/sales', payload)
   return data.data
 }
 

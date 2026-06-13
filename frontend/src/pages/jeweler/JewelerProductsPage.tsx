@@ -4,6 +4,7 @@ import Card from '../../components/Card'
 import ImageUploadField from '../../components/ImageUploadField'
 import Input from '../../components/Input'
 import JewelryProductDetailModal from '../../components/jeweler/JewelryProductDetailModal'
+import JewelryProductSaleModal from '../../components/jeweler/JewelryProductSaleModal'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import PageSubNav from '../../components/PageSubNav'
@@ -359,6 +360,7 @@ export default function JewelerProductsPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [detailProduct, setDetailProduct] = useState<JewelryProduct | null>(null)
+  const [saleProduct, setSaleProduct] = useState<JewelryProduct | null>(null)
 
   const [name, setName] = useState(EMPTY_FORM.name)
   const [categoryId, setCategoryId] = useState(EMPTY_FORM.categoryId)
@@ -415,6 +417,18 @@ export default function JewelerProductsPage() {
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories],
   )
+
+  const detailGoldPricePerGram = useMemo(() => {
+    if (!detailProduct) return null
+    const breakdown = calculateJewelryPrice(
+      1,
+      detailProduct.karat ?? 22,
+      0,
+      0,
+      goldPrices,
+    )
+    return breakdown?.goldPricePerGram ?? null
+  }, [detailProduct, goldPrices])
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<CategoryFilter, number>()
@@ -833,7 +847,21 @@ export default function JewelerProductsPage() {
               ? categoryNameById.get(detailProduct.category_id)
               : null
           }
+          goldPricePerGram={detailGoldPricePerGram}
           onClose={() => setDetailProduct(null)}
+          onSell={() => {
+            setSaleProduct(detailProduct)
+            setDetailProduct(null)
+          }}
+        />
+      )}
+
+      {saleProduct && (
+        <JewelryProductSaleModal
+          product={saleProduct}
+          goldPrices={goldPrices}
+          onClose={() => setSaleProduct(null)}
+          onSuccess={() => void load()}
         />
       )}
     </div>

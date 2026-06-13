@@ -73,6 +73,12 @@ export default function JewelerDashboardPage() {
               accent="brand"
             />
             <PanelStatCard
+              label="Haftalık ciro"
+              value={formatPanelMoney(stats.summary.week_revenue)}
+              hint={`${stats.summary.week_sales_count} satış`}
+              accent="emerald"
+            />
+            <PanelStatCard
               label="Aktif tamir"
               value={String(stats.repairs.active_count)}
               hint="Devam eden işler"
@@ -81,8 +87,8 @@ export default function JewelerDashboardPage() {
             <PanelStatCard
               label="Düşük stok"
               value={String(stats.inventory.low_stock_count)}
-              hint={`Toplam ${stats.inventory.total_products} ürün`}
-              accent="emerald"
+              hint={`${stats.inventory.out_of_stock_count} tükenen ürün`}
+              accent="amber"
             />
           </div>
         )}

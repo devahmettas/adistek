@@ -78,3 +78,68 @@ export const KARAT_OPTIONS = [
   { value: 22, label: '22 Ayar' },
   { value: 24, label: '24 Ayar (Has)' },
 ]
+
+export interface JewelrySaleProfitSummary {
+  goldPricePerGram: number | null
+  metalValue: number
+  laborCost: number
+  unitCost: number
+  unitSalePrice: number
+  unitProfit: number
+  quantity: number
+  subtotal: number
+  discount: number
+  totalRevenue: number
+  totalCost: number
+  totalProfit: number
+  profitMarginPercent: number
+  catalogPrice: number
+  priceDifference: number
+}
+
+export function calculateJewelrySaleProfit(
+  unitSalePrice: number,
+  weightGram: number,
+  karat: number,
+  laborCost: number,
+  quantity: number,
+  discount: number,
+  catalogPrice: number,
+  prices: MarketGoldPriceRecord[],
+): JewelrySaleProfitSummary {
+  const goldPricePerGram = getGoldPricePerGram(karat, prices)
+  const metalValue = goldPricePerGram !== null
+    ? Math.round(weightGram * goldPricePerGram * 100) / 100
+    : 0
+  const labor = Number(laborCost) || 0
+  const unitCost = Math.round((metalValue + labor) * 100) / 100
+  const qty = Math.max(1, quantity)
+  const subtotal = Math.round(unitSalePrice * qty * 100) / 100
+  const discountValue = Math.max(0, discount)
+  const totalRevenue = Math.round(Math.max(0, subtotal - discountValue) * 100) / 100
+  const totalCost = Math.round(unitCost * qty * 100) / 100
+  const totalProfit = Math.round((totalRevenue - totalCost) * 100) / 100
+  const unitProfit = Math.round((unitSalePrice - unitCost) * 100) / 100
+  const profitMarginPercent = totalRevenue > 0
+    ? Math.round((totalProfit / totalRevenue) * 10000) / 100
+    : 0
+  const priceDifference = Math.round((unitSalePrice - catalogPrice) * 100) / 100
+
+  return {
+    goldPricePerGram,
+    metalValue,
+    laborCost: labor,
+    unitCost,
+    unitSalePrice,
+    unitProfit,
+    quantity: qty,
+    subtotal,
+    discount: discountValue,
+    totalRevenue,
+    totalCost,
+    totalProfit,
+    profitMarginPercent,
+    catalogPrice,
+    priceDifference,
+  }
+}

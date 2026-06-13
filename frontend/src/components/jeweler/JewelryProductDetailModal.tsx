@@ -7,17 +7,24 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 interface JewelryProductDetailModalProps {
   product: JewelryProduct
   categoryName?: string | null
+  goldPricePerGram?: number | null
   onClose: () => void
+  onSell: () => void
 }
 
 export default function JewelryProductDetailModal({
   product,
   categoryName,
+  goldPricePerGram,
   onClose,
+  onSell,
 }: JewelryProductDetailModalProps) {
   useBodyScrollLock(true)
 
   const previewUrl = resolveMenuAssetUrl(null, product.image_path)
+  const metalValue = goldPricePerGram
+    ? Number(product.weight_gram) * goldPricePerGram
+    : null
 
   return (
     <div
@@ -43,7 +50,6 @@ export default function JewelryProductDetailModal({
           </svg>
         </button>
 
-        {/* Mobil: tek sütun kaydırma */}
         <div className="min-h-0 flex-1 overflow-y-auto lg:flex lg:flex-row lg:overflow-hidden">
           <div className="flex aspect-[4/3] shrink-0 items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-5 sm:p-6 lg:aspect-auto lg:h-full lg:w-[44%] lg:border-r lg:border-slate-100 lg:p-8">
             {previewUrl ? (
@@ -78,6 +84,20 @@ export default function JewelryProductDetailModal({
                   {product.karat} ayar
                 </span>
               </div>
+
+              {goldPricePerGram !== null && goldPricePerGram !== undefined && (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 text-sm">
+                  <p className="font-semibold text-amber-900">Güncel Altın Fiyatı</p>
+                  <p className="mt-1 text-amber-800">
+                    {product.karat} ayar · {formatJewelryMoney(goldPricePerGram)} / gr
+                  </p>
+                  {metalValue !== null && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Altın değeri ({product.weight_gram} gr): {formatJewelryMoney(metalValue)}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-sm lg:grid-cols-3">
                 <div>
@@ -124,8 +144,15 @@ export default function JewelryProductDetailModal({
               )}
             </div>
 
-            <div className="shrink-0 border-t border-slate-100 p-4 lg:px-7 lg:py-5">
-              <Button type="button" variant="secondary" className="w-full lg:w-auto" onClick={onClose}>
+            <div className="flex shrink-0 flex-wrap gap-2 border-t border-slate-100 p-4 lg:px-7 lg:py-5">
+              <Button
+                type="button"
+                onClick={onSell}
+                disabled={product.stock_quantity < 1}
+              >
+                Satış Yap
+              </Button>
+              <Button type="button" variant="secondary" className="lg:w-auto" onClick={onClose}>
                 Kapat
               </Button>
             </div>
