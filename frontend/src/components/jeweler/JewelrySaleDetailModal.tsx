@@ -1,4 +1,5 @@
 import Button from '../Button'
+import JewelrySaleItemThumb from './JewelrySaleItemThumb'
 import type { JewelrySale } from '../../api/jeweler'
 import { formatJewelryMoney } from '../../utils/jewelryPrice'
 import { getPaymentLabel, getSaleItemCategoryName } from '../../utils/jewelrySalesAnalytics'
@@ -78,7 +79,16 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
               <tbody className="divide-y divide-slate-100">
                 {(sale.items ?? []).map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">{item.product_name}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <JewelrySaleItemThumb
+                          imagePath={item.product?.image_path}
+                          name={item.product_name}
+                          size="sm"
+                        />
+                        <span className="font-medium text-slate-900">{item.product_name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{getSaleItemCategoryName(sale, item)}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{item.quantity}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{formatJewelryMoney(item.unit_price)}</td>

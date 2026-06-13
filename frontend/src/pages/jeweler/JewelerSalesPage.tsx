@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import JewelrySaleDetailModal from '../../components/jeweler/JewelrySaleDetailModal'
+import JewelrySaleItemThumb from '../../components/jeweler/JewelrySaleItemThumb'
 import StatsBarChart from '../../components/jeweler/StatsBarChart'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
@@ -280,14 +281,34 @@ export default function JewelerSalesPage() {
                 {filteredSales.map((sale) => {
                   const itemCountForSale = (sale.items ?? []).reduce((sum, item) => sum + item.quantity, 0)
                   const categoryLabels = getSaleCategoryLabels(sale)
+                  const previewItems = (sale.items ?? []).slice(0, 4)
+                  const extraItemCount = Math.max(0, (sale.items?.length ?? 0) - previewItems.length)
 
                   return (
                     <li key={sale.id}>
                       <button
                         type="button"
                         onClick={() => setSelectedSale(sale)}
-                        className="flex w-full flex-col gap-3 py-4 text-left transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:px-2"
+                        className="flex w-full flex-col gap-3 py-4 text-left transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-2"
                       >
+                        {(sale.items?.length ?? 0) > 0 && (
+                          <div className="flex shrink-0 items-center gap-1.5 sm:order-first">
+                            {previewItems.map((item) => (
+                              <JewelrySaleItemThumb
+                                key={item.id}
+                                imagePath={item.product?.image_path}
+                                name={item.product_name}
+                                size="xs"
+                              />
+                            ))}
+                            {extraItemCount > 0 && (
+                              <span className="flex h-7 min-w-7 items-center justify-center rounded-md bg-slate-100 px-1 text-[10px] font-semibold text-slate-600">
+                                +{extraItemCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-slate-900">#{sale.sale_number}</p>
