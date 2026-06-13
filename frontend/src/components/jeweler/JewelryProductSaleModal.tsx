@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Button from '../Button'
 import Input from '../Input'
+import MoneyInput from '../MoneyInput'
 import Select from '../Select'
 import { JewelrySaleProfitBreakdown } from './JewelrySaleProfitBreakdown'
 import {
@@ -18,6 +19,7 @@ import {
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
+import { parseMoneyInput } from '../../utils/moneyInput'
 
 const PAYMENT_OPTIONS = [
   { value: 'cash', label: 'Nakit' },
@@ -70,9 +72,9 @@ export default function JewelryProductSaleModal({
   }, [jewelrySettings])
 
   const hasSalePrice = salePrice.trim() !== ''
-  const unitSalePrice = hasSalePrice ? Number(salePrice) : 0
+  const unitSalePrice = hasSalePrice ? parseMoneyInput(salePrice) : 0
   const qty = Math.max(1, Number(quantity) || 1)
-  const discountValue = Number(discount) || 0
+  const discountValue = parseMoneyInput(discount) || 0
 
   const profitSummary = useMemo(
     () => calculateJewelrySaleProfit(
@@ -94,7 +96,7 @@ export default function JewelryProductSaleModal({
     event.preventDefault()
     setError(null)
 
-    if (!hasSalePrice || unitSalePrice <= 0) {
+    if (!hasSalePrice || Number.isNaN(unitSalePrice) || unitSalePrice <= 0) {
       setError('Satış fiyatını girin.')
       return
     }
@@ -139,7 +141,7 @@ export default function JewelryProductSaleModal({
   const handleAddToCart = () => {
     setError(null)
 
-    if (!hasSalePrice || unitSalePrice <= 0) {
+    if (!hasSalePrice || Number.isNaN(unitSalePrice) || unitSalePrice <= 0) {
       setError('Satış fiyatını girin.')
       return
     }
@@ -250,13 +252,10 @@ export default function JewelryProductSaleModal({
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-5 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden lg:px-5 lg:pb-0">
                 <div className="space-y-1 lg:shrink-0">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
-                    <Input
+                    <MoneyInput
                       label="Satış Fiyatı (₺)"
-                      type="number"
-                      min="0"
-                      step="0.01"
                       value={salePrice}
-                      onChange={(e) => setSalePrice(e.target.value)}
+                      onValueChange={setSalePrice}
                       placeholder="Satış fiyatını girin"
                       className="lg:py-2 lg:text-sm"
                       required
@@ -281,13 +280,10 @@ export default function JewelryProductSaleModal({
                       className="lg:py-2 lg:text-sm"
                     />
 
-                    <Input
+                    <MoneyInput
                       label="Ek İndirim (₺)"
-                      type="number"
-                      min="0"
-                      step="0.01"
                       value={discount}
-                      onChange={(e) => setDiscount(e.target.value)}
+                      onValueChange={setDiscount}
                       className="lg:py-2 lg:text-sm"
                     />
                   </div>

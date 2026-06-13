@@ -3,6 +3,7 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import ImageUploadField from '../../components/ImageUploadField'
 import Input from '../../components/Input'
+import MoneyInput from '../../components/MoneyInput'
 import JewelryProductDetailModal from '../../components/jeweler/JewelryProductDetailModal'
 import JewelryProductSaleModal from '../../components/jeweler/JewelryProductSaleModal'
 import LoadingState from '../../components/LoadingState'
@@ -29,6 +30,7 @@ import {
   KARAT_OPTIONS,
   type JewelryPriceBreakdown,
 } from '../../utils/jewelryPrice'
+import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyInput'
 
 type ProductsTab = 'list' | 'add' | 'edit'
 type CategoryFilter = 'all' | 'uncategorized' | number
@@ -52,12 +54,12 @@ function populateFormFromProduct(product: JewelryProduct) {
     categoryId: product.category_id ? String(product.category_id) : '',
     karat: String(product.karat ?? 22),
     weightGram: product.weight_gram,
-    laborCost: product.labor_cost,
+    laborCost: formatMoneyInputFromNumber(product.labor_cost),
     profitRate: product.profit_rate ?? '0',
     description: product.description ?? '',
     stockQuantity: String(product.stock_quantity),
     isManualPrice: product.is_manual_price,
-    manualPrice: product.sale_price,
+    manualPrice: formatMoneyInputFromNumber(product.sale_price),
     imagePath: product.image_path,
     imageUrl: resolveMenuAssetUrl(null, product.image_path),
   }
@@ -203,13 +205,10 @@ function ProductForm({
               onChange={(e) => setWeightGram(e.target.value)}
               required
             />
-            <Input
+            <MoneyInput
               label="İşçilik (₺)"
-              type="number"
-              step="0.01"
-              min="0"
               value={laborCost}
-              onChange={(e) => setLaborCost(e.target.value)}
+              onValueChange={setLaborCost}
             />
           </div>
 
@@ -264,13 +263,10 @@ function ProductForm({
 
             {isManualPrice ? (
               <div className="mt-3">
-                <Input
+                <MoneyInput
                   label="Manuel Satış Fiyatı (₺)"
-                  type="number"
-                  step="0.01"
-                  min="0"
                   value={manualPrice}
-                  onChange={(e) => setManualPrice(e.target.value)}
+                  onValueChange={setManualPrice}
                   required
                 />
               </div>
@@ -403,7 +399,7 @@ export default function JewelerProductsPage() {
     if (isManualPrice) return null
 
     const gram = Number(weightGram)
-    const labor = Number(laborCost) || 0
+    const labor = parseMoneyInput(laborCost) || 0
     const profit = Number(profitRate) || 0
 
     if (!gram || gram <= 0) return null
@@ -532,7 +528,7 @@ export default function JewelerProductsPage() {
     }
 
     if (isManualPrice) {
-      const price = Number(manualPrice)
+      const price = parseMoneyInput(manualPrice)
       if (Number.isNaN(price) || price < 0) {
         setFormError('Geçerli bir manuel fiyat girin.')
         return
@@ -546,12 +542,12 @@ export default function JewelerProductsPage() {
       category_id: categoryId ? Number(categoryId) : null,
       karat: Number(karat),
       weight_gram: weightGram || '0',
-      labor_cost: laborCost || '0',
+      labor_cost: String(parseMoneyInput(laborCost) || 0),
       profit_rate: profitRate || '0',
       description: description.trim() || null,
       image_path: imagePath,
       is_manual_price: isManualPrice,
-      sale_price: isManualPrice ? manualPrice : String(priceBreakdown?.salePrice ?? 0),
+      sale_price: isManualPrice ? String(parseMoneyInput(manualPrice)) : String(priceBreakdown?.salePrice ?? 0),
       metal_type: 'gold' as const,
       stock_quantity: Number(stockQuantity) || 0,
     }

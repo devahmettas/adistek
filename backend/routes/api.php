@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
 use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockController;
+use App\Http\Controllers\Api\Jeweler\JewelryVaultController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -161,6 +162,10 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
 
     Route::get('/stock-movements', [JewelryStockController::class, 'index']);
+
+    Route::get('/vault', [JewelryVaultController::class, 'show']);
+    Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
+    Route::put('/vault/cash-transactions/{transaction}', [JewelryVaultController::class, 'updateCashTransaction']);
 
     Route::get('/sales', [JewelrySaleController::class, 'index']);
     Route::post('/sales', [JewelrySaleController::class, 'store']);

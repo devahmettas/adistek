@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import Button from '../Button'
-import Input from '../Input'
+import MoneyInput from '../MoneyInput'
 import Select from '../Select'
 import { JewelryCartProfitBreakdown } from './JewelrySaleProfitBreakdown'
 import {
@@ -19,6 +19,11 @@ import {
   formatJewelryMoney,
   type JewelrySaleFinancialSettings,
 } from '../../utils/jewelryPrice'
+import {
+  formatMoneyInputFromNumber,
+  formatMoneyInputWhileTyping,
+  parseMoneyInput,
+} from '../../utils/moneyInput'
 
 const PAYMENT_OPTIONS = [
   { value: 'cash', label: 'Nakit' },
@@ -48,8 +53,9 @@ export default function JewelrySaleCartCheckoutModal() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lineErrors, setLineErrors] = useState<Record<string, string>>({})
+  const [linePriceInputs, setLinePriceInputs] = useState<Record<string, string>>({})
 
-  const discountValue = Number(discount) || 0
+  const discountValue = parseMoneyInput(discount) || 0
 
   const financialSettings = useMemo<JewelrySaleFinancialSettings | undefined>(() => {
     if (!jewelrySettings) return undefined
@@ -89,6 +95,7 @@ export default function JewelrySaleCartCheckoutModal() {
       void loadData()
       setError(null)
       setLineErrors({})
+      setLinePriceInputs({})
     }
   }, [isCheckoutOpen, loadData])
 
@@ -111,7 +118,14 @@ export default function JewelrySaleCartCheckoutModal() {
   }
 
   const handleLinePriceChange = (lineId: string, value: string) => {
-    const unitPrice = Number(value) || 0
+    const formatted = formatMoneyInputWhileTyping(value)
+    setLinePriceInputs((current) => ({ ...current, [lineId]: formatted }))
+
+    const unitPrice = parseMoneyInput(formatted)
+    if (Number.isNaN(unitPrice)) {
+      return
+    }
+
     const lineError = updateItem(lineId, { unit_price: unitPrice })
     setLineErrors((current) => {
       const next = { ...current }
@@ -265,10 +279,10 @@ export default function JewelrySaleCartCheckoutModal() {
                             <label className="sm:contents">
                               <span className="mb-1 block text-[11px] text-slate-500 sm:hidden">Fiyat</span>
                               <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={String(item.unit_price)}
+                                type="text"
+                                inputMode="decimal"
+                                autoComplete="off"
+                                value={linePriceInputs[item.id] ?? formatMoneyInputFromNumber(item.unit_price)}
                                 onChange={(e) => handleLinePriceChange(item.id, e.target.value)}
                                 className="input-field h-8 w-full px-2 py-1 text-xs sm:text-center"
                               />
@@ -332,13 +346,10 @@ export default function JewelrySaleCartCheckoutModal() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     options={PAYMENT_OPTIONS}
                   />
-                  <Input
+                  <MoneyInput
                     label="Ek İndirim (₺)"
-                    type="number"
-                    min="0"
-                    step="0.01"
                     value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
+                    onValueChange={setDiscount}
                   />
                 </div>
 

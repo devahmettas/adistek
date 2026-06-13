@@ -13,6 +13,7 @@ class JewelrySaleService
 {
     public function __construct(
         private readonly JewelryProductService $productService,
+        private readonly JewelryCashService $cashService,
     ) {}
 
     public function listByRestaurant(int $restaurantId): Collection
@@ -84,6 +85,8 @@ class JewelrySaleService
                     );
                 }
             }
+
+            $this->cashService->recordSale($restaurantId, $sale);
 
             return $sale->load(['customer', 'items.product']);
         });

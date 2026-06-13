@@ -101,7 +101,7 @@ export default function JewelerDashboardPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <PanelActionCard to="/dashboard/jeweler/products" title="Ürün Yönetimi" description="Altın, gümüş ve mücevher ürünlerini tanımlayın." icon="◆" />
-          <PanelActionCard to="/dashboard/jeweler/stock" title="Stok Yönetimi" description="Stok giriş/çıkış hareketlerini izleyin." icon="▤" />
+          <PanelActionCard to="/dashboard/jeweler/vault" title="Kasa Yönetimi" description="Stok değeri, nakit bakiye ve kategori bazlı kasa takibi." icon="▤" />
           <PanelActionCard to="/dashboard/jeweler/sales" title="Satış Yönetimi" description="Satış kayıtlarını görüntüleyin ve oluşturun." icon="₺" />
           <PanelActionCard to="/dashboard/jeweler/repairs" title="Tamir Takibi" description="Müşteri tamir işlerini takip edin." icon="⚙" />
           <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />

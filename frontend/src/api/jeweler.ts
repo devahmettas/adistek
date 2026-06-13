@@ -376,6 +376,91 @@ export async function getJewelryStockMovements(): Promise<JewelryStockMovement[]
   return data.data
 }
 
+export interface JewelryVaultProduct {
+  id: number
+  name: string
+  stock_quantity: number
+  weight_gram: string
+  karat: number | null
+  sale_price: string
+  line_value: number
+}
+
+export interface JewelryVaultCategory {
+  category_id: number
+  category_name: string
+  product_count: number
+  stock_units: number
+  total_gram: number
+  total_value: number
+  average_unit_value: number
+  products: JewelryVaultProduct[]
+}
+
+export interface JewelryVaultCashSummary {
+  balance: number
+  total_in: number
+  total_out: number
+  transaction_count: number
+}
+
+export interface JewelryVaultCashTransaction {
+  id: number
+  type: 'in' | 'out'
+  type_label: string
+  source: 'manual' | 'sale'
+  source_label: string
+  amount: number
+  notes: string | null
+  sale_id: number | null
+  sale_number: string | null
+  created_at: string | null
+}
+
+export interface JewelryVaultOverview {
+  stock_total: number
+  grand_total: number
+  total_stock_units: number
+  total_gram: number
+  category_count: number
+  categories: JewelryVaultCategory[]
+  cash: JewelryVaultCashSummary
+  cash_transactions: JewelryVaultCashTransaction[]
+  synced_at: string | null
+}
+
+export async function getJewelryVaultOverview(): Promise<JewelryVaultOverview> {
+  const { data } = await apiClient.get<ApiResponse<JewelryVaultOverview>>('/jeweler/vault')
+  return data.data
+}
+
+export async function createJewelryCashTransaction(payload: {
+  type: 'in' | 'out'
+  amount: number
+  notes?: string
+}): Promise<{ transaction: JewelryVaultCashTransaction; overview: JewelryVaultOverview }> {
+  const { data } = await apiClient.post<ApiResponse<{
+    transaction: JewelryVaultCashTransaction
+    overview: JewelryVaultOverview
+  }>>('/jeweler/vault/cash-transactions', payload)
+  return data.data
+}
+
+export async function updateJewelryCashTransaction(
+  id: number,
+  payload: {
+    type: 'in' | 'out'
+    amount: number
+    notes?: string
+  },
+): Promise<{ transaction: JewelryVaultCashTransaction; overview: JewelryVaultOverview }> {
+  const { data } = await apiClient.put<ApiResponse<{
+    transaction: JewelryVaultCashTransaction
+    overview: JewelryVaultOverview
+  }>>(`/jeweler/vault/cash-transactions/${id}`, payload)
+  return data.data
+}
+
 export async function getMarketGoldPricesLatest(): Promise<MarketGoldPriceLatestResponse> {
   const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/latest')
   return data.data
