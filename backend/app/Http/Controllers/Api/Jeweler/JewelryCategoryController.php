@@ -14,8 +14,11 @@ class JewelryCategoryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $restaurantId = $this->restaurantId($request);
+        $this->ensureGoldPurchaseCategories($restaurantId);
+
         $categories = JewelryCategory::query()
-            ->where('restaurant_id', $this->restaurantId($request))
+            ->where('restaurant_id', $restaurantId)
             ->orderBy('name')
             ->get();
 
@@ -66,6 +69,30 @@ class JewelryCategoryController extends Controller
     {
         if ($category->restaurant_id !== $this->restaurantId($request)) {
             abort(404);
+        }
+    }
+
+    private function ensureGoldPurchaseCategories(int $restaurantId): void
+    {
+        $defaults = [
+            'Gram Altın',
+            'Çeyrek Altın',
+            'Yarım Altın',
+            'Tam Altın',
+            'Ata Altın',
+            'Cumhuriyet Altını',
+        ];
+
+        foreach ($defaults as $name) {
+            JewelryCategory::query()->firstOrCreate(
+                [
+                    'restaurant_id' => $restaurantId,
+                    'name' => $name,
+                ],
+                [
+                    'is_active' => true,
+                ],
+            );
         }
     }
 }

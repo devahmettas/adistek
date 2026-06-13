@@ -5,6 +5,7 @@ import Select from '../Select'
 import { JewelryCartProfitBreakdown } from './JewelrySaleProfitBreakdown'
 import {
   createJewelrySale,
+  getJewelryProductSaleCost,
   getJewelrySettings,
   getMarketGoldPricesLatest,
   type JewelrySettings,
@@ -54,8 +55,42 @@ export default function JewelrySaleCartCheckoutModal() {
   const [error, setError] = useState<string | null>(null)
   const [lineErrors, setLineErrors] = useState<Record<string, string>>({})
   const [linePriceInputs, setLinePriceInputs] = useState<Record<string, string>>({})
+  const [lineUnitCosts, setLineUnitCosts] = useState<Record<string, number>>({})
 
   const discountValue = parseMoneyInput(discount) || 0
+
+  useEffect(() => {
+    if (!isCheckoutOpen || items.length === 0) {
+      setLineUnitCosts({})
+      return
+    }
+
+    void Promise.all(
+      items.map(async (item) => {
+        try {
+          const cost = await getJewelryProductSaleCost(item.product_id, item.quantity)
+          return [item.id, cost.unit_cost_with_labor] as const
+        } catch {
+          return [item.id, item.purchase_price] as const
+        }
+      }),
+    ).then((entries) => setLineUnitCosts(Object.fromEntries(entries)))
+  }, [isCheckoutOpen, items])
+
+  const cartLines = useMemo(
+    () => items.map((item) => ({
+      unit_price: item.unit_price,
+      weight_gram: item.weight_gram,
+      karat: item.karat,
+      labor_cost: item.labor_cost,
+      quantity: item.quantity,
+      catalog_price: item.catalog_price,
+      product_name: item.product_name,
+      category_name: item.category_name,
+      unit_cost_override: lineUnitCosts[item.id],
+    })),
+    [items, lineUnitCosts],
+  )
 
   const financialSettings = useMemo<JewelrySaleFinancialSettings | undefined>(() => {
     if (!jewelrySettings) return undefined
@@ -67,13 +102,13 @@ export default function JewelrySaleCartCheckoutModal() {
 
   const cartTotals = useMemo(
     () => calculateJewelryCartTotals(
-      items,
+      cartLines,
       discountValue,
       goldPrices,
       paymentMethod,
       financialSettings,
     ),
-    [items, discountValue, goldPrices, paymentMethod, financialSettings],
+    [cartLines, discountValue, goldPrices, paymentMethod, financialSettings],
   )
 
   const loadData = useCallback(async () => {
@@ -250,6 +285,14 @@ export default function JewelrySaleCartCheckoutModal() {
                         0,
                         item.catalog_price,
                         goldPrices,
+                        'cash',
+                        undefined,
+                        {
+                          productName: item.product_name,
+                          categoryName: item.category_name,
+                          purchasePrice: item.purchase_price,
+                          unitCostOverride: lineUnitCosts[item.id],
+                        },
                       )
                       const previewUrl = resolveMenuAssetUrl(null, item.image_path)
 

@@ -6,8 +6,10 @@ import Select from '../Select'
 import { JewelrySaleProfitBreakdown } from './JewelrySaleProfitBreakdown'
 import {
   createJewelrySale,
+  getJewelryProductSaleCost,
   getJewelrySettings,
   type JewelryProduct,
+  type JewelryProductSaleCost,
   type JewelrySettings,
   type MarketGoldPriceRecord,
 } from '../../api/jeweler'
@@ -56,12 +58,21 @@ export default function JewelryProductSaleModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jewelrySettings, setJewelrySettings] = useState<JewelrySettings | null>(null)
+  const [saleCost, setSaleCost] = useState<JewelryProductSaleCost | null>(null)
 
   useEffect(() => {
     void getJewelrySettings()
       .then(setJewelrySettings)
       .catch(() => setJewelrySettings(null))
   }, [])
+
+  const qty = Math.max(1, Number(quantity) || 1)
+
+  useEffect(() => {
+    void getJewelryProductSaleCost(product.id, qty)
+      .then(setSaleCost)
+      .catch(() => setSaleCost(null))
+  }, [product.id, qty])
 
   const financialSettings = useMemo<JewelrySaleFinancialSettings | undefined>(() => {
     if (!jewelrySettings) return undefined
@@ -73,7 +84,6 @@ export default function JewelryProductSaleModal({
 
   const hasSalePrice = salePrice.trim() !== ''
   const unitSalePrice = hasSalePrice ? parseMoneyInput(salePrice) : 0
-  const qty = Math.max(1, Number(quantity) || 1)
   const discountValue = parseMoneyInput(discount) || 0
 
   const profitSummary = useMemo(
@@ -88,8 +98,14 @@ export default function JewelryProductSaleModal({
       goldPrices,
       paymentMethod,
       financialSettings,
+      {
+        productName: product.name,
+        categoryName: product.category?.name,
+        purchasePrice: Number(product.purchase_price) || 0,
+        unitCostOverride: saleCost?.unit_cost_with_labor,
+      },
     ),
-    [unitSalePrice, product, qty, discountValue, catalogPrice, goldPrices, paymentMethod, financialSettings],
+    [unitSalePrice, product, qty, discountValue, catalogPrice, goldPrices, paymentMethod, financialSettings, saleCost],
   )
 
   const handleSubmit = async (event: FormEvent) => {
@@ -323,19 +339,24 @@ export default function JewelryProductSaleModal({
                     <div className={`rounded-2xl border p-4 text-sm lg:flex lg:min-h-0 lg:flex-col lg:p-3 lg:text-xs ${profitPositive ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'}`}>
                       <p className="shrink-0 font-semibold text-slate-900">Karlılık analizi</p>
                       <dl className="mt-2 grid flex-1 grid-cols-2 gap-x-3 gap-y-1 lg:mt-1.5 lg:content-center">
-                        {profitSummary.goldPricePerGram !== null && (
-                          <div>
-                            <dt className="text-slate-500">Altın değeri</dt>
-                            <dd className="font-medium text-slate-900">{formatJewelryMoney(profitSummary.metalValue)}</dd>
-                          </div>
-                        )}
+                        <div>
+                          <dt className="text-slate-500">Altın değeri</dt>
+                          <dd className="font-medium text-slate-900">{formatJewelryMoney(profitSummary.metalValue)}</dd>
+                        </div>
                         <div>
                           <dt className="text-slate-500">İşçilik</dt>
                           <dd className="font-medium text-slate-900">{formatJewelryMoney(profitSummary.laborCost)}</dd>
                         </div>
                         <div>
                           <dt className="text-slate-500">Birim maliyet</dt>
-                          <dd className="font-medium text-slate-900">{formatJewelryMoney(profitSummary.unitCost)}</dd>
+                          <dd className="font-medium text-slate-900">
+                            {formatJewelryMoney(profitSummary.unitCost)}
+                            {saleCost && (
+                              <span className="block text-[10px] font-normal text-slate-500">
+                                FIFO · Ort. {formatJewelryMoney(saleCost.average_unit_cost + saleCost.labor_cost)}
+                              </span>
+                            )}
+                          </dd>
                         </div>
                         <div>
                           <dt className="text-slate-500">Birim kar</dt>

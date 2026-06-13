@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Jeweler\JewelryGoldPriceController;
 use App\Http\Controllers\Api\Jeweler\MarketGoldPriceController;
 use App\Http\Controllers\Api\Jeweler\JewelryProductController;
 use App\Http\Controllers\Api\Jeweler\JewelryRepairController;
+use App\Http\Controllers\Api\Jeweler\JewelryPurchaseController;
 use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
 use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
@@ -157,6 +158,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/products/calculate-price', [JewelryProductController::class, 'calculatePrice']);
     Route::post('/products', [JewelryProductController::class, 'store']);
     Route::get('/products/{product}', [JewelryProductController::class, 'show']);
+    Route::get('/products/{product}/sale-cost', [JewelryProductController::class, 'saleCost']);
     Route::put('/products/{product}', [JewelryProductController::class, 'update']);
     Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
     Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
@@ -170,6 +172,11 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::get('/sales', [JewelrySaleController::class, 'index']);
     Route::post('/sales', [JewelrySaleController::class, 'store']);
     Route::get('/sales/{sale}', [JewelrySaleController::class, 'show']);
+
+    Route::get('/purchases', [JewelryPurchaseController::class, 'index']);
+    Route::post('/purchases', [JewelryPurchaseController::class, 'store']);
+    Route::get('/purchases/{purchase}', [JewelryPurchaseController::class, 'show']);
+    Route::put('/purchases/{purchase}', [JewelryPurchaseController::class, 'update']);
 
     Route::get('/repairs', [JewelryRepairController::class, 'index']);
     Route::post('/repairs', [JewelryRepairController::class, 'store']);

@@ -16,6 +16,8 @@ export interface JewelrySaleCartLine {
   labor_cost: number
   karat: number
   catalog_price: number
+  purchase_price: number
+  category_name?: string
   stock_quantity: number
   quantity: number
   unit_price: number
@@ -137,6 +139,8 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
         labor_cost: Number(product.labor_cost),
         karat: product.karat ?? 22,
         catalog_price: Number(product.sale_price),
+        purchase_price: Number(product.purchase_price) || 0,
+        category_name: product.category?.name,
         stock_quantity: product.stock_quantity,
         quantity: qty,
         unit_price,

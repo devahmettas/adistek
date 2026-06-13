@@ -14,6 +14,7 @@ class JewelrySaleService
     public function __construct(
         private readonly JewelryProductService $productService,
         private readonly JewelryCashService $cashService,
+        private readonly JewelryInventoryCostService $inventoryCostService,
     ) {}
 
     public function listByRestaurant(int $restaurantId): Collection
@@ -64,21 +65,40 @@ class JewelrySaleService
             ]);
 
             foreach ($items as $item) {
+                $unitCost = 0.0;
+                $lineCost = 0.0;
+                $product = null;
+
+                if (! empty($item['product_id'])) {
+                    $product = $this->productService->findForRestaurant(
+                        $restaurantId,
+                        (int) $item['product_id'],
+                    );
+                    $allocated = $this->inventoryCostService->allocateSaleCost(
+                        $product,
+                        (int) $item['quantity'],
+                    );
+                    $unitCost = $allocated['unit_cost_with_labor'];
+                    $lineCost = $allocated['line_cost_with_labor'];
+                }
+
                 JewelrySaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'] ?? null,
                     'product_name' => $item['product_name'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
+                    'unit_cost' => $unitCost,
+                    'line_cost' => $lineCost,
                     'weight_gram' => $item['weight_gram'] ?? null,
                     'labor_cost' => $item['labor_cost'] ?? 0,
                     'line_total' => $item['line_total'],
                 ]);
 
-                if (! empty($item['product_id'])) {
+                if ($product !== null) {
                     $this->productService->adjustStock(
                         $restaurantId,
-                        (int) $item['product_id'],
+                        $product->id,
                         (int) $item['quantity'],
                         JewelryStockMovementType::Sale,
                         "Satış #{$sale->sale_number}",

@@ -10,6 +10,7 @@ enum JewelryStockMovementType: string
     case Sale = 'sale';
     case Return = 'return';
     case Repair = 'repair';
+    case Purchase = 'purchase';
 
     public static function values(): array
     {
@@ -25,6 +26,7 @@ enum JewelryStockMovementType: string
             self::Sale => 'Satış',
             self::Return => 'İade',
             self::Repair => 'Tamir',
+            self::Purchase => 'Alım',
         };
     }
 }

@@ -412,18 +412,6 @@ export default function JewelerProductsPage() {
     [categories],
   )
 
-  const detailGoldPricePerGram = useMemo(() => {
-    if (!detailProduct) return null
-    const breakdown = calculateJewelryPrice(
-      1,
-      detailProduct.karat ?? 22,
-      0,
-      0,
-      goldPrices,
-    )
-    return breakdown?.goldPricePerGram ?? null
-  }, [detailProduct, goldPrices])
-
   const categoryCounts = useMemo(() => {
     const counts = new Map<CategoryFilter, number>()
     counts.set('all', products.length)
@@ -841,7 +829,7 @@ export default function JewelerProductsPage() {
               ? categoryNameById.get(detailProduct.category_id)
               : null
           }
-          goldPricePerGram={detailGoldPricePerGram}
+          goldPrices={goldPrices}
           onClose={() => setDetailProduct(null)}
           onSell={() => {
             setSaleProduct(detailProduct)

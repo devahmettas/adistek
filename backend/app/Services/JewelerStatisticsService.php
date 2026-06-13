@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\DB;
 
 class JewelerStatisticsService
 {
+    public function __construct(
+        private readonly JewelryProductPriceService $priceService,
+        private readonly JewelryInventoryCostService $inventoryCostService,
+    ) {}
+
     public function getDashboardStats(int $restaurantId): array
     {
         $today = Carbon::today();
@@ -141,6 +146,13 @@ class JewelerStatisticsService
             ->orderByDesc('stock_units')
             ->get();
 
+        $allProducts = JewelryProduct::query()
+            ->with('category')
+            ->where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         $totalCustomers = JewelryCustomer::query()
             ->where('restaurant_id', $restaurantId)
             ->count();
@@ -150,6 +162,8 @@ class JewelerStatisticsService
             ->where('sold_at', '>=', $monthStart)
             ->whereNotNull('customer_id')
             ->count();
+
+        $profitSummary = $this->buildProfitSummary($restaurantId, $today, $weekStart, $monthStart);
 
         return [
             'summary' => [
@@ -165,6 +179,7 @@ class JewelerStatisticsService
                 'month_average_sale' => $monthSales->count() > 0
                     ? round((float) $monthSales->sum('total') / $monthSales->count(), 2)
                     : 0,
+                ...$profitSummary,
             ],
             'inventory' => [
                 'total_products' => (int) ($productStats->total_products ?? 0),
@@ -212,6 +227,79 @@ class JewelerStatisticsService
                 'total' => (float) $row->total,
                 'count' => (int) $row->count,
             ])->values()->all(),
+            'all_products' => $allProducts->map(function (JewelryProduct $product) {
+                $averagePurchaseCost = $this->inventoryCostService->getWeightedAverageUnitCost($product);
+                $fifoPreview = $this->inventoryCostService->previewSaleCost($product, 1);
+                $metrics = $this->priceService->resolveProductMetrics(
+                    (float) $product->weight_gram,
+                    (int) ($product->karat ?? 22),
+                    (float) $product->labor_cost,
+                    (float) $averagePurchaseCost,
+                    $product->name,
+                    $product->category?->name,
+                );
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category_name' => $product->category?->name ?? 'Kategorisiz',
+                    'karat' => $product->karat,
+                    'weight_gram' => (string) $product->weight_gram,
+                    'stock_quantity' => (int) $product->stock_quantity,
+                    'purchase_price' => (string) $averagePurchaseCost,
+                    'sale_price' => (string) $product->sale_price,
+                    'metal_value' => $metrics['metal_value'],
+                    'average_unit_cost' => round($averagePurchaseCost + (float) $product->labor_cost, 2),
+                    'fifo_unit_cost' => $fifoPreview['unit_cost_with_labor'],
+                    'unit_cost' => round($averagePurchaseCost + (float) $product->labor_cost, 2),
+                    'stock_value' => round((float) $product->sale_price * (int) $product->stock_quantity, 2),
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    private function buildProfitSummary(int $restaurantId, $today, $weekStart, $monthStart): array
+    {
+        $todayProfit = $this->profitForPeriod($restaurantId, $today, $today->copy()->endOfDay());
+        $weekProfit = $this->profitForPeriod($restaurantId, $weekStart, now());
+        $monthProfit = $this->profitForPeriod($restaurantId, $monthStart, now());
+
+        return [
+            'today_cost' => $todayProfit['cost'],
+            'today_profit' => $todayProfit['profit'],
+            'today_profit_margin' => $todayProfit['margin'],
+            'week_cost' => $weekProfit['cost'],
+            'week_profit' => $weekProfit['profit'],
+            'week_profit_margin' => $weekProfit['margin'],
+            'month_cost' => $monthProfit['cost'],
+            'month_profit' => $monthProfit['profit'],
+            'month_profit_margin' => $monthProfit['margin'],
+        ];
+    }
+
+    /**
+     * @return array{revenue: float, cost: float, profit: float, margin: float}
+     */
+    private function profitForPeriod(int $restaurantId, $start, $end): array
+    {
+        $sales = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereBetween('sold_at', [$start, $end])
+            ->with('items')
+            ->get();
+
+        $revenue = (float) $sales->sum('total');
+        $cost = $sales->sum(
+            fn (JewelrySale $sale) => (float) ($sale->items?->sum('line_cost') ?? 0),
+        );
+        $profit = round($revenue - $cost, 2);
+        $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+
+        return [
+            'revenue' => round($revenue, 2),
+            'cost' => round($cost, 2),
+            'profit' => $profit,
+            'margin' => $margin,
         ];
     }
 }

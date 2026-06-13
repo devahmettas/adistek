@@ -18,6 +18,7 @@ class JewelryCashTransaction extends Model
         'amount',
         'notes',
         'sale_id',
+        'purchase_id',
         'created_at',
     ];
 
@@ -36,5 +37,10 @@ class JewelryCashTransaction extends Model
     public function sale(): BelongsTo
     {
         return $this->belongsTo(JewelrySale::class, 'sale_id');
+    }
+
+    public function purchase(): BelongsTo
+    {
+        return $this->belongsTo(JewelryPurchase::class, 'purchase_id');
     }
 }

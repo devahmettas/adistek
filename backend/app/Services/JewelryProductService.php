@@ -6,7 +6,8 @@ use App\Enums\JewelryStockMovementType;
 use App\Models\JewelryProduct;
 use App\Models\JewelrySetting;
 use App\Models\JewelryStockMovement;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -14,15 +15,18 @@ class JewelryProductService
 {
     public function __construct(
         private readonly JewelryProductPriceService $priceService,
+        private readonly JewelryInventoryCostService $inventoryCostService,
     ) {}
 
-    public function listByRestaurant(int $restaurantId): Collection
+    public function listByRestaurant(int $restaurantId): EloquentCollection
     {
-        return JewelryProduct::query()
+        $products = JewelryProduct::query()
             ->with('category')
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('created_at')
             ->get();
+
+        return $this->enrichWithCostMetrics($products);
     }
 
     public function findForRestaurant(int $restaurantId, int $id): JewelryProduct
@@ -37,6 +41,13 @@ class JewelryProductService
         }
 
         return $product;
+    }
+
+    public function findForRestaurantWithMetrics(int $restaurantId, int $id): JewelryProduct
+    {
+        $product = $this->findForRestaurant($restaurantId, $id)->load('category');
+
+        return $this->enrichWithCostMetrics(collect([$product]))->first();
     }
 
     public function findByBarcode(int $restaurantId, string $barcode): ?JewelryProduct
@@ -74,9 +85,15 @@ class JewelryProductService
                     $initialStock,
                     'İlk stok girişi',
                 );
+
+                $this->inventoryCostService->addLot(
+                    $product,
+                    $initialStock,
+                    (float) ($data['purchase_price'] ?? 0),
+                );
             }
 
-            return $product->load('category');
+            return $this->enrichWithCostMetrics(collect([$product->load('category')]))->first();
         });
     }
 
@@ -104,7 +121,34 @@ class JewelryProductService
             );
         }
 
-        return $product->refresh()->load('category');
+        return $this->enrichWithCostMetrics(collect([$product->refresh()->load('category')]))->first();
+    }
+
+    public function previewSaleCost(int $restaurantId, int $productId, int $quantity): array
+    {
+        $product = $this->findForRestaurant($restaurantId, $productId);
+
+        return $this->inventoryCostService->previewSaleCost($product, $quantity);
+    }
+
+    /**
+     * @param  Collection<int, JewelryProduct>|EloquentCollection<int, JewelryProduct>  $products
+     * @return Collection<int, JewelryProduct>|EloquentCollection<int, JewelryProduct>
+     */
+    public function enrichWithCostMetrics(Collection|EloquentCollection $products): Collection|EloquentCollection
+    {
+        return $products->map(function (JewelryProduct $product) {
+            $preview = $this->inventoryCostService->previewSaleCost($product, 1);
+
+            $product->setAttribute('average_unit_cost', $preview['average_unit_cost']);
+            $product->setAttribute('fifo_unit_cost', $preview['unit_cost_with_labor']);
+            $product->setAttribute('average_unit_cost_with_labor', round(
+                $preview['average_unit_cost'] + (float) $product->labor_cost,
+                2,
+            ));
+
+            return $product;
+        });
     }
 
     public function delete(int $restaurantId, int $id): void
@@ -124,7 +168,7 @@ class JewelryProductService
             $product = $this->findForRestaurant($restaurantId, $productId);
 
             $delta = match ($type) {
-                JewelryStockMovementType::In, JewelryStockMovementType::Return => $quantity,
+                JewelryStockMovementType::In, JewelryStockMovementType::Return, JewelryStockMovementType::Purchase => $quantity,
                 JewelryStockMovementType::Out, JewelryStockMovementType::Sale, JewelryStockMovementType::Repair => -$quantity,
                 JewelryStockMovementType::Adjustment => $quantity,
             };
@@ -137,7 +181,15 @@ class JewelryProductService
 
             $this->recordMovement($restaurantId, $product->refresh(), $type, abs($quantity), $notes);
 
-            return $product->load('category');
+            if ($type === JewelryStockMovementType::In) {
+                $this->inventoryCostService->addLot(
+                    $product->refresh(),
+                    $quantity,
+                    (float) $product->purchase_price,
+                );
+            }
+
+            return $this->enrichWithCostMetrics(collect([$product->load('category')]))->first();
         });
     }
 

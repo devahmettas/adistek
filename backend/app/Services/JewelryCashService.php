@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\JewelryCashTransactionSource;
 use App\Enums\JewelryCashTransactionType;
 use App\Models\JewelryCashTransaction;
+use App\Models\JewelryPurchase;
 use App\Models\JewelrySale;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -39,7 +40,7 @@ class JewelryCashService
     public function listRecent(int $restaurantId, int $limit = 50): Collection
     {
         return JewelryCashTransaction::query()
-            ->with('sale:id,sale_number')
+            ->with(['sale:id,sale_number', 'purchase:id,purchase_number'])
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -78,6 +79,49 @@ class JewelryCashService
             'sale_id' => $sale->id,
             'created_at' => $sale->sold_at ?? now(),
         ]);
+    }
+
+    public function recordPurchase(int $restaurantId, JewelryPurchase $purchase): ?JewelryCashTransaction
+    {
+        if ($purchase->payment_method !== 'cash' || (float) $purchase->total <= 0) {
+            return null;
+        }
+
+        return JewelryCashTransaction::create([
+            'restaurant_id' => $restaurantId,
+            'type' => JewelryCashTransactionType::Out,
+            'source' => JewelryCashTransactionSource::Purchase,
+            'amount' => round((float) $purchase->total, 2),
+            'notes' => "Alım #{$purchase->purchase_number}",
+            'purchase_id' => $purchase->id,
+            'created_at' => $purchase->purchased_at ?? now(),
+        ]);
+    }
+
+    public function syncPurchaseCash(int $restaurantId, JewelryPurchase $purchase): void
+    {
+        $existing = JewelryCashTransaction::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('purchase_id', $purchase->id)
+            ->first();
+
+        if ($purchase->payment_method === 'cash' && (float) $purchase->total > 0) {
+            if ($existing) {
+                $existing->update([
+                    'amount' => round((float) $purchase->total, 2),
+                    'notes' => "Alım #{$purchase->purchase_number}",
+                    'created_at' => $purchase->purchased_at ?? $existing->created_at,
+                ]);
+
+                return;
+            }
+
+            $this->recordPurchase($restaurantId, $purchase);
+
+            return;
+        }
+
+        $existing?->delete();
     }
 
     public function findForRestaurant(int $restaurantId, int $id): JewelryCashTransaction
@@ -124,6 +168,8 @@ class JewelryCashService
             'notes' => $transaction->notes,
             'sale_id' => $transaction->sale_id,
             'sale_number' => $transaction->sale?->sale_number,
+            'purchase_id' => $transaction->purchase_id,
+            'purchase_number' => $transaction->purchase?->purchase_number,
             'created_at' => $transaction->created_at?->toIso8601String(),
         ];
     }

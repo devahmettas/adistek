@@ -6,6 +6,7 @@ enum JewelryCashTransactionSource: string
 {
     case Manual = 'manual';
     case Sale = 'sale';
+    case Purchase = 'purchase';
 
     public static function values(): array
     {
@@ -17,6 +18,7 @@ enum JewelryCashTransactionSource: string
         return match ($this) {
             self::Manual => 'Manuel',
             self::Sale => 'Satış',
+            self::Purchase => 'Alım',
         };
     }
 }

@@ -76,6 +76,39 @@ export default function JewelerReportsPage() {
             </div>
           </section>
 
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-slate-900">Karlılık Analizi</h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <PanelStatCard
+                label="Bugünkü net kar"
+                value={formatPanelMoney(stats.summary.today_profit)}
+                hint={`Maliyet ${formatPanelMoney(stats.summary.today_cost)} · Marj %${stats.summary.today_profit_margin}`}
+                accent="emerald"
+              />
+              <PanelStatCard
+                label="Haftalık net kar"
+                value={formatPanelMoney(stats.summary.week_profit)}
+                hint={`Maliyet ${formatPanelMoney(stats.summary.week_cost)} · Marj %${stats.summary.week_profit_margin}`}
+                accent="brand"
+              />
+              <PanelStatCard
+                label="Aylık net kar"
+                value={formatPanelMoney(stats.summary.month_profit)}
+                hint={`Maliyet ${formatPanelMoney(stats.summary.month_cost)} · Marj %${stats.summary.month_profit_margin}`}
+                accent="amber"
+              />
+              <PanelStatCard
+                label="Aylık ciro"
+                value={formatPanelMoney(stats.summary.month_revenue)}
+                hint={`${stats.summary.month_sales_count} satış`}
+                accent="violet"
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              Kar hesabı her satışta FIFO alış maliyetine göre yapılır. Aynı ürün farklı fiyatlardan alındıysa sırayla en eski lot kullanılır.
+            </p>
+          </section>
+
           <StatsTrendChart title="Son 7 gün satış trendi" points={stats.revenue_trend} />
 
           <section className="grid gap-4 xl:grid-cols-2">
@@ -183,6 +216,53 @@ export default function JewelerReportsPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          </section>
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-slate-900">Tüm Ürünler</h2>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+              {stats.all_products.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-slate-500">Henüz ürün kaydı yok.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Ürün</th>
+                        <th className="px-4 py-3">Kategori</th>
+                        <th className="px-4 py-3 text-right">Ayar</th>
+                        <th className="px-4 py-3 text-right">Gram</th>
+                        <th className="px-4 py-3 text-right">Stok</th>
+                        <th className="px-4 py-3 text-right">Ort. Alış</th>
+                        <th className="px-4 py-3 text-right">Altın Değeri</th>
+                        <th className="px-4 py-3 text-right">Ort. Maliyet</th>
+                        <th className="px-4 py-3 text-right">FIFO Maliyet</th>
+                        <th className="px-4 py-3 text-right">Satış</th>
+                        <th className="px-4 py-3 text-right">Stok Değeri</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {stats.all_products.map((product) => (
+                        <tr key={product.id}>
+                          <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
+                          <td className="px-4 py-3 text-slate-600">{product.category_name}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {product.karat ? `${product.karat} ayar` : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">{product.weight_gram} gr</td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-900">{product.stock_quantity}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(product.average_unit_cost)}</td>
+                          <td className="px-4 py-3 text-right text-amber-700">{formatPanelMoney(product.metal_value)}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(product.unit_cost)}</td>
+                          <td className="px-4 py-3 text-right font-medium text-brand-700">{formatPanelMoney(product.fifo_unit_cost)}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(Number(product.sale_price))}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-brand-700">{formatPanelMoney(product.stock_value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </section>
         </>

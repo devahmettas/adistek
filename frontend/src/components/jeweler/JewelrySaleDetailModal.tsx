@@ -15,6 +15,8 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
   useBodyScrollLock(true)
 
   const itemCount = (sale.items ?? []).reduce((sum, item) => sum + item.quantity, 0)
+  const totalCost = (sale.items ?? []).reduce((sum, item) => sum + Number(item.line_cost || 0), 0)
+  const grossProfit = Number(sale.total) - totalCost
 
   return (
     <div
@@ -72,12 +74,18 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
                   <th className="px-4 py-3">Ürün</th>
                   <th className="px-4 py-3">Kategori</th>
                   <th className="px-4 py-3 text-right">Adet</th>
-                  <th className="px-4 py-3 text-right">Birim</th>
+                  <th className="px-4 py-3 text-right">Satış</th>
+                  <th className="px-4 py-3 text-right">Maliyet</th>
+                  <th className="px-4 py-3 text-right">Kar</th>
                   <th className="px-4 py-3 text-right">Toplam</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(sale.items ?? []).map((item) => (
+                {(sale.items ?? []).map((item) => {
+                  const lineCost = Number(item.line_cost) || 0
+                  const lineProfit = Number(item.line_total) - lineCost
+
+                  return (
                   <tr key={item.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -92,9 +100,14 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
                     <td className="px-4 py-3 text-slate-600">{getSaleItemCategoryName(sale, item)}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{item.quantity}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{formatJewelryMoney(item.unit_price)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{formatJewelryMoney(item.unit_cost)}</td>
+                    <td className={`px-4 py-3 text-right font-medium ${lineProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {formatJewelryMoney(lineProfit)}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatJewelryMoney(item.line_total)}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -123,6 +136,20 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
               <dt className="font-semibold text-slate-900">Tahsil edilen</dt>
               <dd className="text-lg font-bold text-brand-700">{formatPanelMoney(Number(sale.total))}</dd>
             </div>
+            {totalCost > 0 && (
+              <>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">Toplam maliyet</dt>
+                  <dd className="font-medium text-slate-900">{formatPanelMoney(totalCost)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">Net kar</dt>
+                  <dd className={`font-semibold ${grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {formatPanelMoney(grossProfit)}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
           <Button type="button" variant="secondary" className="mt-4" onClick={onClose}>
             Kapat

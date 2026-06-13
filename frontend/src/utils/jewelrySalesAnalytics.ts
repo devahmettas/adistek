@@ -18,6 +18,9 @@ export interface SalesSummary {
   discount: number
   itemCount: number
   averageSale: number
+  totalCost: number
+  grossProfit: number
+  profitMargin: number
 }
 
 export interface SalesBreakdownItem {
@@ -133,13 +136,17 @@ export function computeSalesSummary(sales: JewelrySale[]): SalesSummary {
   let subtotal = 0
   let discount = 0
   let itemCount = 0
+  let totalCost = 0
 
   for (const sale of sales) {
     revenue += Number(sale.total)
     subtotal += Number(sale.subtotal)
     discount += Number(sale.discount)
     itemCount += (sale.items ?? []).reduce((sum, item) => sum + item.quantity, 0)
+    totalCost += (sale.items ?? []).reduce((sum, item) => sum + Number(item.line_cost || 0), 0)
   }
+
+  const grossProfit = Math.round((revenue - totalCost) * 100) / 100
 
   return {
     count: sales.length,
@@ -148,6 +155,9 @@ export function computeSalesSummary(sales: JewelrySale[]): SalesSummary {
     discount: Math.round(discount * 100) / 100,
     itemCount,
     averageSale: sales.length > 0 ? Math.round((revenue / sales.length) * 100) / 100 : 0,
+    totalCost: Math.round(totalCost * 100) / 100,
+    grossProfit,
+    profitMargin: revenue > 0 ? Math.round((grossProfit / revenue) * 10000) / 100 : 0,
   }
 }
 

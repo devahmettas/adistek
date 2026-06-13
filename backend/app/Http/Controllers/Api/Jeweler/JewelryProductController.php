@@ -43,7 +43,24 @@ class JewelryProductController extends Controller
         $this->ensureOwnership($request, $product);
 
         return response()->json([
-            'data' => $this->service->findForRestaurant($this->restaurantId($request), $product->id),
+            'data' => $this->service->findForRestaurantWithMetrics($this->restaurantId($request), $product->id),
+        ]);
+    }
+
+    public function saleCost(Request $request, JewelryProduct $product): JsonResponse
+    {
+        $this->ensureOwnership($request, $product);
+
+        $data = $request->validate([
+            'quantity' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json([
+            'data' => $this->service->previewSaleCost(
+                $this->restaurantId($request),
+                $product->id,
+                (int) ($data['quantity'] ?? 1),
+            ),
         ]);
     }
 

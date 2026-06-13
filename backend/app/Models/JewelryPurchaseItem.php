@@ -2,40 +2,39 @@
 
 namespace App\Models;
 
+use App\Enums\JewelryMetalType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class JewelrySaleItem extends Model
+class JewelryPurchaseItem extends Model
 {
     public $timestamps = false;
 
     protected $fillable = [
-        'sale_id',
+        'purchase_id',
         'product_id',
-        'product_name',
-        'quantity',
-        'unit_price',
-        'unit_cost',
-        'line_cost',
+        'item_description',
+        'metal_type',
+        'karat',
         'weight_gram',
-        'labor_cost',
+        'unit_price',
+        'quantity',
         'line_total',
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
-        'unit_price' => 'decimal:2',
-        'unit_cost' => 'decimal:2',
-        'line_cost' => 'decimal:2',
+        'metal_type' => JewelryMetalType::class,
+        'karat' => 'integer',
         'weight_gram' => 'decimal:3',
-        'labor_cost' => 'decimal:2',
+        'unit_price' => 'decimal:2',
+        'quantity' => 'integer',
         'line_total' => 'decimal:2',
         'created_at' => 'datetime',
     ];
 
-    public function sale(): BelongsTo
+    public function purchase(): BelongsTo
     {
-        return $this->belongsTo(JewelrySale::class, 'sale_id');
+        return $this->belongsTo(JewelryPurchase::class, 'purchase_id');
     }
 
     public function product(): BelongsTo

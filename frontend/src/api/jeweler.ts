@@ -33,6 +33,9 @@ export interface JewelryProduct {
   is_active: boolean
   created_at: string
   category?: JewelryCategory
+  average_unit_cost?: number
+  fifo_unit_cost?: number
+  average_unit_cost_with_labor?: number
 }
 
 export interface JewelryCustomer {
@@ -54,6 +57,8 @@ export interface JewelrySaleItem {
   product_name: string
   quantity: number
   unit_price: string
+  unit_cost: string
+  line_cost: string
   weight_gram: string | null
   labor_cost: string
   line_total: string
@@ -74,6 +79,35 @@ export interface JewelrySale {
   created_at: string
   customer?: JewelryCustomer
   items?: JewelrySaleItem[]
+}
+
+export interface JewelryPurchaseItem {
+  id: number
+  purchase_id: number
+  product_id: number | null
+  item_description: string
+  metal_type: string
+  karat: number | null
+  weight_gram: string
+  unit_price: string
+  quantity: number
+  line_total: string
+  product?: JewelryProduct
+}
+
+export interface JewelryPurchase {
+  id: number
+  restaurant_id: number
+  customer_id: number | null
+  purchase_number: string
+  subtotal: string
+  total: string
+  payment_method: string
+  notes: string | null
+  purchased_at: string
+  created_at: string
+  customer?: JewelryCustomer
+  items?: JewelryPurchaseItem[]
 }
 
 export interface JewelryRepair {
@@ -192,6 +226,15 @@ export interface JewelerStats {
     month_sales_count: number
     average_sale: number
     month_average_sale: number
+    today_cost: number
+    today_profit: number
+    today_profit_margin: number
+    week_cost: number
+    week_profit: number
+    week_profit_margin: number
+    month_cost: number
+    month_profit: number
+    month_profit_margin: number
   }
   inventory: {
     total_products: number
@@ -244,6 +287,29 @@ export interface JewelerStats {
     total: number
     count: number
   }>
+  all_products: Array<{
+    id: number
+    name: string
+    category_name: string
+    karat: number | null
+    weight_gram: string
+    stock_quantity: number
+    purchase_price: string
+    sale_price: string
+    metal_value: number
+    average_unit_cost: number
+    fifo_unit_cost: number
+    unit_cost: number
+    stock_value: number
+  }>
+}
+
+export interface JewelryProductSaleCost {
+  fifo_unit_cost: number
+  fifo_line_cost: number
+  average_unit_cost: number
+  labor_cost: number
+  unit_cost_with_labor: number
 }
 
 export async function getJewelerStats(): Promise<JewelerStats> {
@@ -266,6 +332,17 @@ export async function createJewelryCategory(payload: {
 
 export async function getJewelryProducts(): Promise<JewelryProduct[]> {
   const { data } = await apiClient.get<ApiResponse<JewelryProduct[]>>('/jeweler/products')
+  return data.data
+}
+
+export async function getJewelryProductSaleCost(
+  productId: number,
+  quantity = 1,
+): Promise<JewelryProductSaleCost> {
+  const { data } = await apiClient.get<ApiResponse<JewelryProductSaleCost>>(
+    `/jeweler/products/${productId}/sale-cost`,
+    { params: { quantity } },
+  )
   return data.data
 }
 
@@ -351,6 +428,56 @@ export async function createJewelrySale(payload: {
   return data.data
 }
 
+export async function getJewelryPurchases(): Promise<JewelryPurchase[]> {
+  const { data } = await apiClient.get<ApiResponse<JewelryPurchase[]>>('/jeweler/purchases')
+  return data.data
+}
+
+export async function createJewelryPurchase(payload: {
+  customer_id?: number | null
+  payment_method: string
+  notes?: string
+  purchased_at?: string
+  items: Array<{
+    product_id?: number | null
+    category_id?: number | null
+    item_description: string
+    metal_type?: string
+    karat?: number | null
+    weight_gram?: number | string
+    unit_price: number | string
+    quantity?: number
+    line_total: number | string
+  }>
+}): Promise<JewelryPurchase> {
+  const { data } = await apiClient.post<ApiResponse<JewelryPurchase>>('/jeweler/purchases', payload)
+  return data.data
+}
+
+export async function updateJewelryPurchase(
+  id: number,
+  payload: {
+    customer_id?: number | null
+    payment_method?: string
+    notes?: string
+    purchased_at?: string
+    items?: Array<{
+      product_id?: number | null
+      category_id?: number | null
+      item_description: string
+      metal_type?: string
+      karat?: number | null
+      weight_gram?: number | string
+      unit_price: number | string
+      quantity?: number
+      line_total: number | string
+    }>
+  },
+): Promise<JewelryPurchase> {
+  const { data } = await apiClient.put<ApiResponse<JewelryPurchase>>(`/jeweler/purchases/${id}`, payload)
+  return data.data
+}
+
 export async function getJewelryRepairs(): Promise<JewelryRepair[]> {
   const { data } = await apiClient.get<ApiResponse<JewelryRepair[]>>('/jeweler/repairs')
   return data.data
@@ -408,12 +535,14 @@ export interface JewelryVaultCashTransaction {
   id: number
   type: 'in' | 'out'
   type_label: string
-  source: 'manual' | 'sale'
+  source: 'manual' | 'sale' | 'purchase'
   source_label: string
   amount: number
   notes: string | null
   sale_id: number | null
   sale_number: string | null
+  purchase_id: number | null
+  purchase_number: string | null
   created_at: string | null
 }
 

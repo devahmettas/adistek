@@ -1,13 +1,14 @@
+import { useMemo } from 'react'
 import Button from '../Button'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
-import { formatJewelryMoney } from '../../utils/jewelryPrice'
-import type { JewelryProduct } from '../../api/jeweler'
+import { formatJewelryMoney, resolveProductMetalMetrics } from '../../utils/jewelryPrice'
+import type { JewelryProduct, MarketGoldPriceRecord } from '../../api/jeweler'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
 interface JewelryProductDetailModalProps {
   product: JewelryProduct
   categoryName?: string | null
-  goldPricePerGram?: number | null
+  goldPrices: MarketGoldPriceRecord[]
   onClose: () => void
   onSell: () => void
 }
@@ -15,16 +16,27 @@ interface JewelryProductDetailModalProps {
 export default function JewelryProductDetailModal({
   product,
   categoryName,
-  goldPricePerGram,
+  goldPrices,
   onClose,
   onSell,
 }: JewelryProductDetailModalProps) {
   useBodyScrollLock(true)
 
   const previewUrl = resolveMenuAssetUrl(null, product.image_path)
-  const metalValue = goldPricePerGram
-    ? Number(product.weight_gram) * goldPricePerGram
-    : null
+  const metrics = useMemo(
+    () => resolveProductMetalMetrics(
+      Number(product.weight_gram),
+      product.karat ?? 22,
+      Number(product.labor_cost),
+      goldPrices,
+      {
+        productName: product.name,
+        categoryName: categoryName ?? product.category?.name,
+        purchasePrice: Number(product.purchase_price) || 0,
+      },
+    ),
+    [product, categoryName, goldPrices],
+  )
 
   return (
     <div
@@ -85,19 +97,38 @@ export default function JewelryProductDetailModal({
                 </span>
               </div>
 
-              {goldPricePerGram !== null && goldPricePerGram !== undefined && (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 text-sm">
-                  <p className="font-semibold text-amber-900">Güncel Altın Fiyatı</p>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 text-sm">
+                <p className="font-semibold text-amber-900">Güncel Altın Değeri</p>
+                {metrics.goldPricePerGram !== null && Number(product.weight_gram) > 0 ? (
                   <p className="mt-1 text-amber-800">
-                    {product.karat} ayar · {formatJewelryMoney(goldPricePerGram)} / gr
+                    {product.karat} ayar · {formatJewelryMoney(metrics.goldPricePerGram)} / gr
                   </p>
-                  {metalValue !== null && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      Altın değeri ({product.weight_gram} gr): {formatJewelryMoney(metalValue)}
-                    </p>
-                  )}
-                </div>
-              )}
+                ) : null}
+                <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <dt className="text-amber-700">Altın değeri</dt>
+                    <dd className="font-semibold text-amber-900">{formatJewelryMoney(metrics.metalValue)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-amber-700">Sıradaki satış maliyeti</dt>
+                    <dd className="font-semibold text-amber-900">
+                      {formatJewelryMoney(product.fifo_unit_cost ?? metrics.unitCost)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-amber-700">Ortalama alış</dt>
+                    <dd className="font-semibold text-amber-900">
+                      {formatJewelryMoney(product.average_unit_cost ?? product.purchase_price)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-amber-700">Ortalama birim maliyet</dt>
+                    <dd className="font-semibold text-amber-900">
+                      {formatJewelryMoney(product.average_unit_cost_with_labor ?? metrics.unitCost)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
 
               <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-sm lg:grid-cols-3">
                 <div>
@@ -111,6 +142,10 @@ export default function JewelryProductDetailModal({
                 <div>
                   <dt className="text-slate-500">İşçilik</dt>
                   <dd className="font-medium text-slate-900">{formatJewelryMoney(product.labor_cost)}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Alış fiyatı</dt>
+                  <dd className="font-medium text-slate-900">{formatJewelryMoney(product.purchase_price)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-500">Kar Oranı</dt>

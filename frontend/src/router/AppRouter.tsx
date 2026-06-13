@@ -15,6 +15,7 @@ import DashboardPage from '../pages/DashboardPage'
 import JewelerBarcodePage from '../pages/jeweler/JewelerBarcodePage'
 import JewelerCustomersPage from '../pages/jeweler/JewelerCustomersPage'
 import JewelerGoldPricesPage from '../pages/jeweler/JewelerGoldPricesPage'
+import JewelerPurchasesPage from '../pages/jeweler/JewelerPurchasesPage'
 import JewelerProductsPage from '../pages/jeweler/JewelerProductsPage'
 import JewelerRepairsPage from '../pages/jeweler/JewelerRepairsPage'
 import JewelerReportsPage from '../pages/jeweler/JewelerReportsPage'
@@ -58,6 +59,7 @@ export default function AppRouter() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route element={<JewelerOnlyRoute />}>
             <Route path="/dashboard/jeweler/products" element={<JewelerProductsPage />} />
+            <Route path="/dashboard/jeweler/purchases" element={<JewelerPurchasesPage />} />
             <Route path="/dashboard/jeweler/vault" element={<JewelerVaultPage />} />
             <Route path="/dashboard/jeweler/stock" element={<Navigate to="/dashboard/jeweler/vault" replace />} />
             <Route path="/dashboard/jeweler/sales" element={<JewelerSalesPage />} />

@@ -160,16 +160,16 @@ export default function JewelerSalesPage() {
               accent="amber"
             />
             <PanelStatCard
-              label="Toplam indirim"
-              value={formatPanelMoney(summary.discount)}
-              hint={`Brüt ${formatPanelMoney(summary.subtotal)}`}
-              accent="violet"
+              label="Net kar"
+              value={formatPanelMoney(summary.grossProfit)}
+              hint={`Maliyet ${formatPanelMoney(summary.totalCost)} · Marj %${summary.profitMargin}`}
+              accent="emerald"
             />
             <PanelStatCard
               label="Kategori çeşidi"
               value={String(categoryBreakdown.length)}
               hint={`${paymentBreakdown.length} ödeme tipi`}
-              accent="emerald"
+              accent="violet"
             />
           </section>
 
