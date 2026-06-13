@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Jeweler\MarketGoldPriceController;
 use App\Http\Controllers\Api\Jeweler\JewelryProductController;
 use App\Http\Controllers\Api\Jeweler\JewelryRepairController;
 use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
+use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockController;
 use Illuminate\Support\Facades\Route;
@@ -185,6 +186,8 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
 
     Route::get('/settings', [JewelrySettingController::class, 'show']);
     Route::patch('/settings', [JewelrySettingController::class, 'update']);
+
+    Route::post('/uploads', [JewelryUploadController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

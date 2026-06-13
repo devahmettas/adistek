@@ -14,8 +14,21 @@ class UploadMenuImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'image' => [
+                'required',
+                'file',
+                'max:5120',
+                'mimetypes:image/jpeg,image/png,image/webp,image/pjpeg,image/x-png',
+            ],
             'context' => ['required', 'in:product,slide,category'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'image.mimetypes' => 'Yalnızca JPEG, JPG, PNG veya WebP görselleri yüklenebilir.',
+            'image.max' => 'Görsel boyutu en fazla 5 MB olabilir.',
         ];
     }
 }

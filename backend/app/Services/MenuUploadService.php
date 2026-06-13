@@ -28,7 +28,15 @@ class MenuUploadService
             throw new UnprocessableEntityHttpException('Görsel boyutu en fazla 5 MB olabilir.');
         }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: '');
+        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            $extension = match (strtolower((string) $file->getMimeType())) {
+                'image/png', 'image/x-png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+        }
+
         $filename = Str::uuid().'.'.$extension;
         $directoryNames = [
             'product' => 'products',
@@ -57,12 +65,17 @@ class MenuUploadService
 
     private function isAllowedImage(UploadedFile $file): bool
     {
-        $extension = strtolower($file->getClientOriginalExtension());
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: '');
 
-        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            return false;
+        if (in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            return $this->hasAllowedMime($file);
         }
 
+        return $this->hasAllowedMime($file);
+    }
+
+    private function hasAllowedMime(UploadedFile $file): bool
+    {
         $mime = strtolower((string) $file->getMimeType());
 
         if ($mime === '' || $mime === 'application/octet-stream') {

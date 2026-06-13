@@ -271,13 +271,17 @@ export default function JewelerProductsPage() {
               return (
                 <article
                   key={product.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                 >
-                  <div className="aspect-[4/3] bg-slate-50">
+                  <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
                     {previewUrl ? (
-                      <img src={previewUrl} alt={product.name} className="h-full w-full object-cover" />
+                      <img
+                        src={previewUrl}
+                        alt={product.name}
+                        className="max-h-full max-w-full object-contain object-center"
+                      />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                      <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-400">
                         Fotoğraf yok
                       </div>
                     )}
@@ -433,6 +437,7 @@ export default function JewelerProductsPage() {
               <ImageUploadField
                 label="Fotoğraf"
                 context="product"
+                module="jeweler"
                 imagePath={imagePath}
                 imageUrl={imageUrl}
                 onChange={({ path, url }) => {

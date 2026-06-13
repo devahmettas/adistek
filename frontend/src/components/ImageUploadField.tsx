@@ -1,11 +1,18 @@
 import { useRef, useState } from 'react'
-import { uploadMenuImage } from '../api/menuUpload'
+import { uploadImage } from '../api/menuUpload'
 import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
+import {
+  ALLOWED_IMAGE_ACCEPT,
+  ALLOWED_IMAGE_LABEL,
+  isAllowedImageFile,
+} from '../utils/imageUpload'
 import Button from './Button'
+import axios from 'axios'
 
 interface ImageUploadFieldProps {
   label: string
   context: 'product' | 'slide' | 'category'
+  module?: 'menu' | 'jeweler'
   imageUrl?: string | null
   imagePath?: string | null
   onChange: (payload: { path: string | null; url: string | null }) => void
@@ -20,6 +27,7 @@ const imageSizeHints: Record<ImageUploadFieldProps['context'], string> = {
 export default function ImageUploadField({
   label,
   context,
+  module = 'menu',
   imageUrl,
   imagePath,
   onChange,
@@ -35,9 +43,13 @@ export default function ImageUploadField({
       return
     }
 
-    const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
-    if (!['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
-      setError('Yalnızca JPG, JPEG, PNG veya WebP dosyaları yüklenebilir.')
+    if (!isAllowedImageFile(file)) {
+      setError(`Yalnızca ${ALLOWED_IMAGE_LABEL} dosyaları yüklenebilir.`)
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Görsel boyutu en fazla 5 MB olabilir.')
       return
     }
 
@@ -45,13 +57,28 @@ export default function ImageUploadField({
     setError(null)
 
     try {
-      const result = await uploadMenuImage(file, context)
+      const result = await uploadImage(file, context, module)
       onChange({
         path: result.path,
         url: resolveMenuAssetUrl(result.url, result.path),
       })
-    } catch {
-      setError('Görsel yüklenemedi. JPG, JPEG, PNG veya WebP ve en fazla 5 MB olmalı.')
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const serverMessage = error.response?.data?.message
+        const validationMessage = error.response?.data?.errors?.image?.[0]
+
+        if (validationMessage) {
+          setError(validationMessage)
+        } else if (serverMessage) {
+          setError(serverMessage)
+        } else if (error.response?.status === 403) {
+          setError('Görsel yükleme yetkiniz yok.')
+        } else {
+          setError('Görsel yüklenemedi. Lütfen tekrar deneyin.')
+        }
+      } else {
+        setError('Görsel yüklenemedi. Lütfen tekrar deneyin.')
+      }
     } finally {
       setUploading(false)
       if (inputRef.current) {
@@ -65,14 +92,14 @@ export default function ImageUploadField({
       <div>
         <p className="text-sm font-medium text-slate-700">{label}</p>
         <p className="mt-0.5 text-xs text-slate-500">
-          {imageSizeHints[context]}. JPG, JPEG, PNG veya WebP, en fazla 5 MB.
+          {imageSizeHints[context]}. {ALLOWED_IMAGE_LABEL}, en fazla 5 MB.
         </p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="h-28 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 sm:w-40">
+        <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 sm:w-44">
           {previewUrl ? (
-            <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+            <img src={previewUrl} alt="" className="max-h-full max-w-full object-contain object-center" />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-slate-400">
               Görsel yok
@@ -84,7 +111,7 @@ export default function ImageUploadField({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            accept={ALLOWED_IMAGE_ACCEPT}
             className="hidden"
             onChange={(event) => void handleFile(event.target.files?.[0])}
           />
