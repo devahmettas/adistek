@@ -6,51 +6,43 @@ use App\Contracts\GoldPriceProviderInterface;
 use App\Data\GoldPriceFetchResult;
 use App\Data\GoldPriceQuote;
 use App\Enums\GoldPriceType;
+use App\Services\GoldPrices\IzkoPriceCalculator;
+use App\Services\GoldPrices\IzkoSettingsStore;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class IzkoGoldPriceProvider implements GoldPriceProviderInterface
 {
+    public function __construct(
+        private readonly IzkoPriceCalculator $calculator,
+        private readonly IzkoSettingsStore $settingsStore,
+    ) {}
+
     public function getName(): string
     {
         return 'izko';
     }
 
-    public function fetch(): GoldPriceFetchResult
+    public function fetch(?float $hasAltinOverride = null): GoldPriceFetchResult
     {
         $config = config('gold_prices.providers.izko');
-        $commissionPercent = (float) config('gold_prices.commission_percent', 5);
+        $settings = $this->settingsStore->get();
+        $payload = $this->fetchPricesPayload($config['prices_url']);
 
-        $http = Http::timeout(10)
-            ->acceptJson()
-            ->withOptions(['verify' => (bool) config('gold_prices.verify_ssl', true)])
-            ->withHeaders([
-                'User-Agent' => 'Adistek-GoldPriceSync/1.0',
-            ]);
+        $hasFromApi = $payload['has_altin_price'] ?? null;
 
-        $response = $http->get($config['prices_url']);
-
-        if (! $response->successful()) {
-            throw new RuntimeException('İZKO altın fiyat API isteği başarısız: '.$response->status());
+        if (! is_numeric($hasFromApi) || (float) $hasFromApi <= 0) {
+            throw new RuntimeException('İZKO has altın fiyatı alınamadı.');
         }
 
-        $payload = $response->json();
-
-        if (! ($payload['success'] ?? false) || ! is_array($payload['data'] ?? null)) {
-            throw new RuntimeException('İZKO altın fiyat API yanıtı geçersiz.');
-        }
-
-        $hasGoldBase = isset($payload['has_altin_price'])
-            ? (float) $payload['has_altin_price']
-            : null;
-
+        $hasGoldBase = (float) $hasFromApi;
         $fetchedAt = Carbon::now(config('gold_prices.timezone', 'Europe/Istanbul'));
-
         $quotes = [];
 
         foreach ($payload['data'] as $item) {
-            $type = GoldPriceType::fromIzkoKey((string) ($item['key'] ?? ''));
+            $key = (string) ($item['key'] ?? '');
+            $type = GoldPriceType::fromIzkoKey($key);
 
             if (! $type) {
                 continue;
@@ -62,16 +54,17 @@ class IzkoGoldPriceProvider implements GoldPriceProviderInterface
                 continue;
             }
 
-            $cardSell = $type === GoldPriceType::Ayar24
-                ? null
-                : $this->calculateCardSellPrice($cashSell, $commissionPercent);
-
             $quotes[] = new GoldPriceQuote(
                 type: $type,
-                externalKey: (string) $item['key'],
+                externalKey: $key,
                 name: (string) ($item['name'] ?? $type->label()),
                 cashSellPrice: $cashSell,
-                cardSellPrice: $cardSell,
+                cardSellPrice: $this->calculator->cardFromCash(
+                    $key,
+                    $cashSell,
+                    $settings['commission_type'],
+                    $settings['commission_value'],
+                ),
                 hasGoldBase: $hasGoldBase,
             );
         }
@@ -89,12 +82,27 @@ class IzkoGoldPriceProvider implements GoldPriceProviderInterface
         );
     }
 
-    private function calculateCardSellPrice(float $cashSell, float $commissionPercent): float
+    /**
+     * @return array{success?: bool, data: array<int, array<string, mixed>>, has_altin_price?: float|int|string, source?: string}
+     */
+    private function fetchPricesPayload(string $pricesUrl): array
     {
-        if ($commissionPercent <= 0) {
-            return $cashSell;
+        $response = Http::timeout(5)
+            ->acceptJson()
+            ->withOptions(['verify' => (bool) config('gold_prices.verify_ssl', true)])
+            ->withHeaders(['User-Agent' => 'Adistek-GoldPriceSync/1.0'])
+            ->get($pricesUrl);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('İZKO altın fiyat API isteği başarısız: '.$response->status());
         }
 
-        return (float) (ceil(($cashSell * (1 + ($commissionPercent / 100))) / 10) * 10);
+        $payload = $response->json();
+
+        if (! ($payload['success'] ?? false) || ! is_array($payload['data'] ?? null)) {
+            throw new RuntimeException('İZKO altın fiyat API yanıtı geçersiz.');
+        }
+
+        return $payload;
     }
 }

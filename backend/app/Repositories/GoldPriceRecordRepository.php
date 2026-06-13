@@ -11,6 +11,28 @@ use Illuminate\Support\Facades\DB;
 
 class GoldPriceRecordRepository
 {
+    public function snapshotFromResult(GoldPriceFetchResult $result): Collection
+    {
+        $latestByType = $this->getLatestByType()->keyBy(fn (GoldPriceRecord $record) => $record->type->value);
+
+        return collect($result->quotes)->map(function ($quote) use ($result, $latestByType) {
+            $latest = $latestByType->get($quote->type->value);
+
+            return new GoldPriceRecord([
+                'id' => $latest?->id ?? 0,
+                'provider' => $result->provider,
+                'type' => $quote->type,
+                'external_key' => $quote->externalKey,
+                'name' => $quote->name,
+                'cash_sell_price' => $quote->cashSellPrice,
+                'card_sell_price' => $quote->cardSellPrice,
+                'has_gold_base' => $quote->hasGoldBase ?? $result->hasGoldBase,
+                'source' => $result->source,
+                'fetched_at' => $result->fetchedAt,
+            ]);
+        });
+    }
+
     public function storeFetchResult(GoldPriceFetchResult $result): Collection
     {
         $records = collect();

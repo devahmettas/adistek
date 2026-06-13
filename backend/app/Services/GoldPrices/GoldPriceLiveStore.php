@@ -2,6 +2,8 @@
 
 namespace App\Services\GoldPrices;
 
+use App\Enums\GoldPriceType;
+use App\Models\GoldPriceRecord;
 use App\Support\MarketGoldPricePresenter;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -17,12 +19,20 @@ class GoldPriceLiveStore
 
     private const SIGNATURE_KEY = 'gold_prices.live_signature';
 
+    private const DERIVATIVE_HAS_KEY = 'gold_prices.last_derivative_has';
+
+    private const DERIVATIVE_PRICES_KEY = 'gold_prices.derivative_prices';
+
     public function publish(Collection $prices, ?float $hasGoldBase, string $provider, string $source, bool $force = false): int
     {
         $signature = $this->buildSignature($prices, $hasGoldBase);
         $previousSignature = Cache::get(self::SIGNATURE_KEY);
 
-        if (! $force && $previousSignature === $signature) {
+        $previousHas = $this->getLastHasPrice();
+        $hasChanged = $hasGoldBase !== null
+            && ($previousHas === null || abs($previousHas - $hasGoldBase) >= (float) config('gold_prices.has_change_threshold', 0.0001));
+
+        if (! $force && $previousSignature === $signature && ! $hasChanged) {
             return $this->getVersion();
         }
 
@@ -82,12 +92,20 @@ class GoldPriceLiveStore
         return $value !== null ? (float) $value : null;
     }
 
-    public function isFresh(float $maxAgeSeconds): bool
+    public function isFresh(float $maxAgeSeconds, ?float $currentHas = null): bool
     {
         $snapshot = Cache::get(self::SNAPSHOT_KEY);
 
         if (! is_array($snapshot) || empty($snapshot['prices'])) {
             return false;
+        }
+
+        if ($currentHas !== null) {
+            $cachedHas = $snapshot['has_gold_base'] ?? null;
+
+            if (is_numeric($cachedHas) && abs((float) $cachedHas - $currentHas) >= (float) config('gold_prices.has_change_threshold', 0.01)) {
+                return false;
+            }
         }
 
         $lastSyncAt = $snapshot['last_sync_at'] ?? null;
@@ -103,6 +121,90 @@ class GoldPriceLiveStore
         );
 
         return $ageSeconds < $maxAgeSeconds;
+    }
+
+    public function getLastDerivativeHas(): ?float
+    {
+        $value = Cache::get(self::DERIVATIVE_HAS_KEY);
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * @return array<string, array{cash: float, card: float|null}>
+     */
+    public function getDerivativePrices(): array
+    {
+        $value = Cache::get(self::DERIVATIVE_PRICES_KEY);
+
+        return is_array($value) ? $value : [];
+    }
+
+    /**
+     * @param  array<string, array{cash: float, card: float|null}>  $derivativePrices
+     */
+    public function saveDerivativeState(?float $lastDerivativeHas, array $derivativePrices): void
+    {
+        if ($lastDerivativeHas !== null) {
+            Cache::put(self::DERIVATIVE_HAS_KEY, $lastDerivativeHas, now()->addHour());
+        }
+
+        Cache::put(self::DERIVATIVE_PRICES_KEY, $derivativePrices, now()->addHour());
+    }
+
+    public function snapshotAgeSeconds(): ?float
+    {
+        $snapshot = Cache::get(self::SNAPSHOT_KEY);
+        $lastSyncAt = is_array($snapshot) ? ($snapshot['last_sync_at'] ?? null) : null;
+
+        if (! is_string($lastSyncAt) || $lastSyncAt === '') {
+            return null;
+        }
+
+        $timezone = config('gold_prices.timezone', 'Europe/Istanbul');
+
+        return Carbon::parse($lastSyncAt)->timezone($timezone)->diffInSeconds(
+            Carbon::now($timezone),
+            absolute: true,
+        );
+    }
+
+    public function recordsFromSnapshot(): Collection
+    {
+        $snapshot = Cache::get(self::SNAPSHOT_KEY);
+
+        if (! is_array($snapshot) || empty($snapshot['prices'])) {
+            return collect();
+        }
+
+        return collect($snapshot['prices'])->map(function ($row) {
+            if ($row instanceof GoldPriceRecord) {
+                return $row;
+            }
+
+            if (! is_array($row)) {
+                return null;
+            }
+
+            $typeValue = $row['type'] ?? null;
+
+            if (is_array($typeValue) && isset($typeValue['value'])) {
+                $typeValue = $typeValue['value'];
+            }
+
+            return new GoldPriceRecord([
+                'id' => $row['id'] ?? 0,
+                'provider' => $row['provider'] ?? 'izko',
+                'type' => GoldPriceType::from((string) $typeValue),
+                'external_key' => $row['external_key'] ?? '',
+                'name' => $row['name'] ?? '',
+                'cash_sell_price' => $row['cash_sell_price'] ?? 0,
+                'card_sell_price' => $row['card_sell_price'] ?? null,
+                'has_gold_base' => $row['has_gold_base'] ?? null,
+                'source' => $row['source'] ?? null,
+                'fetched_at' => isset($row['fetched_at']) ? Carbon::parse($row['fetched_at']) : now(),
+            ]);
+        })->filter()->values();
     }
 
     public function getSnapshot(): array

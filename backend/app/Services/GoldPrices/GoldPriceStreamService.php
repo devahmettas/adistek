@@ -2,59 +2,122 @@
 
 namespace App\Services\GoldPrices;
 
+use App\Services\GoldPrices\Streams\OzbagSocketIoClient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GoldPriceStreamService
 {
-    private float $lastIzkoProbeAt = 0;
+    private float $lastFallbackSyncAt = 0;
 
     public function __construct(
         private readonly GoldPriceSyncService $syncService,
         private readonly GoldPriceLiveStore $liveStore,
+        private readonly GoldPriceHasFeed $hasFeed,
+        private readonly GoldPriceWatchHeartbeat $watchHeartbeat,
     ) {}
 
     public function watch(): void
     {
-        $pollMicros = (int) config('gold_prices.watch_poll_microseconds', 500_000);
+        try {
+            $this->syncService->sync();
+        } catch (\Throwable $exception) {
+            Log::warning('Başlangıç İZKO senkronu atlandı.', ['error' => $exception->getMessage()]);
+        }
 
-        while (true) {
+        $this->watchHeartbeat->pulse();
+
+        $onHasPrice = function (float $hasPrice): void {
+            $this->watchHeartbeat->pulse();
+            $this->hasFeed->publish($hasPrice, 'ozbag');
+
             try {
-                $this->tickFromIzko();
+                $this->syncService->syncLiveTick($hasPrice);
             } catch (\Throwable $exception) {
-                Log::warning('Altın fiyat dinleyici hatası.', [
+                Log::warning('Canlı has/paketli senkronu başarısız.', [
+                    'has_price' => $hasPrice,
                     'error' => $exception->getMessage(),
                 ]);
             }
 
-            usleep(max(100_000, $pollMicros));
+            if ($this->syncService->shouldRefreshDerivatives($hasPrice)) {
+                try {
+                    $this->syncService->sync();
+                } catch (\Throwable $exception) {
+                    Log::debug('Türev fiyat senkronu başarısız.', ['error' => $exception->getMessage()]);
+                }
+            }
+        };
+
+        $onIdle = function (): void {
+            $this->watchHeartbeat->pulse();
+        };
+
+        while (true) {
+            try {
+                (new OzbagSocketIoClient)->run(
+                    $onHasPrice,
+                    $onIdle,
+                    function (\Throwable $exception): void {
+                        Log::warning('Ozbag akışı kesildi, yeniden bağlanılıyor.', [
+                            'error' => $exception->getMessage(),
+                        ]);
+                    },
+                );
+            } catch (\Throwable $exception) {
+                Log::warning('Ozbag dinleyici hatası, API yedek moduna geçiliyor.', [
+                    'error' => $exception->getMessage(),
+                ]);
+                $this->pollApiLoop();
+            }
+
+            sleep(1);
         }
     }
 
-    public function tickFromIzko(): bool
+    public function isWatchAlive(): bool
     {
-        $has = $this->fetchHasFromIzko();
+        return $this->watchHeartbeat->isAlive();
+    }
 
-        if ($has === null) {
-            return false;
+    public function refreshSnapshotIfStale(): void
+    {
+        $interval = (float) config('gold_prices.fallback_sync_seconds', 5);
+        $maxAge = (float) config('gold_prices.fallback_snapshot_max_age', 15);
+
+        if ($this->watchHeartbeat->isAlive()) {
+            return;
         }
 
-        $lastHas = $this->liveStore->getLastHasPrice();
-        $threshold = (float) config('gold_prices.has_change_threshold', 0.01);
+        $snapshotAge = $this->liveStore->snapshotAgeSeconds();
 
-        if ($lastHas !== null && abs($has - $lastHas) < $threshold) {
-            return false;
+        if ($snapshotAge !== null && $snapshotAge < $maxAge) {
+            return;
         }
 
-        $this->syncService->sync();
+        if (microtime(true) - $this->lastFallbackSyncAt < $interval) {
+            return;
+        }
 
-        return true;
+        if (! Cache::add('gold_prices.refresh_lock', true, 5)) {
+            return;
+        }
+
+        $this->lastFallbackSyncAt = microtime(true);
+
+        try {
+            $this->syncService->sync();
+        } catch (\Throwable $exception) {
+            Log::debug('Yedek fiyat senkronu başarısız.', ['error' => $exception->getMessage()]);
+        } finally {
+            Cache::forget('gold_prices.refresh_lock');
+        }
     }
 
     public function waitForUpdate(int $sinceVersion, int $timeoutSeconds = 25): array
     {
         $deadline = microtime(true) + $timeoutSeconds;
-        $pollMicros = (int) config('gold_prices.wait_poll_microseconds', 400_000);
 
         while (microtime(true) < $deadline) {
             if ($this->liveStore->getVersion() > $sinceVersion) {
@@ -65,8 +128,8 @@ class GoldPriceStreamService
                 return $snapshot;
             }
 
-            $this->maybeTickFromIzko();
-            usleep(max(100_000, $pollMicros));
+            $this->refreshSnapshotIfStale();
+            usleep(200_000);
         }
 
         $snapshot = $this->liveStore->getSnapshot();
@@ -76,22 +139,35 @@ class GoldPriceStreamService
         return $snapshot;
     }
 
-    private function maybeTickFromIzko(): void
+    private function pollApiLoop(): void
     {
-        $minIntervalSeconds = (float) config('gold_prices.sync_interval_seconds', 1);
+        $deadline = time() + 30;
+        $interval = (float) config('gold_prices.fallback_sync_seconds', 5);
+        $lastSync = 0.0;
 
-        if (microtime(true) - $this->lastIzkoProbeAt < $minIntervalSeconds) {
-            return;
-        }
+        while (time() < $deadline) {
+            $this->watchHeartbeat->pulse();
 
-        $this->lastIzkoProbeAt = microtime(true);
+            if (microtime(true) - $lastSync >= $interval) {
+                try {
+                    $has = $this->fetchHasFromIzko();
 
-        try {
-            $this->tickFromIzko();
-        } catch (\Throwable $exception) {
-            Log::debug('İZKO canlı kontrol başarısız.', [
-                'error' => $exception->getMessage(),
-            ]);
+                    if ($has !== null) {
+                        $this->hasFeed->publish($has, 'izko_api');
+                        $this->syncService->syncLiveTick($has);
+
+                        if ($this->syncService->shouldRefreshDerivatives($has)) {
+                            $this->syncService->sync();
+                        }
+                    }
+                } catch (\Throwable $exception) {
+                    Log::debug('Yedek API senkronu başarısız.', ['error' => $exception->getMessage()]);
+                }
+
+                $lastSync = microtime(true);
+            }
+
+            usleep(500_000);
         }
     }
 
@@ -99,7 +175,7 @@ class GoldPriceStreamService
     {
         $url = config('gold_prices.providers.izko.prices_url');
 
-        $response = Http::timeout(8)
+        $response = Http::timeout(5)
             ->acceptJson()
             ->withOptions(['verify' => (bool) config('gold_prices.verify_ssl', true)])
             ->withHeaders(['User-Agent' => 'Adistek-GoldWatcher/1.0'])

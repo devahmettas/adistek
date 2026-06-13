@@ -8,5 +8,5 @@ interface GoldPriceProviderInterface
 {
     public function getName(): string;
 
-    public function fetch(): GoldPriceFetchResult;
+    public function fetch(?float $hasAltinOverride = null): GoldPriceFetchResult;
 }

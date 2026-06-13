@@ -300,8 +300,13 @@ export async function getMarketGoldPricesLatest(): Promise<MarketGoldPriceLatest
   return data.data
 }
 
-export async function getMarketGoldPricesLive(): Promise<MarketGoldPriceLatestResponse> {
-  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/live')
+export async function getMarketGoldPricesLive(
+  sinceVersion?: number,
+): Promise<MarketGoldPriceLatestResponse> {
+  const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/live', {
+    params: sinceVersion ? { since_version: sinceVersion } : undefined,
+    timeout: 8000,
+  })
   return data.data
 }
 

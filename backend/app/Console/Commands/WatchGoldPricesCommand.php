@@ -10,11 +10,11 @@ class WatchGoldPricesCommand extends Command
 {
     protected $signature = 'gold-prices:watch';
 
-    protected $description = 'İZKO kaynağını dinler ve fiyat değişince senkronize eder';
+    protected $description = 'Ozbag canlı has akışını dinler ve İZKO formülüyle senkronize eder';
 
     public function handle(GoldPriceStreamService $streamService, GoldPriceSyncService $syncService): int
     {
-        $this->info('Altın fiyat canlı dinleyici başlatılıyor (İZKO senkron)...');
+        $this->info('Altın fiyat canlı dinleyici başlatılıyor (Ozbag ↔ İZKO senkron)...');
 
         try {
             $syncService->sync();

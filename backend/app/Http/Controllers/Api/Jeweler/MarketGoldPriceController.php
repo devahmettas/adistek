@@ -21,39 +21,35 @@ class MarketGoldPriceController extends Controller
         private readonly GoldPriceRecordRepository $repository,
     ) {}
 
-    public function live(): JsonResponse
+    public function live(Request $request): JsonResponse
     {
-        $interval = (float) config('gold_prices.sync_interval_seconds', 1);
-        $liveStore = $this->syncService->getLiveStore();
+        $sinceVersion = (int) $request->query('since_version', 0);
+        $timezone = config('gold_prices.timezone', 'Europe/Istanbul');
 
-        if ($liveStore->isFresh($interval)) {
-            $snapshot = $liveStore->getSnapshot();
-            $snapshot['changed'] = false;
+        if ($sinceVersion > 0) {
+            $currentVersion = $this->syncService->getLiveStore()->getVersion();
 
-            return response()->json(['data' => $snapshot]);
+            if ($currentVersion <= $sinceVersion) {
+                return response()
+                    ->json([
+                        'data' => [
+                            'version' => $currentVersion,
+                            'changed' => false,
+                            'server_time' => Carbon::now($timezone)->toIso8601String(),
+                        ],
+                    ])
+                    ->header('Cache-Control', 'no-store');
+            }
         }
 
-        $sync = $this->syncService->sync();
-        $result = $sync['result'];
-        $timezone = config('gold_prices.timezone', 'Europe/Istanbul');
-        $now = Carbon::now($timezone);
+        $snapshot = $this->syncService->getFastSnapshot();
+        $currentVersion = (int) ($snapshot['version'] ?? 0);
 
-        return response()->json([
-            'data' => [
-                'prices' => MarketGoldPricePresenter::formatCollection($sync['prices']),
-                'changed' => $sync['changed'],
-                'stored_count' => $sync['stored_count'],
-                'has_gold_base' => $result->hasGoldBase,
-                'last_sync_at' => $now->toIso8601String(),
-                'server_time' => $now->toIso8601String(),
-                'timezone' => $timezone,
-                'sync_interval_seconds' => (int) config('gold_prices.sync_interval_seconds', 1),
-                'provider' => $result->provider,
-                'source' => $result->source,
-                'version' => $sync['version'],
-                'stream_source' => config('gold_prices.stream_source', 'izko'),
-            ],
-        ]);
+        $snapshot['changed'] = $sinceVersion > 0 && $currentVersion > $sinceVersion;
+
+        return response()
+            ->json(['data' => $snapshot])
+            ->header('Cache-Control', 'no-store');
     }
 
     public function wait(Request $request): JsonResponse

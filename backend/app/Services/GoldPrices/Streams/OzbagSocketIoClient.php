@@ -13,12 +13,13 @@ class OzbagSocketIoClient
 
     private const PATH = '/socket.io/?status=true&EIO=4&transport=websocket';
 
-    public function listen(callable $onHasPrice, ?callable $onDisconnect = null): void
+    public function run(callable $onHasPrice, callable $onIdle, ?callable $onDisconnect = null): void
     {
         $socket = $this->connect();
 
         try {
-            $this->readLoop($socket, $onHasPrice);
+            stream_set_timeout($socket, 1);
+            $this->readLoop($socket, $onHasPrice, $onIdle);
         } catch (\Throwable $exception) {
             if (is_resource($socket)) {
                 fclose($socket);
@@ -30,6 +31,11 @@ class OzbagSocketIoClient
 
             throw $exception;
         }
+    }
+
+    public function listen(callable $onHasPrice, ?callable $onDisconnect = null): void
+    {
+        $this->run($onHasPrice, static function (): void {}, $onDisconnect);
     }
 
     /**
@@ -69,7 +75,7 @@ class OzbagSocketIoClient
             throw new RuntimeException("Ozbag bağlantısı kurulamadı: {$errstr} ({$errno})");
         }
 
-        stream_set_timeout($socket, 30);
+        stream_set_timeout($socket, 1);
         fwrite($socket, $header);
 
         $response = '';
@@ -91,9 +97,11 @@ class OzbagSocketIoClient
     /**
      * @param  resource  $socket
      */
-    private function readLoop($socket, callable $onHasPrice): void
+    private function readLoop($socket, callable $onHasPrice, callable $onIdle): void
     {
         $buffer = '';
+        $lastIdleAt = microtime(true);
+        $idleInterval = (float) config('gold_prices.api_poll_seconds', 1);
 
         while (! feof($socket)) {
             $chunk = fread($socket, 8192);
@@ -104,9 +112,12 @@ class OzbagSocketIoClient
 
             if ($chunk === '') {
                 $meta = stream_get_meta_data($socket);
-                if ($meta['timed_out'] ?? false) {
-                    stream_set_timeout($socket, 30);
+
+                if (($meta['timed_out'] ?? false) && microtime(true) - $lastIdleAt >= $idleInterval) {
+                    $onIdle();
+                    $lastIdleAt = microtime(true);
                 }
+
                 continue;
             }
 

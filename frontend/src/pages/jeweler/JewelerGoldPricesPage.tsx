@@ -7,13 +7,15 @@ import PageHeader from '../../components/PageHeader'
 import {
   getMarketGoldPriceHistory,
   getMarketGoldPricesLive,
+  syncMarketGoldPrices,
   type MarketGoldPriceLatestResponse,
   type MarketGoldPriceRecord,
   type MarketGoldPriceType,
 } from '../../api/jeweler'
 
-const LIVE_POLL_MS = 1000
 const HISTORY_REFRESH_MS = 30_000
+const LIVE_POLL_MS = 400
+const LOCAL_CACHE_KEY = 'adistek_gold_prices_v1'
 const DISPLAY_TIMEZONE = 'Europe/Istanbul'
 
 const GOLD_TYPE_OPTIONS: Array<{ value: MarketGoldPriceType; label: string }> = [
@@ -104,10 +106,15 @@ function normalizePrices(prices: MarketGoldPriceRecord[] | undefined): MarketGol
     .filter((price): price is MarketGoldPriceRecord => Boolean(price))
 }
 
-function pricesSignature(prices: MarketGoldPriceRecord[]): string {
-  return normalizePrices(prices)
+function pricesSignature(
+  prices: MarketGoldPriceRecord[],
+  hasGoldBase?: number | null,
+): string {
+  const base = hasGoldBase ?? 'na'
+
+  return `${base}|${normalizePrices(prices)
     .map((price) => `${price.type}:${price.cash_sell_price}:${price.card_sell_price}`)
-    .join('|')
+    .join('|')}`
 }
 
 function sleep(ms: number): Promise<void> {
@@ -116,8 +123,51 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+function readLocalCache(): MarketGoldPriceLatestResponse | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY)
+    if (!raw) {
+      return null
+    }
+
+    const parsed = JSON.parse(raw) as MarketGoldPriceLatestResponse
+    return parsed.prices?.length ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function writeLocalCache(data: MarketGoldPriceLatestResponse): void {
+  try {
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data))
+  } catch {
+    // localStorage dolu veya devre dışı
+  }
+}
+
+function buildInitialState(): {
+  latest: MarketGoldPriceLatestResponse | null
+  version: number
+  signature: string | null
+} {
+  const cached = readLocalCache()
+
+  if (!cached) {
+    return { latest: null, version: 0, signature: null }
+  }
+
+  const prices = normalizePrices(cached.prices)
+
+  return {
+    latest: { ...cached, prices },
+    version: cached.version ?? 0,
+    signature: pricesSignature(prices, cached.has_gold_base),
+  }
+}
+
 export default function JewelerGoldPricesPage() {
-  const [latest, setLatest] = useState<MarketGoldPriceLatestResponse | null>(null)
+  const initialState = useMemo(() => buildInitialState(), [])
+  const [latest, setLatest] = useState<MarketGoldPriceLatestResponse | null>(initialState.latest)
   const [selectedType, setSelectedType] = useState<MarketGoldPriceType>('ayar_22')
   const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h')
   const [chartPoints, setChartPoints] = useState<Array<{
@@ -125,7 +175,7 @@ export default function JewelerGoldPricesPage() {
     cash_sell_price: number
     card_sell_price: number | null
   }>>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialState.latest)
   const [chartLoading, setChartLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [listening, setListening] = useState(false)
@@ -136,14 +186,22 @@ export default function JewelerGoldPricesPage() {
   const [hasGoldBase, setHasGoldBase] = useState<number | null>(null)
 
   const activeRef = useRef(true)
-  const pollInFlightRef = useRef(false)
-  const previousSignature = useRef<string | null>(null)
+  const versionRef = useRef(initialState.version)
+  const previousSignature = useRef<string | null>(initialState.signature)
   const flashTimer = useRef<number | null>(null)
-  const consecutiveFailures = useRef(0)
+  const pollInFlightRef = useRef(false)
 
-  const applyLiveData = useCallback((data: MarketGoldPriceLatestResponse) => {
+  const applyLiveData = useCallback((data: MarketGoldPriceLatestResponse, options?: { silent?: boolean }) => {
+    if (!data.prices?.length) {
+      return
+    }
+
     const normalizedPrices = normalizePrices(data.prices)
-    const signature = pricesSignature(normalizedPrices)
+    const signature = pricesSignature(normalizedPrices, data.has_gold_base)
+
+    if (typeof data.version === 'number') {
+      versionRef.current = data.version
+    }
 
     setLatest({
       ...data,
@@ -153,7 +211,11 @@ export default function JewelerGoldPricesPage() {
     setLastDisplayedAt(data.last_sync_at ?? data.server_time)
     setHasGoldBase(data.has_gold_base ?? null)
 
-    if (previousSignature.current !== null && previousSignature.current !== signature) {
+    if (
+      !options?.silent
+      && previousSignature.current !== null
+      && previousSignature.current !== signature
+    ) {
       setJustUpdated(true)
       if (flashTimer.current) {
         window.clearTimeout(flashTimer.current)
@@ -162,7 +224,54 @@ export default function JewelerGoldPricesPage() {
     }
 
     previousSignature.current = signature
+    writeLocalCache({
+      ...data,
+      prices: normalizedPrices,
+    })
   }, [])
+
+  const pollLiveOnce = useCallback(async (): Promise<void> => {
+    if (pollInFlightRef.current) {
+      return
+    }
+
+    pollInFlightRef.current = true
+
+    try {
+      const data = await getMarketGoldPricesLive(versionRef.current)
+
+      if (!activeRef.current) {
+        return
+      }
+
+      if (typeof data.version === 'number') {
+        versionRef.current = data.version
+      }
+
+      if (data.prices?.length) {
+        applyLiveData(data)
+        setError(null)
+        setListening(true)
+      }
+    } catch {
+      if (activeRef.current) {
+        setError('Bağlantı yeniden kuruluyor...')
+      }
+    } finally {
+      pollInFlightRef.current = false
+    }
+  }, [applyLiveData])
+
+  const startLivePoll = useCallback(async () => {
+    setListening(true)
+
+    while (activeRef.current) {
+      await pollLiveOnce()
+      await sleep(LIVE_POLL_MS)
+    }
+
+    setListening(false)
+  }, [pollLiveOnce])
 
   const loadHistory = useCallback(async () => {
     setChartLoading(true)
@@ -176,72 +285,21 @@ export default function JewelerGoldPricesPage() {
     }
   }, [period, selectedType])
 
-  const fetchLiveOnce = useCallback(async (): Promise<boolean> => {
-    if (pollInFlightRef.current) {
-      return true
-    }
-
-    pollInFlightRef.current = true
-
-    try {
-      const data = await getMarketGoldPricesLive()
-      applyLiveData(data)
-      consecutiveFailures.current = 0
-      setError(null)
-      setListening(true)
-
-      return data.prices.length > 0
-    } catch {
-      consecutiveFailures.current += 1
-
-      if (consecutiveFailures.current >= 3) {
-        setError('Bağlantı yeniden kuruluyor...')
-      }
-
-      return false
-    } finally {
-      pollInFlightRef.current = false
-    }
-  }, [applyLiveData])
-
-  const runLivePoll = useCallback(async () => {
-    while (activeRef.current) {
-      await fetchLiveOnce()
-      await sleep(LIVE_POLL_MS)
-    }
-
-    setListening(false)
-  }, [fetchLiveOnce])
-
   useEffect(() => {
     activeRef.current = true
 
-    const bootstrap = async () => {
+    const cached = readLocalCache()
+    if (cached) {
+      applyLiveData(cached, { silent: true })
+      setLoading(false)
+    } else {
       setLoading(true)
-
-      try {
-        let loaded = false
-
-        for (let attempt = 0; attempt < 4 && !loaded && activeRef.current; attempt += 1) {
-          loaded = await fetchLiveOnce()
-
-          if (!loaded && attempt < 3) {
-            await sleep(800)
-          }
-        }
-
-        if (!loaded) {
-          setError('Altın fiyatları yüklenemedi. Lütfen birkaç saniye sonra tekrar deneyin.')
-        } else {
-          await loadHistory()
-          void runLivePoll()
-        }
-      } finally {
-        setLoading(false)
-      }
     }
 
-    void bootstrap()
+    void pollLiveOnce().finally(() => {
+      setLoading(false)
+    })
+    void startLivePoll()
 
     const historyTimer = window.setInterval(() => {
       void loadHistory()
@@ -259,7 +317,7 @@ export default function JewelerGoldPricesPage() {
         window.clearTimeout(flashTimer.current)
       }
     }
-  }, [fetchLiveOnce, loadHistory, runLivePoll])
+  }, [applyLiveData, loadHistory, pollLiveOnce, startLivePoll])
 
   useEffect(() => {
     void loadHistory()
@@ -270,13 +328,9 @@ export default function JewelerGoldPricesPage() {
     setError(null)
 
     try {
-      const loaded = await fetchLiveOnce()
-
-      if (!loaded) {
-        setError('Fiyat güncellenemedi.')
-        return
-      }
-
+      await syncMarketGoldPrices()
+      const data = await getMarketGoldPricesLive()
+      applyLiveData(data)
       await loadHistory()
     } catch {
       setError('Fiyat güncellenemedi.')
@@ -299,12 +353,12 @@ export default function JewelerGoldPricesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Altın Fiyatları"
-        description="İZKO kaynağıyla saniyede bir senkron canlı akış"
+        description="İZKO ile senkron — yalnızca fiyat değişince güncellenir"
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
               <span className={`h-2 w-2 rounded-full bg-emerald-500 ${listening ? 'animate-pulse' : ''}`} />
-              {listening ? 'Canlı' : 'Bağlanıyor'}
+              {listening ? 'Canlı dinleme' : 'Bağlanıyor'}
             </span>
             <Button type="button" onClick={() => void handleManualSync()} disabled={syncing}>
               {syncing ? 'Güncelleniyor...' : 'Şimdi Güncelle'}
@@ -327,7 +381,7 @@ export default function JewelerGoldPricesPage() {
           <p>
             Kaynak: <strong>{latest.source}</strong>
             {' · '}
-            Akış: <strong>{latest.stream_source ?? 'izko'}</strong>
+            Akış: <strong>{latest.stream_source ?? 'ozbag'}</strong>
             {hasGoldBase !== null && (
               <>
                 {' · '}
@@ -345,7 +399,7 @@ export default function JewelerGoldPricesPage() {
             {' · '}
             Son veri: <strong>{formatTurkeyDateTime(lastDisplayedAt)}</strong>
             {' · '}
-            Yenileme: her {LIVE_POLL_MS / 1000} saniye
+            Güncelleme: fiyat değişince anında
           </p>
         </div>
       )}
@@ -359,6 +413,10 @@ export default function JewelerGoldPricesPage() {
           <li>
             <strong>K.K Satış (Kredi Kartı Satış):</strong> Müşterinin kredi kartı veya banka kartı ile ödediği
             fiyattır. Kart komisyonu (%5) eklendiği için nakit satıştan genelde daha yüksektir.
+          </li>
+          <li>
+            <strong>Has Altın / Paketli Has:</strong> Ozbag canlı akışı ile anlık güncellenir. Diğer türler İZKO ile
+            aynı anda, has 5 TL hareket edince yenilenir.
           </li>
         </ul>
       </div>
