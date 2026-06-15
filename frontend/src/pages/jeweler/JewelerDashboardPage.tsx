@@ -106,7 +106,7 @@ export default function JewelerDashboardPage() {
           <PanelActionCard to="/dashboard/jeweler/sales" title="Satış Yönetimi" description="Satış kayıtlarını görüntüleyin ve oluşturun." icon="₺" />
           <PanelActionCard to="/dashboard/jeweler/repairs" title="Tamir Takibi" description="Müşteri tamir işlerini takip edin." icon="⚙" />
           <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />
-          <PanelActionCard to="/dashboard/jeweler/barcode" title="Barkod Sistemi" description="Barkod ile ürün sorgulayın." icon="▥" />
+          <PanelActionCard to="/dashboard/jeweler/barcode" title="Barkod Sistemi" description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın." icon="▥" />
           <PanelActionCard to="/dashboard/jeweler/gold-prices" title="Altın Fiyatları" description="Güncel altın alış/satış fiyatlarını kaydedin." icon="★" />
           <PanelActionCard to="/dashboard/jeweler/reports" title="Raporlama" description="Satış ve performans raporları." icon="▦" />
           <PanelActionCard to="/dashboard/jeweler/settings" title="Ayarlar" description="Kuyumcu panel ayarlarını yapılandırın." icon="⚙" />

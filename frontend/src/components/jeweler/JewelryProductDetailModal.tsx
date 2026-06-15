@@ -4,6 +4,8 @@ import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 import { formatJewelryMoney, resolveProductMetalMetrics } from '../../utils/jewelryPrice'
 import type { JewelryProduct, MarketGoldPriceRecord } from '../../api/jeweler'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import ProductBarcode from './ProductBarcode'
+import { printJewelryBarcodeLabel, toJewelryBarcodeLabel } from '../../utils/jewelryBarcodePrint'
 
 interface JewelryProductDetailModalProps {
   product: JewelryProduct
@@ -38,6 +40,12 @@ export default function JewelryProductDetailModal({
     [product, categoryName, goldPrices],
   )
 
+  const handlePrintLabel = () => {
+    const label = toJewelryBarcodeLabel(product)
+    if (!label) return
+    void printJewelryBarcodeLabel(label)
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 lg:items-center lg:p-6"
@@ -63,7 +71,8 @@ export default function JewelryProductDetailModal({
         </button>
 
         <div className="min-h-0 flex-1 overflow-y-auto lg:flex lg:flex-row lg:overflow-hidden">
-          <div className="flex aspect-[4/3] shrink-0 items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-5 sm:p-6 lg:aspect-auto lg:h-full lg:w-[44%] lg:border-r lg:border-slate-100 lg:p-8">
+          <div className="relative flex aspect-[4/3] shrink-0 items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-5 sm:p-6 lg:aspect-auto lg:h-full lg:w-[44%] lg:border-r lg:border-slate-100 lg:p-8">
+            <ProductBarcode value={product.barcode} size="sm" corner="top-right" />
             {previewUrl ? (
               <img
                 src={previewUrl}
@@ -152,10 +161,11 @@ export default function JewelryProductDetailModal({
                   <dd className="font-medium text-slate-900">%{product.profit_rate ?? '0'}</dd>
                 </div>
                 {product.barcode && (
-                  <div className="col-span-2 lg:col-span-1">
+                  <div className="col-span-2 lg:col-span-3">
                     <dt className="text-slate-500">Barkod</dt>
-                    <dd className="break-all font-mono text-xs font-medium text-amber-800 lg:text-sm">
-                      {product.barcode}
+                    <dd className="mt-1 space-y-1">
+                      <ProductBarcode value={product.barcode} size="sm" showValue />
+                      <p className="break-all font-mono text-[10px] text-slate-500">{product.barcode}</p>
                     </dd>
                   </div>
                 )}
@@ -187,6 +197,11 @@ export default function JewelryProductDetailModal({
               >
                 Satış / Sepete Ekle
               </Button>
+              {product.barcode && (
+                <Button type="button" variant="secondary" onClick={handlePrintLabel}>
+                  Şerit Yazdır
+                </Button>
+              )}
               <Button type="button" variant="secondary" className="lg:w-auto" onClick={onClose}>
                 Kapat
               </Button>

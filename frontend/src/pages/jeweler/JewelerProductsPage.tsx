@@ -6,6 +6,8 @@ import Input from '../../components/Input'
 import MoneyInput from '../../components/MoneyInput'
 import JewelryProductDetailModal from '../../components/jeweler/JewelryProductDetailModal'
 import JewelryProductSaleModal from '../../components/jeweler/JewelryProductSaleModal'
+import ProductBarcode from '../../components/jeweler/ProductBarcode'
+import { printJewelryBarcodeLabel, toJewelryBarcodeLabel } from '../../utils/jewelryBarcodePrint'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import PageSubNav from '../../components/PageSubNav'
@@ -695,7 +697,8 @@ export default function JewelerProductsPage() {
                     onClick={() => setDetailProduct(product)}
                     className="flex flex-1 cursor-pointer flex-col text-left"
                   >
-                    <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
+                    <div className="relative flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
+                      <ProductBarcode value={product.barcode} corner="top-right" />
                       {previewUrl ? (
                         <img
                           src={previewUrl}
@@ -741,6 +744,20 @@ export default function JewelerProductsPage() {
                     >
                       Düzenle
                     </Button>
+                    {product.barcode && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => {
+                          const label = toJewelryBarcodeLabel(product)
+                          if (label) void printJewelryBarcodeLabel(label)
+                        }}
+                      >
+                        Yazdır
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"
