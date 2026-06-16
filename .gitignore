@@ -1,2 +1,7 @@
 composer.phar
 composer-setup.php
+
+# Frontend production build (npm run build)
+/assets/
+/favicon.svg
+/apple-touch-icon.svg
