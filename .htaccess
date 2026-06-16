@@ -1,7 +1,13 @@
+<IfModule mod_mime.c>
+    AddType application/javascript js mjs
+    AddType text/css css
+    AddType image/svg+xml svg svgz
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
 
-    # API / Laravel
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
@@ -11,19 +17,23 @@
     RewriteRule ^up$ index.php [L]
     RewriteRule ^api(/|$) index.php [L]
 
-    # Yüklenen dosyalar (storage:link alternatifi)
-    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
     RewriteRule ^storage/(.*)$ backend/storage/app/public/$1 [L]
 
-    # Kaynak klasörlerine doğrudan erişimi kapat
     RewriteRule ^(?:backend|frontend)(/|$) - [F,L]
 
-    # Mevcut dosya ve klasörler
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
+    # Build çıktıları — var olan dosyayı doğrudan sun
+    RewriteRule ^assets/ - [L]
+    RewriteRule ^(favicon\.svg|apple-touch-icon\.svg)$ - [L]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -d
     RewriteRule ^ - [L]
 
-    # React SPA
+    # Eksik JS/CSS dosyası için index.html dönme (MIME hatasını önler)
+    RewriteCond %{REQUEST_URI} \.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$ [NC]
+    RewriteRule ^ - [R=404,L]
+
     RewriteRule ^ index.html [L]
 </IfModule>
 

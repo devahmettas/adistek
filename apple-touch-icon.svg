@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Adistek">
+  <rect width="180" height="180" rx="40" fill="#0f766e"/>
+  <path
+    fill="#ffffff"
+    d="M90 40 136.5 138h-18.9l-8.75-22.25h-43.4l-8.75 22.25H43.5L90 40zm0 34.35-13.85 35.2h27.7L90 74.35z"
+  />
+  <circle cx="138" cy="45" r="12.5" fill="#5eead4"/>
+</svg>
