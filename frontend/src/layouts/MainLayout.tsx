@@ -70,15 +70,17 @@ export default function MainLayout() {
   const { restaurant } = useAuth()
   const isJeweler = isJewelerBusiness(restaurant?.business_type)
 
-  return (
-    <DashboardProvider>
-      {isJeweler ? (
-        <JewelrySaleCartProvider>
-          <MainLayoutContent />
-        </JewelrySaleCartProvider>
-      ) : (
-        <MainLayoutContent />
-      )}
-    </DashboardProvider>
+  const layout = isJeweler ? (
+    <JewelrySaleCartProvider>
+      <MainLayoutContent />
+    </JewelrySaleCartProvider>
+  ) : (
+    <MainLayoutContent />
   )
+
+  if (isJeweler) {
+    return layout
+  }
+
+  return <DashboardProvider>{layout}</DashboardProvider>
 }
