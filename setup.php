@@ -35,7 +35,7 @@ function h(string $value): string
 function runArtisan(string $basePath, string $command): array
 {
     if (! function_exists('exec')) {
-        return ['', 1, 'exec() sunucuda kapalı'];
+        return ['', 1];
     }
 
     $php = PHP_BINARY ?: 'php';
@@ -44,63 +44,70 @@ function runArtisan(string $basePath, string $command): array
     $code = 0;
     exec('cd '.escapeshellarg($basePath).' && '.$full, $output, $code);
 
-    return [implode("\n", $output), $code, ''];
+    return [implode("\n", $output), $code];
 }
 
-$defaults = [
+function installEnv(string $basePath, string $exampleFile, string $envFile, array $config): array
+{
+    $template = file_get_contents($exampleFile);
+    $appKey = 'base64:'.base64_encode(random_bytes(32));
+    $host = parse_url($config['app_url'], PHP_URL_HOST) ?: 'adistek.polleyndigitale.com';
+
+    $replacements = [
+        'APP_KEY=' => 'APP_KEY='.$appKey,
+        'APP_URL=https://adistek.polleyndigitale.com' => 'APP_URL='.$config['app_url'],
+        'DB_HOST=localhost' => 'DB_HOST='.$config['db_host'],
+        'DB_PORT=3306' => 'DB_PORT='.$config['db_port'],
+        'DB_DATABASE=' => 'DB_DATABASE='.$config['db_database'],
+        'DB_USERNAME=' => 'DB_USERNAME='.$config['db_username'],
+        'DB_PASSWORD=' => 'DB_PASSWORD='.$config['db_password'],
+        'SANCTUM_STATEFUL_DOMAINS=adistek.polleyndigitale.com' => 'SANCTUM_STATEFUL_DOMAINS='.$host,
+    ];
+
+    $envContent = str_replace(array_keys($replacements), array_values($replacements), $template);
+
+    if (file_put_contents($envFile, $envContent) === false) {
+        return ['ok' => false, 'errors' => ['backend/.env yazılamadı. backend/ klasör izinlerini kontrol edin.']];
+    }
+
+    [$migrateOut, $migrateCode] = runArtisan($basePath, 'migrate --force');
+    [$linkOut, $linkCode] = runArtisan($basePath, 'storage:link');
+
+    return [
+        'ok' => true,
+        'errors' => [],
+        'migrate' => ['ok' => $migrateCode === 0, 'output' => $migrateOut],
+        'storage_link' => ['ok' => $linkCode === 0, 'output' => $linkOut],
+    ];
+}
+
+$config = [
     'app_url' => 'https://adistek.polleyndigitale.com',
     'db_host' => 'localhost',
     'db_port' => '3306',
-    'db_database' => '',
-    'db_username' => '',
-    'db_password' => '',
+    'db_database' => 'polleynd_adistek',
+    'db_username' => 'polleynd_adistek',
+    'db_password' => '3451x58x35',
 ];
+
 $errors = [];
 $result = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $defaults['app_url'] = trim($_POST['app_url'] ?? $defaults['app_url']);
-    $defaults['db_host'] = trim($_POST['db_host'] ?? $defaults['db_host']);
-    $defaults['db_port'] = trim($_POST['db_port'] ?? $defaults['db_port']);
-    $defaults['db_database'] = trim($_POST['db_database'] ?? '');
-    $defaults['db_username'] = trim($_POST['db_username'] ?? '');
-    $defaults['db_password'] = (string) ($_POST['db_password'] ?? '');
+    $config['app_url'] = trim($_POST['app_url'] ?? $config['app_url']);
+    $config['db_host'] = trim($_POST['db_host'] ?? $config['db_host']);
+    $config['db_port'] = trim($_POST['db_port'] ?? $config['db_port']);
+    $config['db_database'] = trim($_POST['db_database'] ?? $config['db_database']);
+    $config['db_username'] = trim($_POST['db_username'] ?? $config['db_username']);
+    $config['db_password'] = (string) ($_POST['db_password'] ?? $config['db_password']);
+}
 
-    if ($defaults['db_database'] === '') {
-        $errors[] = 'Veritabanı adı zorunlu.';
-    }
-    if ($defaults['db_username'] === '') {
-        $errors[] = 'Veritabanı kullanıcı adı zorunlu.';
-    }
-
-    if ($errors === []) {
-        $template = file_get_contents($exampleFile);
-        $appKey = 'base64:'.base64_encode(random_bytes(32));
-
-        $replacements = [
-            'APP_KEY=' => 'APP_KEY='.$appKey,
-            'APP_URL=https://adistek.polleyndigitale.com' => 'APP_URL='.$defaults['app_url'],
-            'DB_HOST=localhost' => 'DB_HOST='.$defaults['db_host'],
-            'DB_PORT=3306' => 'DB_PORT='.$defaults['db_port'],
-            'DB_DATABASE=' => 'DB_DATABASE='.$defaults['db_database'],
-            'DB_USERNAME=' => 'DB_USERNAME='.$defaults['db_username'],
-            'DB_PASSWORD=' => 'DB_PASSWORD='.$defaults['db_password'],
-            'SANCTUM_STATEFUL_DOMAINS=adistek.polleyndigitale.com' => 'SANCTUM_STATEFUL_DOMAINS='.parse_url($defaults['app_url'], PHP_URL_HOST),
-        ];
-
-        $envContent = str_replace(array_keys($replacements), array_values($replacements), $template);
-
-        if (file_put_contents($envFile, $envContent) === false) {
-            $errors[] = 'backend/.env yazılamadı. Klasör izinlerini kontrol edin.';
-        } else {
-            [$migrateOut, $migrateCode] = runArtisan($basePath, 'migrate --force');
-            [$linkOut, $linkCode] = runArtisan($basePath, 'storage:link');
-
-            $result = [
-                'migrate' => ['ok' => $migrateCode === 0, 'output' => $migrateOut],
-                'storage_link' => ['ok' => $linkCode === 0, 'output' => $linkOut],
-            ];
-        }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || ($_SERVER['REQUEST_METHOD'] === 'GET' && ! isset($_GET['form']))) {
+    if ($config['db_database'] === '' || $config['db_username'] === '') {
+        $errors[] = 'Veritabanı bilgileri eksik.';
+    } else {
+        $result = installEnv($basePath, $exampleFile, $envFile, $config);
+        $errors = $result['errors'];
     }
 }
 
@@ -124,7 +131,6 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
   <h1>Adistek sunucu kurulumu</h1>
-  <p>Hosting panelinizdeki MySQL bilgilerini girin. Bu sayfa <code>backend/.env</code> dosyasını oluşturur.</p>
 
   <?php if ($errors !== []): ?>
     <div class="error">
@@ -134,11 +140,12 @@ header('Content-Type: text/html; charset=utf-8');
     </div>
   <?php endif; ?>
 
-  <?php if ($result !== null && $errors === []): ?>
+  <?php if ($result !== null && ($result['ok'] ?? false)): ?>
     <div class="ok">
-      <strong>.env oluşturuldu ve APP_KEY üretildi.</strong>
-      <p>Kurulumdan sonra <strong>setup.php</strong> ve <strong>diag.php</strong> dosyalarını silin.</p>
-      <p><a href="/">Ana sayfaya git ve giriş dene</a> · <a href="/up">/up kontrolü</a></p>
+      <strong>Kurulum tamamlandı.</strong>
+      <p>Veritabanı: <code><?= h($config['db_database']) ?></code></p>
+      <p><a href="/">Ana sayfaya git ve giriş dene</a> · <a href="/up">/up kontrolü</a> · <a href="/diag.php">diag.php</a></p>
+      <p>Kurulumdan sonra <strong>setup.php</strong> dosyasını silin.</p>
     </div>
     <h2>Migration</h2>
     <pre><?= h($result['migrate']['output'] ?: ($result['migrate']['ok'] ? 'OK' : 'Çalıştırılamadı')) ?></pre>
@@ -147,25 +154,28 @@ header('Content-Type: text/html; charset=utf-8');
     <?php endif; ?>
     <h2>Storage link</h2>
     <pre><?= h($result['storage_link']['output'] ?: ($result['storage_link']['ok'] ? 'OK' : 'Atlandı / zaten var')) ?></pre>
+  <?php elseif ($result === null): ?>
+    <p>Veritabanı bilgileri hazır. Sayfa yüklenirken kurulum otomatik başlayacak.</p>
+    <p><a href="/setup.php">Kurulumu yeniden çalıştır</a></p>
   <?php else: ?>
     <form method="post">
-      <label for="app_url">Site adresi (APP_URL)</label>
-      <input id="app_url" name="app_url" value="<?= h($defaults['app_url']) ?>" required />
+      <label for="app_url">Site adresi</label>
+      <input id="app_url" name="app_url" value="<?= h($config['app_url']) ?>" required />
 
       <label for="db_host">Veritabanı sunucusu</label>
-      <input id="db_host" name="db_host" value="<?= h($defaults['db_host']) ?>" required />
+      <input id="db_host" name="db_host" value="<?= h($config['db_host']) ?>" required />
 
       <label for="db_port">Port</label>
-      <input id="db_port" name="db_port" value="<?= h($defaults['db_port']) ?>" required />
+      <input id="db_port" name="db_port" value="<?= h($config['db_port']) ?>" required />
 
       <label for="db_database">Veritabanı adı</label>
-      <input id="db_database" name="db_database" value="<?= h($defaults['db_database']) ?>" required />
+      <input id="db_database" name="db_database" value="<?= h($config['db_database']) ?>" required />
 
       <label for="db_username">Kullanıcı adı</label>
-      <input id="db_username" name="db_username" value="<?= h($defaults['db_username']) ?>" required />
+      <input id="db_username" name="db_username" value="<?= h($config['db_username']) ?>" required />
 
       <label for="db_password">Şifre</label>
-      <input id="db_password" name="db_password" type="password" value="<?= h($defaults['db_password']) ?>" />
+      <input id="db_password" name="db_password" type="password" value="<?= h($config['db_password']) ?>" />
 
       <button type="submit">Kurulumu tamamla</button>
     </form>
