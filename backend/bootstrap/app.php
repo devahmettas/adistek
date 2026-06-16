@@ -18,9 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+
+        $middleware->trustProxies(at: '*');
 
         $middleware->alias([
             'restaurant' => \App\Http\Middleware\EnsureRestaurant::class,
