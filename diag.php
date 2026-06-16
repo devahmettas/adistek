@@ -110,11 +110,12 @@ if ($failed === 0) {
     echo "Bu dosyayı (diag.php) güvenlik için silin.\n";
 } else {
     echo "{$failed} sorun bulundu. Yukarıdaki [HATA] satırlarını düzeltin.\n";
-    echo "Tipik çözüm:\n";
-    echo "  cd backend\n";
-    echo "  cp .env.production.example .env\n";
-    echo "  composer install --no-dev\n";
-    echo "  php artisan key:generate\n";
-    echo "  php artisan migrate --force\n";
-    echo "  chmod -R 775 storage bootstrap/cache\n";
+    if (! is_file($basePath.'/.env')) {
+        echo "Hızlı çözüm: https://".($_SERVER['HTTP_HOST'] ?? 'alan-adiniz.com')."/setup.php\n";
+    } else {
+        echo "Tipik çözüm:\n";
+        echo "  cd backend\n";
+        echo "  php artisan key:generate\n";
+        echo "  php artisan migrate --force\n";
+    }
 }

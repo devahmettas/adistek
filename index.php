@@ -24,7 +24,7 @@ if (! is_file($envFile)) {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'error' => 'backend/.env dosyası bulunamadı.',
-        'fix' => 'backend/.env.production.example dosyasını backend/.env olarak kopyalayıp doldurun, sonra php artisan key:generate',
+        'fix' => 'Tarayıcıda /setup.php adresini açıp veritabanı bilgilerini girin.',
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

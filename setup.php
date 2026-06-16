@@ -1,0 +1,174 @@
+<?php
+
+declare(strict_types=1);
+
+$basePath = __DIR__.'/backend';
+$envFile = $basePath.'/.env';
+$exampleFile = $basePath.'/.env.production.example';
+
+if (! is_file($basePath.'/vendor/autoload.php')) {
+    http_response_code(503);
+    exit('Önce backend/vendor klasörünün sunucuda olduğundan emin olun.');
+}
+
+if (is_file($envFile)) {
+    http_response_code(200);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="tr"><body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px">';
+    echo '<h1>Kurulum tamamlanmış</h1>';
+    echo '<p><code>backend/.env</code> zaten mevcut. Giriş deneyebilirsiniz.</p>';
+    echo '<p>Güvenlik için <strong>setup.php</strong> ve <strong>diag.php</strong> dosyalarını silin.</p>';
+    echo '<p><a href="/">Ana sayfaya git</a></p></body></html>';
+    exit;
+}
+
+if (! is_file($exampleFile)) {
+    http_response_code(500);
+    exit('backend/.env.production.example bulunamadı.');
+}
+
+function h(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function runArtisan(string $basePath, string $command): array
+{
+    if (! function_exists('exec')) {
+        return ['', 1, 'exec() sunucuda kapalı'];
+    }
+
+    $php = PHP_BINARY ?: 'php';
+    $full = escapeshellarg($php).' '.escapeshellarg($basePath.'/artisan').' '.$command.' 2>&1';
+    $output = [];
+    $code = 0;
+    exec('cd '.escapeshellarg($basePath).' && '.$full, $output, $code);
+
+    return [implode("\n", $output), $code, ''];
+}
+
+$defaults = [
+    'app_url' => 'https://adistek.polleyndigitale.com',
+    'db_host' => 'localhost',
+    'db_port' => '3306',
+    'db_database' => '',
+    'db_username' => '',
+    'db_password' => '',
+];
+$errors = [];
+$result = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $defaults['app_url'] = trim($_POST['app_url'] ?? $defaults['app_url']);
+    $defaults['db_host'] = trim($_POST['db_host'] ?? $defaults['db_host']);
+    $defaults['db_port'] = trim($_POST['db_port'] ?? $defaults['db_port']);
+    $defaults['db_database'] = trim($_POST['db_database'] ?? '');
+    $defaults['db_username'] = trim($_POST['db_username'] ?? '');
+    $defaults['db_password'] = (string) ($_POST['db_password'] ?? '');
+
+    if ($defaults['db_database'] === '') {
+        $errors[] = 'Veritabanı adı zorunlu.';
+    }
+    if ($defaults['db_username'] === '') {
+        $errors[] = 'Veritabanı kullanıcı adı zorunlu.';
+    }
+
+    if ($errors === []) {
+        $template = file_get_contents($exampleFile);
+        $appKey = 'base64:'.base64_encode(random_bytes(32));
+
+        $replacements = [
+            'APP_KEY=' => 'APP_KEY='.$appKey,
+            'APP_URL=https://adistek.polleyndigitale.com' => 'APP_URL='.$defaults['app_url'],
+            'DB_HOST=localhost' => 'DB_HOST='.$defaults['db_host'],
+            'DB_PORT=3306' => 'DB_PORT='.$defaults['db_port'],
+            'DB_DATABASE=' => 'DB_DATABASE='.$defaults['db_database'],
+            'DB_USERNAME=' => 'DB_USERNAME='.$defaults['db_username'],
+            'DB_PASSWORD=' => 'DB_PASSWORD='.$defaults['db_password'],
+            'SANCTUM_STATEFUL_DOMAINS=adistek.polleyndigitale.com' => 'SANCTUM_STATEFUL_DOMAINS='.parse_url($defaults['app_url'], PHP_URL_HOST),
+        ];
+
+        $envContent = str_replace(array_keys($replacements), array_values($replacements), $template);
+
+        if (file_put_contents($envFile, $envContent) === false) {
+            $errors[] = 'backend/.env yazılamadı. Klasör izinlerini kontrol edin.';
+        } else {
+            [$migrateOut, $migrateCode] = runArtisan($basePath, 'migrate --force');
+            [$linkOut, $linkCode] = runArtisan($basePath, 'storage:link');
+
+            $result = [
+                'migrate' => ['ok' => $migrateCode === 0, 'output' => $migrateOut],
+                'storage_link' => ['ok' => $linkCode === 0, 'output' => $linkOut],
+            ];
+        }
+    }
+}
+
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adistek Kurulum</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #0f172a; }
+    label { display: block; font-weight: 600; margin: 16px 0 6px; }
+    input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    button { margin-top: 20px; background: #0f766e; color: #fff; border: 0; border-radius: 8px; padding: 12px 16px; font-weight: 600; cursor: pointer; }
+    .error { background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .ok { background: #ecfdf5; color: #065f46; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    pre { background: #f8fafc; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Adistek sunucu kurulumu</h1>
+  <p>Hosting panelinizdeki MySQL bilgilerini girin. Bu sayfa <code>backend/.env</code> dosyasını oluşturur.</p>
+
+  <?php if ($errors !== []): ?>
+    <div class="error">
+      <?php foreach ($errors as $error): ?>
+        <div><?= h($error) ?></div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($result !== null && $errors === []): ?>
+    <div class="ok">
+      <strong>.env oluşturuldu ve APP_KEY üretildi.</strong>
+      <p>Kurulumdan sonra <strong>setup.php</strong> ve <strong>diag.php</strong> dosyalarını silin.</p>
+      <p><a href="/">Ana sayfaya git ve giriş dene</a> · <a href="/up">/up kontrolü</a></p>
+    </div>
+    <h2>Migration</h2>
+    <pre><?= h($result['migrate']['output'] ?: ($result['migrate']['ok'] ? 'OK' : 'Çalıştırılamadı')) ?></pre>
+    <?php if (! $result['migrate']['ok']): ?>
+      <p>Terminal varsa: <code>cd backend && php artisan migrate --force</code></p>
+    <?php endif; ?>
+    <h2>Storage link</h2>
+    <pre><?= h($result['storage_link']['output'] ?: ($result['storage_link']['ok'] ? 'OK' : 'Atlandı / zaten var')) ?></pre>
+  <?php else: ?>
+    <form method="post">
+      <label for="app_url">Site adresi (APP_URL)</label>
+      <input id="app_url" name="app_url" value="<?= h($defaults['app_url']) ?>" required />
+
+      <label for="db_host">Veritabanı sunucusu</label>
+      <input id="db_host" name="db_host" value="<?= h($defaults['db_host']) ?>" required />
+
+      <label for="db_port">Port</label>
+      <input id="db_port" name="db_port" value="<?= h($defaults['db_port']) ?>" required />
+
+      <label for="db_database">Veritabanı adı</label>
+      <input id="db_database" name="db_database" value="<?= h($defaults['db_database']) ?>" required />
+
+      <label for="db_username">Kullanıcı adı</label>
+      <input id="db_username" name="db_username" value="<?= h($defaults['db_username']) ?>" required />
+
+      <label for="db_password">Şifre</label>
+      <input id="db_password" name="db_password" type="password" value="<?= h($defaults['db_password']) ?>" />
+
+      <button type="submit">Kurulumu tamamla</button>
+    </form>
+  <?php endif; ?>
+</body>
+</html>
