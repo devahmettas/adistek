@@ -37,6 +37,7 @@ interface JewelryProductSaleModalProps {
   onSuccess?: () => void
   variant?: 'standalone' | 'form'
   reservedQuantity?: number
+  extraStock?: number
   onAddToForm?: (payload: { quantity: number; unit_price: number }) => void
 }
 
@@ -47,6 +48,7 @@ export default function JewelryProductSaleModal({
   onSuccess,
   variant = 'standalone',
   reservedQuantity = 0,
+  extraStock = 0,
   onAddToForm,
 }: JewelryProductSaleModalProps) {
   useBodyScrollLock(true)
@@ -55,7 +57,7 @@ export default function JewelryProductSaleModal({
   const catalogPrice = Number(product.sale_price)
   const previewUrl = resolveMenuAssetUrl(null, product.image_path)
   const reservedInCart = variant === 'standalone' ? getReservedQuantity(product.id) : 0
-  const availableStock = Math.max(0, product.stock_quantity - reservedInCart - reservedQuantity)
+  const availableStock = Math.max(0, product.stock_quantity - reservedInCart - reservedQuantity + extraStock)
 
   const [quantity, setQuantity] = useState('1')
   const [salePrice, setSalePrice] = useState('')

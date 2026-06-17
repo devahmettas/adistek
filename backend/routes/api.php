@@ -172,6 +172,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::get('/sales', [JewelrySaleController::class, 'index']);
     Route::post('/sales', [JewelrySaleController::class, 'store']);
     Route::get('/sales/{sale}', [JewelrySaleController::class, 'show']);
+    Route::put('/sales/{sale}', [JewelrySaleController::class, 'update']);
 
     Route::get('/purchases', [JewelryPurchaseController::class, 'index']);
     Route::post('/purchases', [JewelryPurchaseController::class, 'store']);

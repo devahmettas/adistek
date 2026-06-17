@@ -77,11 +77,11 @@ export default function JewelerPurchaseHistorySection({
               const itemLabels = (purchase.items ?? []).map((item) => item.item_description).join(' · ')
 
               return (
-                <li key={purchase.id}>
+                <li key={purchase.id} className="flex items-stretch gap-2 py-4 sm:px-2">
                   <button
                     type="button"
                     onClick={() => setSelectedPurchase(purchase)}
-                    className="flex w-full flex-col gap-2 py-4 text-left transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:px-2"
+                    className="flex min-w-0 flex-1 flex-col gap-2 text-left transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:rounded-xl sm:px-2 sm:py-1"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -103,6 +103,15 @@ export default function JewelerPurchaseHistorySection({
                       <p className="mt-1 text-xs text-slate-500">Detay →</p>
                     </div>
                   </button>
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(purchase)}
+                      className="shrink-0 self-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      Düzenle
+                    </button>
+                  )}
                 </li>
               )
             })}

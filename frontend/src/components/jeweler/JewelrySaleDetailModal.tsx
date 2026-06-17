@@ -9,9 +9,10 @@ import { formatPanelMoney } from '../restaurant/ManagementPanelWidgets'
 interface JewelrySaleDetailModalProps {
   sale: JewelrySale
   onClose: () => void
+  onEdit?: () => void
 }
 
-export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDetailModalProps) {
+export default function JewelrySaleDetailModal({ sale, onClose, onEdit }: JewelrySaleDetailModalProps) {
   useBodyScrollLock(true)
 
   const itemCount = (sale.items ?? []).reduce((sum, item) => sum + item.quantity, 0)
@@ -151,9 +152,16 @@ export default function JewelrySaleDetailModal({ sale, onClose }: JewelrySaleDet
               </>
             )}
           </dl>
-          <Button type="button" variant="secondary" className="mt-4" onClick={onClose}>
-            Kapat
-          </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {onEdit && (
+              <Button type="button" onClick={onEdit}>
+                Düzenle
+              </Button>
+            )}
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Kapat
+            </Button>
+          </div>
         </div>
       </div>
     </div>

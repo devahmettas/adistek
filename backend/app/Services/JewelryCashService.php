@@ -124,6 +124,32 @@ class JewelryCashService
         $existing?->delete();
     }
 
+    public function syncSaleCash(int $restaurantId, JewelrySale $sale): void
+    {
+        $existing = JewelryCashTransaction::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('sale_id', $sale->id)
+            ->first();
+
+        if ($sale->payment_method === 'cash' && (float) $sale->total > 0) {
+            if ($existing) {
+                $existing->update([
+                    'amount' => round((float) $sale->total, 2),
+                    'notes' => "Satış #{$sale->sale_number}",
+                    'created_at' => $sale->sold_at ?? $existing->created_at,
+                ]);
+
+                return;
+            }
+
+            $this->recordSale($restaurantId, $sale);
+
+            return;
+        }
+
+        $existing?->delete();
+    }
+
     public function findForRestaurant(int $restaurantId, int $id): JewelryCashTransaction
     {
         $transaction = JewelryCashTransaction::query()

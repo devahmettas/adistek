@@ -266,11 +266,12 @@ export default function JewelerPurchasesPage() {
 
     try {
       if (editingId) {
-        await updateJewelryPurchase(editingId, payload)
+        const updated = await updateJewelryPurchase(editingId, payload)
+        startEdit(updated)
       } else {
-        await createJewelryPurchase(payload)
+        const saved = await createJewelryPurchase(payload)
+        startEdit(saved)
       }
-      resetForm()
       await load()
     } catch {
       setError(editingId ? 'Alım kaydı güncellenemedi.' : 'Alım kaydı oluşturulamadı.')
@@ -342,6 +343,14 @@ export default function JewelerPurchasesPage() {
           onExternalBarcodeHandled={() => setExternalBarcodeCode(null)}
           pendingProductId={pendingSaleProductId}
           onPendingProductHandled={() => setPendingSaleProductId(null)}
+          editSaleId={editParam ? Number(editParam) : null}
+          onEditSaleHandled={() => {
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current)
+              next.delete('edit')
+              return next
+            }, { replace: true })
+          }}
           onCatalogLoaded={setSaleCatalog}
         />
       ) : (

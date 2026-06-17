@@ -31,7 +31,7 @@ export default function JewelerTransactionHistoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="İşlem Geçmişi"
-        description="Geçmiş satış ve alım kayıtlarını filtreleyin, detaylarını inceleyin."
+        description="Kayıtlı satış ve alım işlemlerini inceleyin, hatalı kayıtları düzenleyin."
         actions={(
           <Link
             to={tab === 'purchases' ? '/dashboard/jeweler/purchases' : '/dashboard/jeweler/purchases?mode=sale'}
@@ -69,7 +69,11 @@ export default function JewelerTransactionHistoryPage() {
         })}
       </div>
 
-      {tab === 'sales' ? <JewelerSalesSection /> : (
+      {tab === 'sales' ? (
+        <JewelerSalesSection
+          onEdit={(sale) => navigate(`/dashboard/jeweler/purchases?mode=sale&edit=${sale.id}`)}
+        />
+      ) : (
         <JewelerPurchaseHistorySection
           onEdit={(purchase) => navigate(`/dashboard/jeweler/purchases?edit=${purchase.id}`)}
         />

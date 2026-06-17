@@ -58,6 +58,31 @@ class JewelrySaleController extends Controller
         return response()->json(['data' => $sale], 201);
     }
 
+    public function update(Request $request, JewelrySale $sale): JsonResponse
+    {
+        $this->ensureOwnership($request, $sale);
+
+        $data = $request->validate([
+            'customer_id' => ['nullable', 'integer', 'exists:jewelry_customers,id'],
+            'payment_method' => ['sometimes', Rule::in(JewelryPaymentMethod::values())],
+            'discount' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string'],
+            'sold_at' => ['nullable', 'date'],
+            'items' => ['sometimes', 'array', 'min:1'],
+            'items.*.product_id' => ['nullable', 'integer', 'exists:jewelry_products,id'],
+            'items.*.product_name' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.weight_gram' => ['nullable', 'numeric', 'min:0'],
+            'items.*.labor_cost' => ['nullable', 'numeric', 'min:0'],
+            'items.*.line_total' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $updated = $this->service->update($this->restaurantId($request), $sale->id, $data);
+
+        return response()->json(['data' => $updated]);
+    }
+
     private function ensureOwnership(Request $request, JewelrySale $sale): void
     {
         if ($sale->restaurant_id !== $this->restaurantId($request)) {

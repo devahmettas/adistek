@@ -112,6 +112,109 @@ class JewelrySaleService
         });
     }
 
+    public function update(int $restaurantId, int $id, array $data): JewelrySale
+    {
+        return DB::transaction(function () use ($restaurantId, $id, $data) {
+            $sale = $this->findForRestaurant($restaurantId, $id);
+            $items = $data['items'] ?? null;
+            unset($data['items']);
+
+            if ($items !== null) {
+                foreach ($sale->items as $oldItem) {
+                    if (! $oldItem->product_id) {
+                        continue;
+                    }
+
+                    $product = $this->productService->findForRestaurant(
+                        $restaurantId,
+                        (int) $oldItem->product_id,
+                    );
+
+                    $this->productService->adjustStock(
+                        $restaurantId,
+                        $product->id,
+                        (int) $oldItem->quantity,
+                        JewelryStockMovementType::Return,
+                        "Satış düzenleme geri alma #{$sale->sale_number}",
+                    );
+
+                    $laborCost = (float) ($oldItem->labor_cost ?? $product->labor_cost);
+                    $fifoUnitCost = max(0, round((float) $oldItem->unit_cost - $laborCost, 2));
+                    if ($fifoUnitCost <= 0) {
+                        $fifoUnitCost = max(0, round((float) $product->purchase_price, 2));
+                    }
+
+                    $this->inventoryCostService->addLot(
+                        $product,
+                        (int) $oldItem->quantity,
+                        $fifoUnitCost,
+                        null,
+                        $sale->sold_at,
+                    );
+                }
+
+                $sale->items()->delete();
+
+                $subtotal = 0.0;
+                foreach ($items as $item) {
+                    $subtotal += (float) $item['line_total'];
+
+                    $unitCost = 0.0;
+                    $lineCost = 0.0;
+                    $product = null;
+
+                    if (! empty($item['product_id'])) {
+                        $product = $this->productService->findForRestaurant(
+                            $restaurantId,
+                            (int) $item['product_id'],
+                        );
+                        $allocated = $this->inventoryCostService->allocateSaleCost(
+                            $product,
+                            (int) $item['quantity'],
+                        );
+                        $unitCost = $allocated['unit_cost_with_labor'];
+                        $lineCost = $allocated['line_cost_with_labor'];
+                    }
+
+                    JewelrySaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $item['product_id'] ?? null,
+                        'product_name' => $item['product_name'],
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'unit_cost' => $unitCost,
+                        'line_cost' => $lineCost,
+                        'weight_gram' => $item['weight_gram'] ?? null,
+                        'labor_cost' => $item['labor_cost'] ?? 0,
+                        'line_total' => $item['line_total'],
+                    ]);
+
+                    if ($product !== null) {
+                        $this->productService->adjustStock(
+                            $restaurantId,
+                            $product->id,
+                            (int) $item['quantity'],
+                            JewelryStockMovementType::Sale,
+                            "Satış düzenleme #{$sale->sale_number}",
+                        );
+                    }
+                }
+
+                $discount = (float) ($data['discount'] ?? $sale->discount);
+                $data['subtotal'] = $subtotal;
+                $data['discount'] = $discount;
+                $data['total'] = max(0, $subtotal - $discount);
+            }
+
+            $sale->update($data);
+            $sale = $sale->fresh(['items', 'customer']);
+
+            $this->cashService->syncSaleCash($restaurantId, $sale);
+
+            return $sale->load(['customer', 'items.product']);
+        });
+    }
+
     private function generateSaleNumber(int $restaurantId): string
     {
         $count = JewelrySale::where('restaurant_id', $restaurantId)->count() + 1;

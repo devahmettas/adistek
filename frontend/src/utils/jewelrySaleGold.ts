@@ -131,8 +131,12 @@ export function getAvailableProductStock(
   product: JewelryProduct,
   items: PurchaseFormItem[],
   excludeKey?: string,
+  extraStock = 0,
 ): number {
-  return Math.max(0, product.stock_quantity - getReservedProductQuantity(items, product.id, excludeKey))
+  return Math.max(
+    0,
+    product.stock_quantity + extraStock - getReservedProductQuantity(items, product.id, excludeKey),
+  )
 }
 
 export function getProductsForQuickGoldType(
@@ -163,9 +167,13 @@ export function getQuickGoldAvailableStock(
   products: JewelryProduct[],
   categories: JewelryCategory[],
   saleItems: PurchaseFormItem[],
+  extraStockByProductId?: Map<number, number>,
 ): number {
   return getProductsForQuickGoldType(quickType, products, categories)
-    .reduce((sum, product) => sum + getAvailableProductStock(product, saleItems), 0)
+    .reduce((sum, product) => {
+      const extra = extraStockByProductId?.get(product.id) ?? 0
+      return sum + getAvailableProductStock(product, saleItems, undefined, extra)
+    }, 0)
 }
 
 export function pickProductForQuickGoldSale(
@@ -188,13 +196,15 @@ export function getSaleItemMaxQuantity(
   categories: JewelryCategory[],
   saleItems: PurchaseFormItem[],
   quickType?: GoldPurchaseQuickType | null,
+  extraStockByProductId?: Map<number, number>,
 ): number | null {
   const excludeKey = item.key
 
   if (item.product_id) {
     const product = products.find((row) => row.id === Number(item.product_id))
     if (product) {
-      return getAvailableProductStock(product, saleItems, excludeKey)
+      const extra = extraStockByProductId?.get(product.id) ?? 0
+      return getAvailableProductStock(product, saleItems, excludeKey, extra)
     }
   }
 
@@ -208,10 +218,29 @@ export function getSaleItemMaxQuantity(
       products,
       categories,
       saleItems.filter((row) => row.key !== excludeKey),
+      extraStockByProductId,
     )
   }
 
   return null
+}
+
+export function buildExtraStockFromSaleItems(items: PurchaseFormItem[]): Map<number, number> {
+  const map = new Map<number, number>()
+
+  for (const item of items) {
+    if (!item.product_id) {
+      continue
+    }
+
+    const productId = Number(item.product_id)
+    map.set(
+      productId,
+      (map.get(productId) ?? 0) + Math.max(1, Number(item.quantity) || 1),
+    )
+  }
+
+  return map
 }
 
 export function isQuickGoldCategoryName(categoryName: string | null | undefined): boolean {

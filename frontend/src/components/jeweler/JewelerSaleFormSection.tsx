@@ -13,11 +13,14 @@ import {
   getJewelryCategories,
   getJewelryCustomers,
   getJewelryProducts,
+  getJewelrySale,
   getMarketGoldPricesLatest,
   lookupBarcode,
+  updateJewelrySale,
   type JewelryCategory,
   type JewelryCustomer,
   type JewelryProduct,
+  type JewelrySale,
   type MarketGoldPriceRecord,
 } from '../../api/jeweler'
 import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
@@ -26,6 +29,7 @@ import {
   calculateSaleLineMarketValue,
   calculateSaleLineTotal,
   calculateSaleSummary,
+  buildExtraStockFromSaleItems,
   createQuickGoldItem,
   createSaleItemFromProduct,
   getAvailableProductStock,
@@ -48,6 +52,8 @@ interface JewelerSaleFormSectionProps {
   onExternalBarcodeHandled?: () => void
   pendingProductId?: number | null
   onPendingProductHandled?: () => void
+  editSaleId?: number | null
+  onEditSaleHandled?: () => void
   onCatalogLoaded?: (data: {
     products: JewelryProduct[]
     categories: JewelryCategory[]
@@ -62,6 +68,29 @@ const PAYMENT_OPTIONS = [
   { value: 'gold_exchange', label: 'Altın Takas' },
 ]
 
+function mapSaleToFormItems(sale: JewelrySale): SaleFormItem[] {
+  return (sale.items ?? []).map((item) => {
+    const quickType = GOLD_PURCHASE_QUICK_TYPES.find(
+      (type) => type.defaultDescription === item.product_name,
+    )
+
+    return {
+      key: String(item.id),
+      item_description: item.product_name,
+      karat: String(item.product?.karat ?? 22),
+      weight_gram: String(item.weight_gram ?? item.product?.weight_gram ?? ''),
+      unit_price: formatMoneyInputFromNumber(item.unit_price),
+      quantity: String(item.quantity),
+      product_id: item.product_id ? String(item.product_id) : '',
+      category_id: item.product?.category_id ? String(item.product.category_id) : '',
+      gold_type: quickType?.goldType ?? '',
+      pricing_mode: quickType?.pricingMode ?? (
+        Number(item.weight_gram) > 0 ? 'gram' : 'piece'
+      ),
+    }
+  })
+}
+
 export default function JewelerSaleFormSection({
   scannerOpen: scannerOpenProp,
   onScannerOpenChange,
@@ -71,6 +100,8 @@ export default function JewelerSaleFormSection({
   onExternalBarcodeHandled,
   pendingProductId = null,
   onPendingProductHandled,
+  editSaleId = null,
+  onEditSaleHandled,
   onCatalogLoaded,
 }: JewelerSaleFormSectionProps) {
   const { notifySaleCompleted } = useJewelrySaleCart()
@@ -98,6 +129,10 @@ export default function JewelerSaleFormSection({
   const [itemModalQuickType, setItemModalQuickType] = useState<GoldPurchaseQuickType | null>(null)
   const [editingItem, setEditingItem] = useState<SaleFormItem | null>(null)
   const [saleProduct, setSaleProduct] = useState<JewelryProduct | null>(null)
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null)
+  const [editingSaleNumber, setEditingSaleNumber] = useState<string | null>(null)
+  const [originalSaleStockBonus, setOriginalSaleStockBonus] = useState<Map<number, number>>(new Map())
+  const [saveNotice, setSaveNotice] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -141,11 +176,43 @@ export default function JewelerSaleFormSection({
   )
 
   const resetForm = () => {
+    setEditingSaleId(null)
+    setEditingSaleNumber(null)
+    setOriginalSaleStockBonus(new Map())
+    setSaveNotice(null)
     setCustomerId('')
     setPaymentMethod('cash')
     setNotes('')
     setItems([])
   }
+
+  const startEditSale = useCallback((sale: JewelrySale) => {
+    const formItems = mapSaleToFormItems(sale)
+    setEditingSaleId(sale.id)
+    setEditingSaleNumber(sale.sale_number)
+    setCustomerId(sale.customer_id ? String(sale.customer_id) : '')
+    setPaymentMethod(sale.payment_method)
+    setNotes(sale.notes ?? '')
+    setItems(formItems)
+    setOriginalSaleStockBonus(buildExtraStockFromSaleItems(formItems))
+    setSaveNotice(null)
+  }, [])
+
+  useEffect(() => {
+    if (!editSaleId || loading) {
+      return
+    }
+
+    void getJewelrySale(editSaleId)
+      .then((sale) => {
+        startEditSale(sale)
+        onEditSaleHandled?.()
+      })
+      .catch(() => {
+        setError('Düzenlenecek satış kaydı yüklenemedi.')
+        onEditSaleHandled?.()
+      })
+  }, [editSaleId, loading, startEditSale, onEditSaleHandled])
 
   const findCategoryId = (categoryName: string) => (
     categories.find((category) => category.name === categoryName)?.id
@@ -162,7 +229,14 @@ export default function JewelerSaleFormSection({
       )
 
       if (quickType) {
-        const maxQty = getSaleItemMaxQuantity(nextItem, products, categories, items, quickType)
+        const maxQty = getSaleItemMaxQuantity(
+          nextItem,
+          products,
+          categories,
+          items,
+          quickType,
+          originalSaleStockBonus,
+        )
         if (maxQty !== null && quantity > maxQty) {
           setError(`"${quickType.label}" için en fazla ${maxQty} adet eklenebilir.`)
           return
@@ -187,7 +261,14 @@ export default function JewelerSaleFormSection({
       }
     } else if (nextItem.product_id) {
       const product = productById.get(Number(nextItem.product_id))
-      const maxQty = getSaleItemMaxQuantity(nextItem, products, categories, items)
+      const maxQty = getSaleItemMaxQuantity(
+        nextItem,
+        products,
+        categories,
+        items,
+        null,
+        originalSaleStockBonus,
+      )
       if (maxQty !== null && quantity > maxQty) {
         setError(`"${product?.name ?? nextItem.item_description}" için en fazla ${maxQty} adet eklenebilir.`)
         return
@@ -206,7 +287,8 @@ export default function JewelerSaleFormSection({
   }
 
   const openProductSaleModal = useCallback((product: JewelryProduct) => {
-    const available = getAvailableProductStock(product, items)
+    const extra = originalSaleStockBonus.get(product.id) ?? 0
+    const available = getAvailableProductStock(product, items, undefined, extra)
     if (available < 1) {
       setError(`"${product.name}" için yeterli stok yok.`)
       return
@@ -214,7 +296,7 @@ export default function JewelerSaleFormSection({
 
     setError(null)
     setSaleProduct(product)
-  }, [items])
+  }, [items, originalSaleStockBonus])
 
   const handleAddProductToForm = (payload: { quantity: number; unit_price: number }) => {
     if (!saleProduct) {
@@ -276,7 +358,13 @@ export default function JewelerSaleFormSection({
   }, [externalBarcodeCode, handleBarcodeScan, onExternalBarcodeHandled])
 
   const openQuickGoldModal = (quickType: GoldPurchaseQuickType) => {
-    const available = getQuickGoldAvailableStock(quickType, products, categories, items)
+    const available = getQuickGoldAvailableStock(
+      quickType,
+      products,
+      categories,
+      items,
+      originalSaleStockBonus,
+    )
     if (available < 1) {
       setError(`"${quickType.label}" için stok yok. Satış yapılamaz.`)
       return
@@ -342,7 +430,9 @@ export default function JewelerSaleFormSection({
             .filter((row) => row.product_id === item.product_id && row.key !== item.key)
             .reduce((sum, row) => sum + Math.max(1, Number(row.quantity) || 1), 0)
 
-          if (reservedOthers + quantity > product.stock_quantity) {
+          const stockBonus = originalSaleStockBonus.get(Number(item.product_id)) ?? 0
+
+          if (reservedOthers + quantity > product.stock_quantity + stockBonus) {
             setError(`"${product.name}" için stok yetersiz.`)
             return
           }
@@ -372,12 +462,20 @@ export default function JewelerSaleFormSection({
     }
 
     try {
-      await createJewelrySale(payload)
-      notifySaleCompleted('Satış kaydedildi.')
-      resetForm()
+      if (editingSaleId) {
+        const updated = await updateJewelrySale(editingSaleId, payload)
+        notifySaleCompleted('Satış güncellendi.')
+        startEditSale(updated)
+        setSaveNotice('Satış güncellendi. Gerekirse kalemleri tekrar düzenleyebilirsiniz.')
+      } else {
+        const saved = await createJewelrySale(payload)
+        notifySaleCompleted('Satış kaydedildi.')
+        startEditSale(saved)
+        setSaveNotice('Satış kaydedildi. Yanlışlık varsa kalemleri düzenleyip "Satışı Güncelle" ile kaydedin.')
+      }
       await load()
     } catch {
-      setError('Satış kaydı oluşturulamadı.')
+      setError(editingSaleId ? 'Satış kaydı güncellenemedi.' : 'Satış kaydı oluşturulamadı.')
     } finally {
       setSubmitting(false)
     }
@@ -404,8 +502,9 @@ export default function JewelerSaleFormSection({
       categories,
       items,
       itemModalQuickType,
+      originalSaleStockBonus,
     )
-  }, [editingItem, products, categories, items, itemModalQuickType])
+  }, [editingItem, products, categories, items, itemModalQuickType, originalSaleStockBonus])
 
   if (loading) {
     return (
@@ -417,6 +516,7 @@ export default function JewelerSaleFormSection({
             goldPrices={goldPrices}
             variant="form"
             reservedQuantity={getReservedProductQuantity(items, saleProduct.id)}
+          extraStock={originalSaleStockBonus.get(saleProduct.id) ?? 0}
             onAddToForm={handleAddProductToForm}
             onClose={() => setSaleProduct(null)}
           />
@@ -439,8 +539,20 @@ export default function JewelerSaleFormSection({
           Barkod okunuyor...
         </p>
       )}
+      {saveNotice && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          <p>{saveNotice}</p>
+          <button
+            type="button"
+            onClick={() => resetForm()}
+            className="shrink-0 text-xs font-semibold text-emerald-800 underline hover:text-emerald-950"
+          >
+            Yeni satış başlat
+          </button>
+        </div>
+      )}
 
-      <Card title="Müşteriye Satış">
+      <Card title={editingSaleId ? `Satış Düzenle #${editingSaleNumber ?? ''}` : 'Müşteriye Satış'}>
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="xl:grid xl:max-h-[calc(100vh-13rem)] xl:grid-cols-[minmax(0,1fr)_340px] xl:overflow-hidden"
@@ -465,7 +577,13 @@ export default function JewelerSaleFormSection({
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Hızlı Satış</p>
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
                 {GOLD_PURCHASE_QUICK_TYPES.map((quickType) => {
-                  const available = getQuickGoldAvailableStock(quickType, products, categories, items)
+                  const available = getQuickGoldAvailableStock(
+                    quickType,
+                    products,
+                    categories,
+                    items,
+                    originalSaleStockBonus,
+                  )
 
                   return (
                     <Button
@@ -493,6 +611,7 @@ export default function JewelerSaleFormSection({
                 products={products}
                 categories={categories}
                 saleItems={items}
+                extraStockByProductId={originalSaleStockBonus}
                 externalSearchQuery={barcodeSearchQuery}
                 onSelect={openProductSaleModal}
               />
@@ -606,8 +725,17 @@ export default function JewelerSaleFormSection({
               </div>
 
               <Button type="submit" className="w-full" disabled={submitting || items.length === 0}>
-                {submitting ? 'Kaydediliyor...' : 'Satış Kaydet'}
+                {submitting
+                  ? 'Kaydediliyor...'
+                  : editingSaleId
+                    ? 'Satışı Güncelle'
+                    : 'Satış Kaydet'}
               </Button>
+              {editingSaleId && (
+                <Button type="button" variant="secondary" className="w-full" onClick={resetForm}>
+                  İptal
+                </Button>
+              )}
             </div>
           </div>
         </form>
@@ -619,6 +747,7 @@ export default function JewelerSaleFormSection({
           goldPrices={goldPrices}
           variant="form"
           reservedQuantity={getReservedProductQuantity(items, saleProduct.id)}
+          extraStock={originalSaleStockBonus.get(saleProduct.id) ?? 0}
           onAddToForm={handleAddProductToForm}
           onClose={() => setSaleProduct(null)}
         />

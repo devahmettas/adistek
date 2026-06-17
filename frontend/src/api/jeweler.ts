@@ -409,6 +409,11 @@ export async function getJewelrySales(): Promise<JewelrySale[]> {
   return data.data
 }
 
+export async function getJewelrySale(id: number): Promise<JewelrySale> {
+  const { data } = await apiClient.get<ApiResponse<JewelrySale>>(`/jeweler/sales/${id}`)
+  return data.data
+}
+
 export async function createJewelrySale(payload: {
   customer_id?: number | null
   payment_method: string
@@ -425,6 +430,28 @@ export async function createJewelrySale(payload: {
   }>
 }): Promise<JewelrySale> {
   const { data } = await apiClient.post<ApiResponse<JewelrySale>>('/jeweler/sales', payload)
+  return data.data
+}
+
+export async function updateJewelrySale(
+  id: number,
+  payload: {
+    customer_id?: number | null
+    payment_method?: string
+    discount?: number
+    notes?: string
+    items?: Array<{
+      product_id?: number | null
+      product_name: string
+      quantity: number
+      unit_price: number | string
+      weight_gram?: number | string | null
+      labor_cost?: number | string
+      line_total: number | string
+    }>
+  },
+): Promise<JewelrySale> {
+  const { data } = await apiClient.put<ApiResponse<JewelrySale>>(`/jeweler/sales/${id}`, payload)
   return data.data
 }
 

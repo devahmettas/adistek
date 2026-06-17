@@ -20,6 +20,7 @@ interface SaleStockProductPickerProps {
   categories: JewelryCategory[]
   saleItems: SaleFormItem[]
   externalSearchQuery?: string
+  extraStockByProductId?: Map<number, number>
   compact?: boolean
   onSelect: (product: JewelryProduct) => void
 }
@@ -29,6 +30,7 @@ export default function SaleStockProductPicker({
   categories,
   saleItems,
   externalSearchQuery = '',
+  extraStockByProductId,
   compact = false,
   onSelect,
 }: SaleStockProductPickerProps) {
@@ -171,7 +173,12 @@ export default function SaleStockProductPicker({
             {filteredGroups.map((group) => {
               const isActive = expandedCategory === group.key
               const availableCount = group.products.reduce(
-                (sum, product) => sum + getAvailableProductStock(product, saleItems),
+                (sum, product) => sum + getAvailableProductStock(
+                  product,
+                  saleItems,
+                  undefined,
+                  extraStockByProductId?.get(product.id) ?? 0,
+                ),
                 0,
               )
 
@@ -217,7 +224,12 @@ export default function SaleStockProductPicker({
             }`}>
               {visibleProducts.map((product) => {
                 const previewUrl = resolveMenuAssetUrl(null, product.image_path)
-                const available = getAvailableProductStock(product, saleItems)
+                const available = getAvailableProductStock(
+                  product,
+                  saleItems,
+                  undefined,
+                  extraStockByProductId?.get(product.id) ?? 0,
+                )
                 const inSale = available < product.stock_quantity
 
                 return (
