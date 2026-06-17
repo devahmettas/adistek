@@ -8,9 +8,9 @@ export interface JewelerNavItem {
 export const JEWELER_NAV_ITEMS: JewelerNavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: '⌂', end: true },
   { to: '/dashboard/jeweler/products', label: 'Ürün Yönetimi', icon: '◆' },
-  { to: '/dashboard/jeweler/purchases', label: 'Ürün Al Yönetimi', icon: '↓' },
+  { to: '/dashboard/jeweler/purchases', label: 'Ürün Alış Satış', icon: '⇅' },
+  { to: '/dashboard/jeweler/history', label: 'İşlem Geçmişi', icon: '☰' },
   { to: '/dashboard/jeweler/vault', label: 'Kasa Yönetimi', icon: '▤' },
-  { to: '/dashboard/jeweler/sales', label: 'Satış Yönetimi', icon: '₺' },
   { to: '/dashboard/jeweler/repairs', label: 'Tamir Takibi', icon: '⚙' },
   { to: '/dashboard/jeweler/customers', label: 'Müşteri Yönetimi', icon: '◉' },
   { to: '/dashboard/jeweler/barcode', label: 'Barkod Sistemi', icon: '▥' },

@@ -1,8 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
-import JewelryPurchaseDetailModal from '../../components/jeweler/JewelryPurchaseDetailModal'
+import JewelerSaleFormSection from '../../components/jeweler/JewelerSaleFormSection'
 import JewelryPurchaseItemModal from '../../components/jeweler/JewelryPurchaseItemModal'
+import PurchaseSaleModeToggle, { type PurchaseSaleMode } from '../../components/jeweler/PurchaseSaleModeToggle'
+import SaleBarcodeScanButton from '../../components/jeweler/SaleBarcodeScanButton'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import Select from '../../components/Select'
@@ -33,7 +36,6 @@ import {
   type PurchaseFormItem,
 } from '../../utils/jewelryPurchaseGold'
 import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyInput'
-import { formatPanelMoney, PanelStatCard } from '../../components/restaurant/ManagementPanelWidgets'
 
 const PAYMENT_OPTIONS = [
   { value: 'cash', label: 'Nakit' },
@@ -64,8 +66,23 @@ function mapPurchaseToFormItems(purchase: JewelryPurchase): PurchaseFormItem[] {
   })
 }
 
+function parseMode(value: string | null): PurchaseSaleMode {
+  return value === 'sale' ? 'sale' : 'purchase'
+}
+
 export default function JewelerPurchasesPage() {
-  const [purchases, setPurchases] = useState<JewelryPurchase[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const mode = parseMode(searchParams.get('mode'))
+
+  const setMode = (nextMode: PurchaseSaleMode) => {
+    if (nextMode === 'purchase') {
+      setSearchParams({}, { replace: true })
+      setSaleScannerOpen(false)
+      return
+    }
+    setSearchParams({ mode: 'sale' }, { replace: true })
+  }
+
   const [customers, setCustomers] = useState<JewelryCustomer[]>([])
   const [products, setProducts] = useState<JewelryProduct[]>([])
   const [categories, setCategories] = useState<JewelryCategory[]>([])
@@ -75,7 +92,6 @@ export default function JewelerPurchasesPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [selectedPurchase, setSelectedPurchase] = useState<JewelryPurchase | null>(null)
   const [customerId, setCustomerId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [notes, setNotes] = useState('')
@@ -85,51 +101,39 @@ export default function JewelerPurchasesPage() {
   const [itemModalMode, setItemModalMode] = useState<'quick-gold' | 'custom'>('custom')
   const [itemModalQuickType, setItemModalQuickType] = useState<GoldPurchaseQuickType | null>(null)
   const [editingItem, setEditingItem] = useState<PurchaseFormItem | null>(null)
+  const [saleScannerOpen, setSaleScannerOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [purchaseData, customerData, productData, categoryData, goldResponse] = await Promise.all([
-        getJewelryPurchases(),
+      const [customerData, productData, categoryData, goldResponse] = await Promise.all([
         getJewelryCustomers(),
         getJewelryProducts(),
         getJewelryCategories(),
         getMarketGoldPricesLatest(),
       ])
-      setPurchases(purchaseData)
       setCustomers(customerData)
       setProducts(productData)
       setCategories(categoryData)
       setGoldPrices(goldResponse.prices)
     } catch {
-      setError('Alım kayıtları yüklenemedi.')
+      setError('Veriler yüklenemedi.')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (mode === 'purchase') {
+      void load()
+    }
+  }, [load, mode])
 
   const profitSummary = useMemo(
     () => calculatePurchaseProfitSummary(items, goldPrices),
     [items, goldPrices],
   )
-
-  const summary = useMemo(() => {
-    const totalPaid = purchases.reduce((sum, purchase) => sum + Number(purchase.total), 0)
-    const itemCount = purchases.reduce(
-      (sum, purchase) => sum + (purchase.items ?? []).reduce((lineSum, item) => lineSum + item.quantity, 0),
-      0,
-    )
-    return {
-      count: purchases.length,
-      totalPaid,
-      itemCount,
-    }
-  }, [purchases])
 
   const resetForm = () => {
     setEditingId(null)
@@ -188,8 +192,31 @@ export default function JewelerPurchasesPage() {
     setPaymentMethod(purchase.payment_method)
     setNotes(purchase.notes ?? '')
     setItems(mapPurchaseToFormItems(purchase))
-    setSelectedPurchase(null)
   }
+
+  const editParam = searchParams.get('edit')
+
+  useEffect(() => {
+    if (mode !== 'purchase' || !editParam) {
+      return
+    }
+
+    void getJewelryPurchases()
+      .then((data) => {
+        const purchase = data.find((row) => row.id === Number(editParam))
+        if (purchase) {
+          startEdit(purchase)
+        }
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current)
+          next.delete('edit')
+          return next
+        }, { replace: true })
+      })
+      .catch(() => {
+        setError('Düzenlenecek alım kaydı yüklenemedi.')
+      })
+  }, [editParam, mode, setSearchParams])
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -250,23 +277,44 @@ export default function JewelerPurchasesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ürün Al Yönetimi"
-        description="Müşteriden altın alımını hızlıca kaydedin. Güncel ayar fiyatına göre uyguna alım analizi yapılır."
+        title="Ürün Alış Satış"
+        description={
+          mode === 'purchase'
+            ? 'Müşteriden altın alımını hızlıca kaydedin. Güncel ayar fiyatına göre uyguna alım analizi yapılır.'
+            : 'Müşteriye hızlı satış yapın. Gram, çeyrek ve diğer altın türlerini tek ekrandan ekleyin.'
+        }
+        actions={(
+          <Link
+            to={mode === 'sale' ? '/dashboard/jeweler/history' : '/dashboard/jeweler/history?tab=purchases'}
+            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-200 hover:text-brand-800"
+          >
+            İşlem Geçmişi
+          </Link>
+        )}
       />
 
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+        <PurchaseSaleModeToggle mode={mode} onChange={setMode} />
+        {mode === 'sale' && (
+          <div className="flex justify-center md:flex-1 md:justify-center">
+            <SaleBarcodeScanButton onClick={() => setSaleScannerOpen(true)} />
+          </div>
+        )}
+      </div>
+
+      {mode === 'sale' ? (
+        <JewelerSaleFormSection
+          scannerOpen={saleScannerOpen}
+          onScannerOpenChange={setSaleScannerOpen}
+        />
+      ) : (
+        <>
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
-          <section className="grid gap-4 sm:grid-cols-3">
-            <PanelStatCard label="Toplam alım" value={String(summary.count)} hint="Kayıt sayısı" accent="brand" />
-            <PanelStatCard label="Alınan kalem" value={String(summary.itemCount)} hint="Ürün adedi" accent="amber" />
-            <PanelStatCard label="Ödenen tutar" value={formatPanelMoney(summary.totalPaid)} hint="Tüm alımlar" accent="emerald" />
-          </section>
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <Card title={editingId ? 'Alım Düzenle' : 'Yeni Alım Kaydı'}>
+          <Card title={editingId ? 'Alım Düzenle' : 'Müşteriden Alım'}>
               <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Select
@@ -427,54 +475,12 @@ export default function JewelerPurchasesPage() {
                 </div>
               </form>
             </Card>
-
-            <Card title={`Alım Listesi (${purchases.length})`}>
-              {purchases.length === 0 ? (
-                <p className="py-8 text-center text-sm text-slate-500">Henüz alım kaydı yok.</p>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {purchases.map((purchase) => {
-                    const itemLabels = (purchase.items ?? []).map((item) => item.item_description).join(' · ')
-
-                    return (
-                      <li key={purchase.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPurchase(purchase)}
-                          className="flex w-full flex-col gap-2 py-4 text-left transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:px-2"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold text-slate-900">#{purchase.purchase_number}</p>
-                              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                                {PAYMENT_OPTIONS.find((option) => option.value === purchase.payment_method)?.label
-                                  ?? purchase.payment_method}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {new Date(purchase.purchased_at).toLocaleString('tr-TR')}
-                              {purchase.customer ? ` · ${purchase.customer.name}` : ''}
-                            </p>
-                            <p className="mt-2 line-clamp-2 text-xs text-slate-600">{itemLabels}</p>
-                          </div>
-                          <div className="shrink-0 sm:text-right">
-                            <p className="text-lg font-bold text-emerald-700">
-                              {formatPanelMoney(Number(purchase.total))}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">Detay →</p>
-                          </div>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </Card>
-          </div>
+        </>
+      )}
         </>
       )}
 
-      {itemModalOpen && editingItem && (
+      {mode === 'purchase' && itemModalOpen && editingItem && (
         <JewelryPurchaseItemModal
           item={editingItem}
           quickType={itemModalQuickType}
@@ -487,14 +493,6 @@ export default function JewelerPurchasesPage() {
             setEditingItem(null)
           }}
           onSave={saveItem}
-        />
-      )}
-
-      {selectedPurchase && (
-        <JewelryPurchaseDetailModal
-          purchase={selectedPurchase}
-          onClose={() => setSelectedPurchase(null)}
-          onEdit={() => startEdit(selectedPurchase)}
         />
       )}
     </div>
