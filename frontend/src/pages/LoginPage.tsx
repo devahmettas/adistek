@@ -11,8 +11,12 @@ import { useAuth } from '../store/AuthStore'
 type Mode = 'login' | 'register'
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (!axios.isAxiosError(error) || !error.response?.data) {
+  if (!axios.isAxiosError(error)) {
     return fallback
+  }
+
+  if (!error.response) {
+    return 'Sunucuya bağlanılamadı. Backend (php artisan serve) çalışıyor mu kontrol edin.'
   }
 
   const data = error.response.data as {

@@ -1,7 +1,28 @@
 <?php
 
 use Illuminate\Support\Str;
-use PDO;
+
+/**
+ * MySQL PDO SSL seçenekleri. Yerel geliştirmede MYSQL_ATTR_SSL_CA boşken
+ * deprecated PDO sabitlerine dokunulmaz (PHP 8.5 JSON yanıtlarını bozmasın).
+ */
+function mysql_ssl_pdo_options(): array
+{
+    if (! extension_loaded('pdo_mysql')) {
+        return [];
+    }
+
+    $sslCa = env('MYSQL_ATTR_SSL_CA');
+    if ($sslCa === null || $sslCa === '') {
+        return [];
+    }
+
+    $attr = (PHP_VERSION_ID >= 80500 && class_exists(\Pdo\Mysql::class, false))
+        ? \Pdo\Mysql::ATTR_SSL_CA
+        : 1009;
+
+    return [$attr => $sslCa];
+}
 
 return [
 
@@ -59,9 +80,7 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => mysql_ssl_pdo_options(),
         ],
 
         'mariadb' => [
@@ -79,9 +98,7 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => mysql_ssl_pdo_options(),
         ],
 
         'pgsql' => [
