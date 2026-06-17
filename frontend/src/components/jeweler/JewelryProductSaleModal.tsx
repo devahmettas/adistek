@@ -34,7 +34,10 @@ interface JewelryProductSaleModalProps {
   product: JewelryProduct
   goldPrices: MarketGoldPriceRecord[]
   onClose: () => void
-  onSuccess: () => void
+  onSuccess?: () => void
+  variant?: 'standalone' | 'form'
+  reservedQuantity?: number
+  onAddToForm?: (payload: { quantity: number; unit_price: number }) => void
 }
 
 export default function JewelryProductSaleModal({
@@ -42,14 +45,17 @@ export default function JewelryProductSaleModal({
   goldPrices,
   onClose,
   onSuccess,
+  variant = 'standalone',
+  reservedQuantity = 0,
+  onAddToForm,
 }: JewelryProductSaleModalProps) {
   useBodyScrollLock(true)
   const { addItem, getReservedQuantity, notifySaleCompleted } = useJewelrySaleCart()
 
   const catalogPrice = Number(product.sale_price)
   const previewUrl = resolveMenuAssetUrl(null, product.image_path)
-  const reservedInCart = getReservedQuantity(product.id)
-  const availableStock = Math.max(0, product.stock_quantity - reservedInCart)
+  const reservedInCart = variant === 'standalone' ? getReservedQuantity(product.id) : 0
+  const availableStock = Math.max(0, product.stock_quantity - reservedInCart - reservedQuantity)
 
   const [quantity, setQuantity] = useState('1')
   const [salePrice, setSalePrice] = useState('')
@@ -65,6 +71,12 @@ export default function JewelryProductSaleModal({
       .then(setJewelrySettings)
       .catch(() => setJewelrySettings(null))
   }, [])
+
+  useEffect(() => {
+    if (catalogPrice > 0) {
+      setSalePrice(String(catalogPrice).replace('.', ','))
+    }
+  }, [catalogPrice, product.id])
 
   const qty = Math.max(1, Number(quantity) || 1)
 
@@ -108,6 +120,23 @@ export default function JewelryProductSaleModal({
     [unitSalePrice, product, qty, discountValue, catalogPrice, goldPrices, paymentMethod, financialSettings, saleCost],
   )
 
+  const handleAddToForm = () => {
+    setError(null)
+
+    if (!hasSalePrice || Number.isNaN(unitSalePrice) || unitSalePrice <= 0) {
+      setError('Satış fiyatını girin.')
+      return
+    }
+
+    if (availableStock < qty) {
+      setError(`Yetersiz stok. En fazla ${availableStock} adet eklenebilir.`)
+      return
+    }
+
+    onAddToForm?.({ quantity: qty, unit_price: unitSalePrice })
+    onClose()
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
@@ -145,7 +174,7 @@ export default function JewelryProductSaleModal({
         ],
       })
       notifySaleCompleted()
-      onSuccess()
+      onSuccess?.()
       onClose()
     } catch {
       setError('Satış kaydedilemedi.')
@@ -245,8 +274,11 @@ export default function JewelryProductSaleModal({
                   <dt className="text-slate-500">Stok</dt>
                   <dd className="font-medium text-slate-900">
                     {availableStock} adet
-                    {reservedInCart > 0 && (
+                    {variant === 'standalone' && reservedInCart > 0 && (
                       <span className="text-slate-500"> ({reservedInCart} sepette)</span>
+                    )}
+                    {variant === 'form' && reservedQuantity > 0 && (
+                      <span className="text-slate-500"> ({reservedQuantity} listede)</span>
                     )}
                   </dd>
                 </div>
@@ -389,20 +421,32 @@ export default function JewelryProductSaleModal({
               </div>
 
               <div className="flex shrink-0 flex-wrap gap-2 border-t border-slate-100 p-4 lg:px-5 lg:py-3">
-                <Button
-                  type="button"
-                  onClick={handleAddToCart}
-                  disabled={availableStock < 1 || !hasSalePrice}
-                >
-                  Sepete Ekle
-                </Button>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  disabled={submitting || availableStock < 1 || !hasSalePrice}
-                >
-                  {submitting ? 'Kaydediliyor...' : 'Hemen Sat'}
-                </Button>
+                {variant === 'form' ? (
+                  <Button
+                    type="button"
+                    onClick={handleAddToForm}
+                    disabled={availableStock < 1 || !hasSalePrice}
+                  >
+                    Satışa Ekle
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={handleAddToCart}
+                      disabled={availableStock < 1 || !hasSalePrice}
+                    >
+                      Sepete Ekle
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      disabled={submitting || availableStock < 1 || !hasSalePrice}
+                    >
+                      {submitting ? 'Kaydediliyor...' : 'Hemen Sat'}
+                    </Button>
+                  </>
+                )}
                 <Button type="button" variant="ghost" className="lg:w-auto" onClick={onClose}>
                   İptal
                 </Button>

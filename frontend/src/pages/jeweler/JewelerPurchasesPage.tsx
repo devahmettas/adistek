@@ -6,6 +6,7 @@ import JewelerSaleFormSection from '../../components/jeweler/JewelerSaleFormSect
 import JewelryPurchaseItemModal from '../../components/jeweler/JewelryPurchaseItemModal'
 import PurchaseSaleModeToggle, { type PurchaseSaleMode } from '../../components/jeweler/PurchaseSaleModeToggle'
 import SaleBarcodeScanButton from '../../components/jeweler/SaleBarcodeScanButton'
+import SaleBarcodeSearch from '../../components/jeweler/SaleBarcodeSearch'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import Select from '../../components/Select'
@@ -35,6 +36,7 @@ import {
   type GoldPurchaseQuickType,
   type PurchaseFormItem,
 } from '../../utils/jewelryPurchaseGold'
+import type { SaleFormItem } from '../../utils/jewelrySaleGold'
 import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyInput'
 
 const PAYMENT_OPTIONS = [
@@ -102,6 +104,14 @@ export default function JewelerPurchasesPage() {
   const [itemModalQuickType, setItemModalQuickType] = useState<GoldPurchaseQuickType | null>(null)
   const [editingItem, setEditingItem] = useState<PurchaseFormItem | null>(null)
   const [saleScannerOpen, setSaleScannerOpen] = useState(false)
+  const [saleBarcodeQuery, setSaleBarcodeQuery] = useState('')
+  const [externalBarcodeCode, setExternalBarcodeCode] = useState<string | null>(null)
+  const [saleCatalog, setSaleCatalog] = useState<{
+    products: JewelryProduct[]
+    categories: JewelryCategory[]
+    saleItems: SaleFormItem[]
+  } | null>(null)
+  const [pendingSaleProductId, setPendingSaleProductId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -275,37 +285,64 @@ export default function JewelerPurchasesPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className={mode === 'sale' ? 'space-y-3' : 'space-y-6'}>
       <PageHeader
         title="Ürün Alış Satış"
         description={
           mode === 'purchase'
             ? 'Müşteriden altın alımını hızlıca kaydedin. Güncel ayar fiyatına göre uyguna alım analizi yapılır.'
-            : 'Müşteriye hızlı satış yapın. Gram, çeyrek ve diğer altın türlerini tek ekrandan ekleyin.'
+            : undefined
         }
         actions={(
           <Link
             to={mode === 'sale' ? '/dashboard/jeweler/history' : '/dashboard/jeweler/history?tab=purchases'}
-            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-200 hover:text-brand-800"
+            className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-200 hover:text-brand-800"
           >
             İşlem Geçmişi
           </Link>
         )}
       />
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-        <PurchaseSaleModeToggle mode={mode} onChange={setMode} />
-        {mode === 'sale' && (
-          <div className="flex justify-center md:flex-1 md:justify-center">
-            <SaleBarcodeScanButton onClick={() => setSaleScannerOpen(true)} />
-          </div>
-        )}
+      <div className={mode === 'sale' ? 'space-y-2' : 'space-y-3'}>
+        <div className={`flex flex-col gap-2 ${mode === 'sale' ? 'xl:flex-row xl:items-center xl:gap-4' : 'md:flex-row md:items-center md:gap-6'}`}>
+          <PurchaseSaleModeToggle mode={mode} onChange={setMode} />
+          {mode === 'sale' && (
+            <>
+              <div className="flex justify-center xl:shrink-0 xl:justify-start">
+                <SaleBarcodeScanButton onClick={() => setSaleScannerOpen(true)} />
+              </div>
+              {saleCatalog && (
+                <div className="min-w-0 flex-1">
+                  <SaleBarcodeSearch
+                    products={saleCatalog.products}
+                    categories={saleCatalog.categories}
+                    saleItems={saleCatalog.saleItems}
+                    value={saleBarcodeQuery}
+                    onChange={setSaleBarcodeQuery}
+                    onSelect={(product) => setPendingSaleProductId(product.id)}
+                    onBarcodeSubmit={(code) => {
+                      setExternalBarcodeCode(code)
+                      setSaleBarcodeQuery('')
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {mode === 'sale' ? (
         <JewelerSaleFormSection
           scannerOpen={saleScannerOpen}
           onScannerOpenChange={setSaleScannerOpen}
+          barcodeSearchQuery={saleBarcodeQuery}
+          onBarcodeSearchQueryChange={setSaleBarcodeQuery}
+          externalBarcodeCode={externalBarcodeCode}
+          onExternalBarcodeHandled={() => setExternalBarcodeCode(null)}
+          pendingProductId={pendingSaleProductId}
+          onPendingProductHandled={() => setPendingSaleProductId(null)}
+          onCatalogLoaded={setSaleCatalog}
         />
       ) : (
         <>

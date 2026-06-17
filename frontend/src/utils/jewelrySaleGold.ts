@@ -173,12 +173,45 @@ export function pickProductForQuickGoldSale(
   products: JewelryProduct[],
   categories: JewelryCategory[],
   saleItems: PurchaseFormItem[],
+  requiredQuantity = 1,
 ): JewelryProduct | null {
   const candidates = getProductsForQuickGoldType(quickType, products, categories)
-    .filter((product) => getAvailableProductStock(product, saleItems) > 0)
+    .filter((product) => getAvailableProductStock(product, saleItems) >= requiredQuantity)
     .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
 
   return candidates[0] ?? null
+}
+
+export function getSaleItemMaxQuantity(
+  item: PurchaseFormItem,
+  products: JewelryProduct[],
+  categories: JewelryCategory[],
+  saleItems: PurchaseFormItem[],
+  quickType?: GoldPurchaseQuickType | null,
+): number | null {
+  const excludeKey = item.key
+
+  if (item.product_id) {
+    const product = products.find((row) => row.id === Number(item.product_id))
+    if (product) {
+      return getAvailableProductStock(product, saleItems, excludeKey)
+    }
+  }
+
+  const resolvedQuickType = quickType ?? GOLD_PURCHASE_QUICK_TYPES.find(
+    (type) => type.goldType === item.gold_type && type.defaultDescription === item.item_description,
+  )
+
+  if (resolvedQuickType) {
+    return getQuickGoldAvailableStock(
+      resolvedQuickType,
+      products,
+      categories,
+      saleItems.filter((row) => row.key !== excludeKey),
+    )
+  }
+
+  return null
 }
 
 export function isQuickGoldCategoryName(categoryName: string | null | undefined): boolean {

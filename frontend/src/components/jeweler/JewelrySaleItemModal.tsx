@@ -23,6 +23,7 @@ interface JewelrySaleItemModalProps {
   categories: JewelryCategory[]
   products: JewelryProduct[]
   goldPrices: MarketGoldPriceRecord[]
+  maxQuantity?: number | null
   onClose: () => void
   onSave: (item: SaleFormItem) => void
 }
@@ -34,6 +35,7 @@ export default function JewelrySaleItemModal({
   categories,
   products,
   goldPrices,
+  maxQuantity = null,
   onClose,
   onSave,
 }: JewelrySaleItemModalProps) {
@@ -61,6 +63,41 @@ export default function JewelrySaleItemModal({
     [draft, goldPrices],
   )
   const priceDifference = Math.round((lineTotal - marketValue) * 100) / 100
+  const quantityLimit = maxQuantity ?? null
+  const currentQuantity = Math.max(1, Number(draft.quantity) || 1)
+
+  const handleQuantityChange = (value: string) => {
+    const parsed = Math.max(1, Number(value) || 1)
+    const nextQuantity = quantityLimit !== null ? Math.min(parsed, quantityLimit) : parsed
+
+    setDraft((current) => ({ ...current, quantity: String(nextQuantity) }))
+  }
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault()
+
+    if (!draft.item_description.trim()) {
+      return
+    }
+
+    if (draft.pricing_mode === 'gram' && !(Number(draft.weight_gram) > 0)) {
+      return
+    }
+
+    if (lineTotal <= 0) {
+      return
+    }
+
+    if (quantityLimit !== null && currentQuantity > quantityLimit) {
+      return
+    }
+
+    onSave({
+      ...draft,
+      quantity: String(currentQuantity),
+    })
+    onClose()
+  }
 
   const categoryOptions = [
     { value: '', label: 'Kategori seçin (opsiyonel)' },
@@ -94,25 +131,6 @@ export default function JewelrySaleItemModal({
         pricing_mode: 'piece',
       } : {}),
     }))
-  }
-
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault()
-
-    if (!draft.item_description.trim()) {
-      return
-    }
-
-    if (draft.pricing_mode === 'gram' && !(Number(draft.weight_gram) > 0)) {
-      return
-    }
-
-    if (lineTotal <= 0) {
-      return
-    }
-
-    onSave(draft)
-    onClose()
   }
 
   const title = mode === 'quick-gold'
@@ -190,14 +208,22 @@ export default function JewelrySaleItemModal({
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="Adet"
-              type="number"
-              min="1"
-              value={draft.quantity}
-              onChange={(event) => setDraft((current) => ({ ...current, quantity: event.target.value }))}
-              required
-            />
+            <div>
+              <Input
+                label="Adet"
+                type="number"
+                min="1"
+                max={quantityLimit ?? undefined}
+                value={draft.quantity}
+                onChange={(event) => handleQuantityChange(event.target.value)}
+                required
+              />
+              {quantityLimit !== null && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Maksimum {quantityLimit} adet seçilebilir
+                </p>
+              )}
+            </div>
 
             {draft.pricing_mode === 'gram' ? (
               <Input
@@ -275,7 +301,12 @@ export default function JewelrySaleItemModal({
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>İptal</Button>
-            <Button type="submit">Kaleme Ekle</Button>
+            <Button
+              type="submit"
+              disabled={quantityLimit !== null && quantityLimit < 1}
+            >
+              Kaleme Ekle
+            </Button>
           </div>
         </form>
       </div>
