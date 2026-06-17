@@ -127,7 +127,7 @@ function OrderControls({
             value={note}
             onChange={(event) => onNoteChange(event.target.value)}
             placeholder="Örn: buzsuz, az pişmiş"
-            className="input-field px-2.5 py-2 text-sm lg:px-3"
+            className="input-field px-2.5 py-2 lg:px-3"
           />
         </div>
 

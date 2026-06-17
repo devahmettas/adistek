@@ -16,7 +16,7 @@ interface RestaurantSidebarProps {
 }
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
-  return `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+  return `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
     isActive
       ? 'bg-brand-700 text-white shadow-sm'
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'

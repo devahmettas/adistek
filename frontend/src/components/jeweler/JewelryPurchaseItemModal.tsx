@@ -97,7 +97,7 @@ export default function JewelryPurchaseItemModal({
       : 'Kalem Ekle'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-3 sm:items-center sm:p-4">
       <button type="button" className="absolute inset-0" aria-label="Kapat" onClick={onClose} />
       <div
         role="dialog"

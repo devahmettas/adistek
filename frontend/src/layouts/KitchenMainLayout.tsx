@@ -11,9 +11,9 @@ export default function KitchenMainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen overflow-x-clip bg-slate-50">
       <header className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:px-6">
+        <div className="mx-auto flex max-w-7xl min-w-0 items-center justify-between gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 lg:px-6">
           <Link to="/kitchen/dashboard">
             <BrandLogo subtitle="Mutfak Paneli" size="md" />
           </Link>
@@ -35,7 +35,7 @@ export default function KitchenMainLayout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:py-8">
+      <main className="mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-4 sm:py-6 lg:px-6 lg:py-8">
         <Outlet />
       </main>
     </div>

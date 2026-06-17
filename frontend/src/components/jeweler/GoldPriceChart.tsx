@@ -59,7 +59,7 @@ export default function GoldPriceChart({ points, height = 220 }: GoldPriceChartP
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-3">
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full min-w-[320px]">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full max-w-full" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="goldChartFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />

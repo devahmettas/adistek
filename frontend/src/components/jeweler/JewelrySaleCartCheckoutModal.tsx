@@ -223,12 +223,12 @@ export default function JewelrySaleCartCheckoutModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/50 p-0 lg:items-center lg:p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
       onClick={closeCheckout}
       role="presentation"
     >
       <div
-        className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl lg:max-h-[88vh] lg:max-w-5xl lg:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl lg:max-h-[88vh] lg:max-w-5xl lg:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -327,7 +327,7 @@ export default function JewelrySaleCartCheckoutModal() {
                                 autoComplete="off"
                                 value={linePriceInputs[item.id] ?? formatMoneyInputFromNumber(item.unit_price)}
                                 onChange={(e) => handleLinePriceChange(item.id, e.target.value)}
-                                className="input-field h-8 w-full px-2 py-1 text-xs sm:text-center"
+                                className="input-field h-10 w-full px-2 py-1 sm:h-8 sm:text-center md:text-sm"
                               />
                             </label>
 
@@ -339,7 +339,7 @@ export default function JewelrySaleCartCheckoutModal() {
                                 max={item.stock_quantity}
                                 value={String(item.quantity)}
                                 onChange={(e) => handleLineQuantityChange(item.id, e.target.value)}
-                                className="input-field h-8 w-full px-2 py-1 text-xs sm:text-center"
+                                className="input-field h-10 w-full px-2 py-1 sm:h-8 sm:text-center md:text-sm"
                               />
                             </label>
 

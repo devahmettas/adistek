@@ -117,7 +117,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => setMode('login')}
-          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition min-h-11 ${
             mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
           }`}
         >
@@ -126,7 +126,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => setMode('register')}
-          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+          className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition min-h-11 ${
             mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
           }`}
         >

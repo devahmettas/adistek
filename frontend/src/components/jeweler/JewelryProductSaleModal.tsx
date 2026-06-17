@@ -181,7 +181,7 @@ export default function JewelryProductSaleModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 lg:items-center lg:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
       onClick={onClose}
       role="presentation"
     >

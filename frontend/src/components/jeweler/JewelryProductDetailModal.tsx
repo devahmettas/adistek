@@ -48,12 +48,12 @@ export default function JewelryProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 lg:items-center lg:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-6"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl lg:h-[min(88vh,700px)] lg:max-h-none lg:max-w-5xl lg:flex-row lg:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl lg:h-[min(88vh,700px)] lg:max-h-none lg:max-w-5xl lg:flex-row lg:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

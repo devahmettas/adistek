@@ -28,7 +28,7 @@ export default function JewelryPurchaseDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 sm:items-center sm:p-4"
       onClick={onClose}
       role="presentation"
     >

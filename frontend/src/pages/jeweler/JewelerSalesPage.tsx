@@ -237,7 +237,7 @@ export default function JewelerSalesPage() {
                 <select
                   value={filters.paymentMethod}
                   onChange={(event) => setFilters((current) => ({ ...current, paymentMethod: event.target.value }))}
-                  className="input-field h-9 px-2 text-xs"
+                  className="input-field h-10 px-2 md:h-9 md:text-sm"
                   aria-label="Ödeme yöntemi"
                 >
                   {paymentFilterOptions.map((option) => (
@@ -247,7 +247,7 @@ export default function JewelerSalesPage() {
                 <select
                   value={filters.categoryId}
                   onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
-                  className="input-field h-9 px-2 text-xs"
+                  className="input-field h-10 px-2 md:h-9 md:text-sm"
                   aria-label="Kategori"
                 >
                   {categoryFilterOptions.map((option) => (
@@ -260,7 +260,7 @@ export default function JewelerSalesPage() {
                     ...current,
                     sort: event.target.value as SalesPageFilters['sort'],
                   }))}
-                  className="input-field col-span-2 h-9 px-2 text-xs sm:col-span-2"
+                  className="input-field col-span-2 h-10 px-2 sm:col-span-2 md:h-9 md:text-sm"
                   aria-label="Sıralama"
                 >
                   {SORT_OPTIONS.map((option) => (

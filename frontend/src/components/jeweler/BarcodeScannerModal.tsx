@@ -102,7 +102,7 @@ export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerM
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col bg-slate-950"
+      className="fixed inset-0 z-[70] flex flex-col overflow-x-hidden overscroll-behavior-contain bg-slate-950"
       role="dialog"
       aria-modal="true"
       aria-labelledby="barcode-scanner-title"

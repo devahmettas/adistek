@@ -424,11 +424,11 @@ export default function TableDetailModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-2 sm:items-center sm:p-4"
+        className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden bg-black/50 p-2 sm:items-center sm:p-4"
         onClick={onClose}
       >
       <div
-        className="flex max-h-[94vh] min-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:min-h-[82vh] lg:max-w-7xl"
+        className="flex max-h-[94dvh] min-h-0 w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[94vh] sm:min-h-[82vh] sm:max-w-6xl lg:max-w-7xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div
@@ -911,7 +911,7 @@ export default function TableDetailModal({
 
       {showPayConfirm && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden bg-black/60 p-2 sm:items-center sm:p-4"
           onClick={(event) => {
             event.stopPropagation()
             if (!submitting) {
@@ -920,7 +920,7 @@ export default function TableDetailModal({
           }}
         >
           <div
-            className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8 lg:max-w-4xl"
+            className="w-full max-w-[calc(100vw-1rem)] rounded-3xl bg-white p-5 shadow-2xl sm:max-w-3xl sm:p-8 lg:max-w-4xl"
             onClick={(event) => event.stopPropagation()}
           >
             <h3 className="text-xl font-bold text-gray-900 sm:text-2xl">

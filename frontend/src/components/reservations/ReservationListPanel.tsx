@@ -41,12 +41,12 @@ export default function ReservationListPanel({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex min-h-[100dvh] items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px] sm:p-6"
+      className="fixed inset-0 z-[200] flex min-h-[100dvh] items-center justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-3 backdrop-blur-[1px] sm:p-6"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="flex max-h-[min(92dvh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[min(92dvh,52rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-5xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

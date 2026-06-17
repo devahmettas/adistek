@@ -293,7 +293,7 @@ export default function JewelerBarcodePage() {
               </p>
 
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[220px] flex-1">
+                <div className="min-w-0 flex-1 sm:min-w-[12rem]">
                   <Input
                     label="Ürün ara"
                     value={productSearch}

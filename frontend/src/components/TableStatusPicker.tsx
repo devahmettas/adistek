@@ -24,7 +24,7 @@ const PICKER_VARIANTS = {
     active: 'font-semibold',
   },
   large: {
-    menu: 'min-w-[14rem] rounded-2xl py-2 shadow-xl sm:min-w-[16rem]',
+    menu: 'w-max max-w-[calc(100vw-2rem)] min-w-0 rounded-2xl py-2 shadow-xl sm:min-w-[16rem]',
     item: 'gap-3 px-4 py-3 text-base sm:py-3.5 sm:text-lg',
     dot: 'h-2.5 w-2.5 sm:h-3 sm:w-3',
     active: 'font-bold',
