@@ -112,7 +112,7 @@ function startOfDay(date: Date): Date {
   return next
 }
 
-function isWithinPeriod(dateValue: string, period: SalesPeriodFilter): boolean {
+export function isWithinPeriod(dateValue: string, period: SalesPeriodFilter): boolean {
   if (period === 'all') return true
 
   const transactionDate = new Date(dateValue)

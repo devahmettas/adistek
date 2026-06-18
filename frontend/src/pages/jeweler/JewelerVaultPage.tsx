@@ -13,11 +13,19 @@ import {
   type JewelryVaultOverview,
 } from '../../api/jeweler'
 import { formatJewelryMoney } from '../../utils/jewelryPrice'
+import {
+  DEFAULT_HISTORY_PERIOD,
+  HISTORY_PERIOD_OPTIONS,
+  isWithinPeriod,
+  type SalesPeriodFilter,
+} from '../../utils/jewelrySalesAnalytics'
 import { formatPanelMoney, PanelStatCard } from '../../components/restaurant/ManagementPanelWidgets'
 
 export default function JewelerVaultPage() {
   const [overview, setOverview] = useState<JewelryVaultOverview | null>(null)
   const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(null)
+  const [transactionPeriod, setTransactionPeriod] = useState<SalesPeriodFilter>(DEFAULT_HISTORY_PERIOD)
+  const [transactionSearch, setTransactionSearch] = useState('')
   const [cashModalType, setCashModalType] = useState<'in' | 'out' | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<JewelryVaultCashTransaction | null>(null)
   const [loading, setLoading] = useState(true)
@@ -32,7 +40,7 @@ export default function JewelerVaultPage() {
       setExpandedCategoryId((current) => (
         current !== null && data.categories.some((category) => category.category_id === current)
           ? current
-          : data.categories[0]?.category_id ?? null
+          : null
       ))
     } catch {
       setError('Kasa bilgileri yüklenemedi.')
@@ -58,6 +66,75 @@ export default function JewelerVaultPage() {
     () => overview?.categories.find((category) => category.category_id === expandedCategoryId) ?? null,
     [overview, expandedCategoryId],
   )
+
+  const filteredCashTransactions = useMemo(() => {
+    if (!overview) {
+      return []
+    }
+
+    const query = transactionSearch.trim().toLocaleLowerCase('tr-TR')
+
+    return overview.cash_transactions
+      .filter((transaction) => {
+        if (!transaction.created_at || !isWithinPeriod(transaction.created_at, transactionPeriod)) {
+          return false
+        }
+
+        if (!query) {
+          return true
+        }
+
+        const haystack = [
+          transaction.type_label,
+          transaction.source_label,
+          transaction.notes,
+          transaction.sale_number,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLocaleLowerCase('tr-TR')
+
+        return haystack.includes(query)
+      })
+      .sort((left, right) => (
+        new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime()
+      ))
+  }, [overview, transactionPeriod, transactionSearch])
+
+  const filteredCashSummary = useMemo(() => {
+    let totalIn = 0
+    let totalOut = 0
+
+    for (const transaction of filteredCashTransactions) {
+      const amount = Number(transaction.amount) || 0
+      if (transaction.type === 'in') {
+        totalIn += amount
+      } else {
+        totalOut += amount
+      }
+    }
+
+    return {
+      count: filteredCashTransactions.length,
+      totalIn: Math.round(totalIn * 100) / 100,
+      totalOut: Math.round(totalOut * 100) / 100,
+      net: Math.round((totalIn - totalOut) * 100) / 100,
+    }
+  }, [filteredCashTransactions])
+
+  const hasTransactionFilters = (
+    transactionPeriod !== DEFAULT_HISTORY_PERIOD
+    || transactionSearch.trim() !== ''
+  )
+
+  const resetTransactionFilters = () => {
+    setTransactionPeriod(DEFAULT_HISTORY_PERIOD)
+    setTransactionSearch('')
+  }
+
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategoryId((current) => (current === categoryId ? null : categoryId))
+  }
 
   return (
     <div className="space-y-6">
@@ -127,10 +204,58 @@ export default function JewelerVaultPage() {
           </section>
 
           <Card
-            title="Nakit İşlemleri"
+            title={`Nakit İşlemleri (${filteredCashTransactions.length})`}
             description="Manuel giriş/çıkışlar ve nakit satışlardan oluşan hareketler"
           >
-            {overview.cash_transactions.length > 0 ? (
+            <div className="mb-4 space-y-2.5 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 sm:p-3">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                <input
+                  type="search"
+                  placeholder="Açıklama, satış no..."
+                  value={transactionSearch}
+                  onChange={(event) => setTransactionSearch(event.target.value)}
+                  className="input-field h-9 min-w-0 flex-1 px-3 text-sm"
+                />
+                <div className="flex flex-wrap items-center gap-1">
+                  {HISTORY_PERIOD_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setTransactionPeriod(option.value)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                        transactionPeriod === option.value
+                          ? 'bg-brand-700 text-white'
+                          : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                  {hasTransactionFilters && (
+                    <button
+                      type="button"
+                      onClick={resetTransactionFilters}
+                      className="rounded-lg px-2.5 py-1 text-xs font-semibold text-brand-700 transition hover:bg-brand-50"
+                    >
+                      Temizle
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+                <span>
+                  Giriş: <strong className="text-emerald-700">{formatPanelMoney(filteredCashSummary.totalIn)}</strong>
+                </span>
+                <span>
+                  Çıkış: <strong className="text-red-600">{formatPanelMoney(filteredCashSummary.totalOut)}</strong>
+                </span>
+                <span>
+                  Net: <strong className="text-slate-900">{formatPanelMoney(filteredCashSummary.net)}</strong>
+                </span>
+              </div>
+            </div>
+
+            {filteredCashTransactions.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -144,7 +269,7 @@ export default function JewelerVaultPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {overview.cash_transactions.map((transaction) => (
+                    {filteredCashTransactions.map((transaction) => (
                       <CashTransactionRow
                         key={transaction.id}
                         transaction={transaction}
@@ -158,7 +283,9 @@ export default function JewelerVaultPage() {
               </div>
             ) : (
               <p className="text-sm text-slate-600">
-                Henüz nakit işlemi yok. Nakit girişi ekleyebilir veya nakit satış yaptığınızda otomatik kayıt oluşur.
+                {overview.cash_transactions.length === 0
+                  ? 'Henüz nakit işlemi yok. Nakit girişi ekleyebilir veya nakit satış yaptığınızda otomatik kayıt oluşur.'
+                  : 'Seçili döneme uygun nakit işlemi bulunamadı.'}
               </p>
             )}
           </Card>
@@ -193,12 +320,12 @@ export default function JewelerVaultPage() {
                     key={category.category_id}
                     category={category}
                     active={expandedCategoryId === category.category_id}
-                    onSelect={() => setExpandedCategoryId(category.category_id)}
+                    onSelect={() => toggleCategory(category.category_id)}
                   />
                 ))}
               </div>
 
-              {selectedCategory && (
+              {selectedCategory ? (
                 <Card
                   title={`${selectedCategory.category_name} — Ürün Detayı`}
                   description="Kasadaki ürünlerin stok ve değer dökümü"
@@ -241,6 +368,10 @@ export default function JewelerVaultPage() {
                     </table>
                   </div>
                 </Card>
+              ) : (
+                <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-sm text-slate-500">
+                  Ürünleri görmek için bir kategori seçin.
+                </p>
               )}
             </>
           ) : (
