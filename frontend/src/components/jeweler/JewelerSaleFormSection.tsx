@@ -4,6 +4,7 @@ import Card from '../Card'
 import BarcodeScannerModal from './BarcodeScannerModal'
 import JewelryProductSaleModal from './JewelryProductSaleModal'
 import JewelrySaleItemModal from './JewelrySaleItemModal'
+import JewelerPaymentMethodPicker, { JEWELER_SALE_PAYMENT_OPTIONS } from './JewelerPaymentMethodPicker'
 import SaleStockProductPicker from './SaleStockProductPicker'
 import LoadingState from '../LoadingState'
 import Select from '../Select'
@@ -60,13 +61,6 @@ interface JewelerSaleFormSectionProps {
     saleItems: SaleFormItem[]
   }) => void
 }
-
-const PAYMENT_OPTIONS = [
-  { value: 'cash', label: 'Nakit' },
-  { value: 'card', label: 'Kart' },
-  { value: 'transfer', label: 'Havale/EFT' },
-  { value: 'gold_exchange', label: 'Altın Takas' },
-]
 
 function mapSaleToFormItems(sale: JewelrySale): SaleFormItem[] {
   return (sale.items ?? []).map((item) => {
@@ -254,9 +248,6 @@ export default function JewelerSaleFormSection({
           quantity: String(quantity),
           product_id: String(product.id),
           weight_gram: String(product.weight_gram),
-          unit_price: parseMoneyInput(nextItem.unit_price) > 0
-            ? nextItem.unit_price
-            : formatMoneyInputFromNumber(product.sale_price),
         }
       }
     } else if (nextItem.product_id) {
@@ -381,7 +372,6 @@ export default function JewelerSaleFormSection({
     if (product) {
       item.product_id = String(product.id)
       item.weight_gram = String(product.weight_gram)
-      item.unit_price = formatMoneyInputFromNumber(product.sale_price)
     }
 
     setEditingItem(item)
@@ -555,9 +545,9 @@ export default function JewelerSaleFormSection({
       <Card title={editingSaleId ? `Satış Düzenle #${editingSaleNumber ?? ''}` : 'Müşteriye Satış'}>
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="xl:grid xl:max-h-[calc(100vh-13rem)] xl:grid-cols-[minmax(0,1fr)_340px] xl:overflow-hidden"
+          className="md:grid md:max-h-[calc(100dvh-12rem)] md:grid-cols-[minmax(0,1fr)_minmax(260px,34%)] md:overflow-hidden lg:grid-cols-[minmax(0,1fr)_340px]"
         >
-          <div className="space-y-3 xl:overflow-y-auto xl:pr-4">
+          <div className="space-y-3 md:overflow-y-auto md:pr-3 lg:pr-4">
             <div className="grid gap-2 sm:grid-cols-2">
               <Select
                 label="Müşteri"
@@ -565,11 +555,11 @@ export default function JewelerSaleFormSection({
                 onChange={(event) => setCustomerId(event.target.value)}
                 options={customerOptions}
               />
-              <Select
-                label="Ödeme Yöntemi"
+              <JewelerPaymentMethodPicker
                 value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
-                options={PAYMENT_OPTIONS}
+                onChange={setPaymentMethod}
+                options={JEWELER_SALE_PAYMENT_OPTIONS}
+                compact
               />
             </div>
 
@@ -618,7 +608,7 @@ export default function JewelerSaleFormSection({
             </div>
           </div>
 
-          <div className="mt-3 flex min-h-0 flex-col border-t border-slate-100 pt-3 xl:mt-0 xl:border-l xl:border-t-0 xl:bg-slate-50/40 xl:pl-4 xl:pt-0">
+          <div className="mt-3 flex min-h-0 flex-col border-t border-slate-100 pt-3 md:mt-0 md:border-l md:border-t-0 md:bg-slate-50/40 md:pl-3 md:pt-0 lg:pl-4">
             <div className="mb-2 shrink-0">
               <p className="text-sm font-semibold text-slate-800">
                 Satılacak ({totalItemCount})

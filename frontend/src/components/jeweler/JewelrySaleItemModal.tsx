@@ -5,7 +5,6 @@ import MoneyInput from '../MoneyInput'
 import Select from '../Select'
 import type { JewelryCategory, JewelryProduct, MarketGoldPriceRecord } from '../../api/jeweler'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
-import { formatMoneyInputFromNumber } from '../../utils/moneyInput'
 import {
   calculateSaleLineMarketValue,
   calculateSaleLineTotal,
@@ -126,7 +125,6 @@ export default function JewelrySaleItemModal({
         item_description: product.name,
         karat: String(product.karat ?? 22),
         weight_gram: String(product.weight_gram),
-        unit_price: formatMoneyInputFromNumber(product.sale_price),
         category_id: product.category_id ? String(product.category_id) : current.category_id,
         pricing_mode: 'piece',
       } : {}),

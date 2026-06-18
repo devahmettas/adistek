@@ -13,6 +13,7 @@ interface SaleBarcodeSearchProps {
   onChange: (value: string) => void
   onSelect: (product: JewelryProduct) => void
   onBarcodeSubmit?: (code: string) => void
+  toolbar?: boolean
 }
 
 export default function SaleBarcodeSearch({
@@ -23,6 +24,7 @@ export default function SaleBarcodeSearch({
   onChange,
   onSelect,
   onBarcodeSubmit,
+  toolbar = false,
 }: SaleBarcodeSearchProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -129,24 +131,52 @@ export default function SaleBarcodeSearch({
   }, [])
 
   return (
-    <div ref={containerRef} className="relative w-full">
-      <Input
-        label="Barkod / Ürün Ara"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            handleSubmit()
-          }
-        }}
-        onFocus={() => {
-          if (value.trim() && matches.length > 0) {
-            setOpen(true)
-          }
-        }}
-        placeholder="Barkod okutun veya ürün adı yazın..."
-      />
+    <div ref={containerRef} className="relative w-full min-w-0">
+      {toolbar ? (
+        <>
+          <label htmlFor="sale-barcode-search" className="sr-only">
+            Barkod / Ürün Ara
+          </label>
+          <input
+            id="sale-barcode-search"
+            type="search"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                handleSubmit()
+              }
+            }}
+            onFocus={() => {
+              if (value.trim() && matches.length > 0) {
+                setOpen(true)
+              }
+            }}
+            placeholder="Barkod veya ürün ara..."
+            className="input-field h-[42px] w-full text-base md:text-sm"
+            autoComplete="off"
+          />
+        </>
+      ) : (
+        <Input
+          label="Barkod / Ürün Ara"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              handleSubmit()
+            }
+          }}
+          onFocus={() => {
+            if (value.trim() && matches.length > 0) {
+              setOpen(true)
+            }
+          }}
+          placeholder="Barkod okutun veya ürün adı yazın..."
+        />
+      )}
 
       {open && matches.length > 0 && (
         <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 shadow-lg">

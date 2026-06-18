@@ -15,7 +15,7 @@ export default function PurchaseSaleModeToggle({ mode, onChange }: PurchaseSaleM
     <div
       role="tablist"
       aria-label="İşlem türü"
-      className="inline-flex w-full max-w-md rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-sm sm:w-auto"
+      className="inline-flex w-full rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-sm md:w-auto md:max-w-sm lg:max-w-md"
     >
       {MODES.map((option) => {
         const active = mode === option.value

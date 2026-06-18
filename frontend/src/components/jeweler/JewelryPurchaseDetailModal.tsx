@@ -81,7 +81,7 @@ export default function JewelryPurchaseDetailModal({
                 <tr>
                   <th className="px-4 py-3">Ürün</th>
                   <th className="px-4 py-3 text-right">Gram</th>
-                  <th className="px-4 py-3 text-right">Alış/gr</th>
+                  <th className="px-4 py-3 text-right">Ödeme tutarı</th>
                   <th className="px-4 py-3 text-right">Adet</th>
                   <th className="px-4 py-3 text-right">Toplam</th>
                 </tr>
@@ -96,7 +96,9 @@ export default function JewelryPurchaseDetailModal({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700">{item.weight_gram} gr</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{formatJewelryMoney(item.unit_price)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">
+                      {formatJewelryMoney(item.line_total)}
+                    </td>
                     <td className="px-4 py-3 text-right text-slate-700">{item.quantity}</td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatJewelryMoney(item.line_total)}</td>
                   </tr>

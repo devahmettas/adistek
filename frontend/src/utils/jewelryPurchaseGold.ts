@@ -115,7 +115,7 @@ export function createQuickGoldItem(
     key: crypto.randomUUID(),
     item_description: quickType.defaultDescription,
     karat: String(quickType.karat),
-    weight_gram: quickType.pricingMode === 'gram' ? '' : '0',
+    weight_gram: '0',
     unit_price: '',
     quantity: '1',
     product_id: '',
@@ -133,8 +133,36 @@ export function calculatePurchaseLinePaid(item: PurchaseFormItem): number {
     return Math.round(unitPrice * quantity * 100) / 100
   }
 
+  return Math.round(unitPrice * 100) / 100
+}
+
+export function getPurchaseApiUnitPrice(item: PurchaseFormItem): number {
+  const quantity = Math.max(1, Number(item.quantity) || 1)
+  const paid = calculatePurchaseLinePaid(item)
+
+  if (item.pricing_mode === 'piece') {
+    return parseMoneyInput(item.unit_price) || 0
+  }
+
   const weight = Number(item.weight_gram) || 0
-  return Math.round(weight * unitPrice * quantity * 100) / 100
+  if (weight > 0) {
+    return Math.round((paid / (weight * quantity)) * 100) / 100
+  }
+
+  return Math.round((paid / quantity) * 100) / 100
+}
+
+export function getPurchaseGramWeight(item: PurchaseFormItem): number {
+  if (item.pricing_mode !== 'gram') {
+    return 0
+  }
+
+  const enteredWeight = Number(item.weight_gram) || 0
+  if (enteredWeight > 0) {
+    return enteredWeight
+  }
+
+  return Math.max(1, Number(item.quantity) || 1)
 }
 
 export function getPurchaseUnitMarketPrice(
@@ -167,13 +195,36 @@ export function calculatePurchaseLineMarketValue(
     return Math.round(piecePrice * quantity * 100) / 100
   }
 
-  const weight = Number(item.weight_gram) || 0
-  const sellPrice = getMarketSellPricePerGram(Number(item.karat) || 22, goldPrices)
-  if (sellPrice === null || weight <= 0) {
+  if (item.pricing_mode === 'gram') {
+    const weight = Number(item.weight_gram) || 0
+
+    if (!item.gold_type && weight > 0) {
+      const sellPrice = getMarketSellPricePerGram(Number(item.karat) || 22, goldPrices)
+      if (sellPrice === null) {
+        return 0
+      }
+
+      return Math.round(weight * sellPrice * quantity * 100) / 100
+    }
+
+    if (item.gold_type) {
+      const piecePrice = getMarketGoldPiecePrice(item.gold_type, goldPrices)
+      if (piecePrice !== null) {
+        return Math.round(piecePrice * quantity * 100) / 100
+      }
+
+      const sellPrice = getMarketSellPricePerGram(Number(item.karat) || 22, goldPrices)
+      if (sellPrice === null) {
+        return 0
+      }
+
+      return Math.round(sellPrice * quantity * 100) / 100
+    }
+
     return 0
   }
 
-  return Math.round(weight * sellPrice * quantity * 100) / 100
+  return 0
 }
 
 export function calculatePurchaseProfitSummary(
@@ -213,4 +264,51 @@ export function getSuggestedPurchaseUnitPrice(
   }
 
   return getSuggestedBuyPricePerGram(Number(item.karat) || 22, goldPrices)
+}
+
+export function getSuggestedPurchaseLineTotal(
+  item: Pick<PurchaseFormItem, 'pricing_mode' | 'gold_type' | 'karat' | 'weight_gram' | 'quantity'>,
+  goldPrices: MarketGoldPriceRecord[],
+): number | null {
+  const quantity = Math.max(1, Number(item.quantity) || 1)
+
+  if (item.pricing_mode === 'piece' && item.gold_type) {
+    const unitPrice = getSuggestedPurchaseUnitPrice(item, goldPrices)
+    if (unitPrice === null) {
+      return null
+    }
+
+    return Math.round(unitPrice * quantity * 100) / 100
+  }
+
+  if (item.pricing_mode === 'gram') {
+    const weight = Number(item.weight_gram) || 0
+
+    if (!item.gold_type && weight > 0) {
+      const perGram = getSuggestedBuyPricePerGram(Number(item.karat) || 22, goldPrices)
+      if (perGram === null) {
+        return null
+      }
+
+      return Math.round(weight * perGram * quantity * 100) / 100
+    }
+
+    if (item.gold_type) {
+      const piecePrice = getMarketGoldPiecePrice(item.gold_type, goldPrices)
+      if (piecePrice !== null) {
+        return Math.round(piecePrice * 0.97 * quantity * 100) / 100
+      }
+
+      const perGram = getSuggestedBuyPricePerGram(Number(item.karat) || 22, goldPrices)
+      if (perGram === null) {
+        return null
+      }
+
+      return Math.round(perGram * quantity * 100) / 100
+    }
+
+    return null
+  }
+
+  return null
 }

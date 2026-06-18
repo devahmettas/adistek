@@ -110,20 +110,10 @@ export default function SaleStockProductPicker({
   }, [categoryGroups, activeSearch, categoryNameById])
 
   useEffect(() => {
-    if (filteredGroups.length === 1) {
-      setExpandedCategory(filteredGroups[0].key)
-      return
-    }
-
     if (activeSearch && filteredGroups.length > 0) {
       setExpandedCategory(filteredGroups[0].key)
-      return
     }
-
-    if (compact && filteredGroups.length > 0) {
-      setExpandedCategory((current) => current ?? filteredGroups[0].key)
-    }
-  }, [activeSearch, filteredGroups, compact])
+  }, [activeSearch, filteredGroups])
 
   const activeGroup = filteredGroups.find((group) => group.key === expandedCategory) ?? null
 
@@ -219,7 +209,7 @@ export default function SaleStockProductPicker({
           ) : (
             <div className={`grid gap-2 ${
               compact
-                ? 'max-h-[180px] overflow-y-auto sm:grid-cols-2 xl:grid-cols-2'
+                ? 'max-h-[200px] overflow-y-auto sm:grid-cols-2 md:max-h-[240px] lg:max-h-[280px]'
                 : 'sm:grid-cols-2 xl:grid-cols-3'
             }`}>
               {visibleProducts.map((product) => {

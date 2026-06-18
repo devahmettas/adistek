@@ -3,7 +3,7 @@ import {
   getMarketGoldPiecePrice,
   getMarketSellPricePerGram,
 } from './jewelryPrice'
-import { formatMoneyInputFromNumber, parseMoneyInput } from './moneyInput'
+import { parseMoneyInput } from './moneyInput'
 import {
   createEmptyPurchaseItem,
   createQuickGoldItem,
@@ -108,7 +108,7 @@ export function createSaleItemFromProduct(product: JewelryProduct): PurchaseForm
     item_description: product.name,
     karat: String(product.karat ?? 22),
     weight_gram: String(product.weight_gram),
-    unit_price: formatMoneyInputFromNumber(product.sale_price),
+    unit_price: '',
     quantity: '1',
     product_id: String(product.id),
     category_id: product.category_id ? String(product.category_id) : '',

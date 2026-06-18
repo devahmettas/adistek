@@ -75,10 +75,12 @@ export default function JewelryProductSaleModal({
   }, [])
 
   useEffect(() => {
-    if (catalogPrice > 0) {
-      setSalePrice(String(catalogPrice).replace('.', ','))
-    }
-  }, [catalogPrice, product.id])
+    setSalePrice('')
+    setQuantity('1')
+    setDiscount('')
+    setPaymentMethod('cash')
+    setError(null)
+  }, [product.id])
 
   const qty = Math.max(1, Number(quantity) || 1)
 

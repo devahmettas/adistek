@@ -460,6 +460,11 @@ export async function getJewelryPurchases(): Promise<JewelryPurchase[]> {
   return data.data
 }
 
+export async function getJewelryPurchase(id: number): Promise<JewelryPurchase> {
+  const { data } = await apiClient.get<ApiResponse<JewelryPurchase>>(`/jeweler/purchases/${id}`)
+  return data.data
+}
+
 export async function createJewelryPurchase(payload: {
   customer_id?: number | null
   payment_method: string

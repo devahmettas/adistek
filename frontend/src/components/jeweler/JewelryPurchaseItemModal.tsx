@@ -9,7 +9,9 @@ import {
   calculatePurchaseLineMarketValue,
   calculatePurchaseLinePaid,
   getPurchaseUnitMarketPrice,
+  getSuggestedPurchaseLineTotal,
   getSuggestedPurchaseUnitPrice,
+  GOLD_PURCHASE_CATEGORY_NAMES,
   type GoldPurchaseQuickType,
   type PurchaseFormItem,
 } from '../../utils/jewelryPurchaseGold'
@@ -48,8 +50,12 @@ export default function JewelryPurchaseItemModal({
     () => getPurchaseUnitMarketPrice(draft, goldPrices),
     [draft, goldPrices],
   )
+  const suggestedLineTotal = useMemo(
+    () => getSuggestedPurchaseLineTotal(draft, goldPrices),
+    [draft, goldPrices],
+  )
   const suggestedUnitPrice = useMemo(
-    () => getSuggestedPurchaseUnitPrice(draft, goldPrices),
+    () => (draft.pricing_mode === 'piece' ? getSuggestedPurchaseUnitPrice(draft, goldPrices) : null),
     [draft, goldPrices],
   )
   const unitLabel = draft.pricing_mode === 'piece' ? 'adet' : 'gr'
@@ -63,7 +69,9 @@ export default function JewelryPurchaseItemModal({
 
   const categoryOptions = [
     { value: '', label: 'Kategori seçin (opsiyonel)' },
-    ...categories.map((category) => ({ value: String(category.id), label: category.name })),
+    ...categories
+      .filter((category) => !GOLD_PURCHASE_CATEGORY_NAMES.includes(category.name))
+      .map((category) => ({ value: String(category.id), label: category.name })),
   ]
 
   const productOptions = [
@@ -75,10 +83,6 @@ export default function JewelryPurchaseItemModal({
     event.preventDefault()
 
     if (!draft.item_description.trim()) {
-      return
-    }
-
-    if (draft.pricing_mode === 'gram' && !(Number(draft.weight_gram) > 0)) {
       return
     }
 
@@ -143,28 +147,51 @@ export default function JewelryPurchaseItemModal({
             </div>
           )}
 
-          {(unitMarketPrice !== null || suggestedUnitPrice !== null) && (
+          {mode === 'quick-gold' && (unitMarketPrice !== null || suggestedLineTotal !== null || suggestedUnitPrice !== null) && (
             <div className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
-              {unitMarketPrice !== null && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-500">Güncel piyasa</span>
-                  <span className="font-semibold text-slate-900">
-                    {formatJewelryMoney(unitMarketPrice)} / {unitLabel}
-                  </span>
-                </div>
-              )}
-              {suggestedUnitPrice !== null && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-500">Önerilen alış fiyatı</span>
-                  <span className="font-semibold text-brand-700">
-                    {formatJewelryMoney(suggestedUnitPrice)} / {unitLabel}
-                  </span>
-                </div>
+              {draft.pricing_mode === 'gram' ? (
+                <>
+                  {marketValue > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-slate-500">Güncel piyasa değeri</span>
+                      <span className="font-semibold text-slate-900">
+                        {formatJewelryMoney(marketValue)}
+                      </span>
+                    </div>
+                  )}
+                  {suggestedLineTotal !== null && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-slate-500">Önerilen alış tutarı</span>
+                      <span className="font-semibold text-brand-700">
+                        {formatJewelryMoney(suggestedLineTotal)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {unitMarketPrice !== null && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-slate-500">Güncel piyasa</span>
+                      <span className="font-semibold text-slate-900">
+                        {formatJewelryMoney(unitMarketPrice)} / {unitLabel}
+                      </span>
+                    </div>
+                  )}
+                  {suggestedUnitPrice !== null && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-slate-500">Önerilen alış fiyatı</span>
+                      <span className="font-semibold text-brand-700">
+                        {formatJewelryMoney(suggestedUnitPrice)} / {unitLabel}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          {mode === 'quick-gold' ? (
             <Input
               label="Adet"
               type="number"
@@ -173,8 +200,16 @@ export default function JewelryPurchaseItemModal({
               onChange={(event) => setDraft((current) => ({ ...current, quantity: event.target.value }))}
               required
             />
-
-            {draft.pricing_mode === 'gram' ? (
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Adet"
+                type="number"
+                min="1"
+                value={draft.quantity}
+                onChange={(event) => setDraft((current) => ({ ...current, quantity: event.target.value }))}
+                required
+              />
               <Input
                 label="Gram"
                 type="number"
@@ -182,15 +217,10 @@ export default function JewelryPurchaseItemModal({
                 min="0.001"
                 value={draft.weight_gram}
                 onChange={(event) => setDraft((current) => ({ ...current, weight_gram: event.target.value }))}
-                required
+                placeholder="Örn. 12.5"
               />
-            ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-                <p className="text-xs font-medium text-slate-500">Birim tipi</p>
-                <p className="text-sm font-semibold text-slate-800">Adet bazlı altın</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {mode === 'custom' && (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -213,7 +243,7 @@ export default function JewelryPurchaseItemModal({
           )}
 
           <MoneyInput
-            label={draft.pricing_mode === 'piece' ? 'Ödeme (₺/adet)' : 'Ödeme (₺/gr)'}
+            label={mode === 'custom' || draft.pricing_mode === 'gram' ? 'Ödeme tutarı (₺)' : 'Ödeme (₺/adet)'}
             value={draft.unit_price}
             onValueChange={(value) => setDraft((current) => ({ ...current, unit_price: value }))}
             placeholder="Tutarı girin"
