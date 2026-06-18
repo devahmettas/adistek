@@ -107,7 +107,7 @@ export default function JewelerReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Raporlama & İstatistikler"
-        description="Satış, stok, tamir ve müşteri performansını dönem bazında takip edin"
+        description="Satış, stok ve müşteri performansını dönem bazında takip edin"
         actions={
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
             <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:w-auto">
@@ -295,8 +295,7 @@ export default function JewelerReportsPage() {
             </div>
           </ReportSection>
 
-          <ReportSection title="Stok dağılımı & tamir" description="Ayar bazlı stok ve tamir süreçleri">
-            <div className="grid gap-4 xl:grid-cols-2">
+          <ReportSection title="Stok dağılımı" description="Ayar bazlı stok özeti">
             <StatsBarChart
               title="Ayar bazlı stok dağılımı"
               items={stats.karat_breakdown.map((row) => ({
@@ -307,31 +306,6 @@ export default function JewelerReportsPage() {
               colorClass="bg-amber-600"
               accentHex="#d97706"
             />
-
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-              <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50/80 to-white px-5 py-4">
-                <h3 className="text-sm font-bold text-slate-900">Tamir durumu</h3>
-                <p className="mt-0.5 text-xs text-slate-500">Aktif ve tamamlanan tamir kayıtları</p>
-              </div>
-              <ul className="grid gap-3 p-4 sm:grid-cols-2">
-                {[
-                  { label: 'Aktif tamir', value: stats.repairs.active_count },
-                  { label: 'Teslim alındı', value: stats.repairs.received_count },
-                  { label: 'İşlemde', value: stats.repairs.in_progress_count },
-                  { label: 'Tamamlandı', value: stats.repairs.completed_count },
-                  { label: 'Teslim edildi', value: stats.repairs.delivered_count },
-                ].map((item) => (
-                  <li
-                    key={item.label}
-                    className="rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white px-4 py-3"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            </div>
           </ReportSection>
 
           <ReportSection

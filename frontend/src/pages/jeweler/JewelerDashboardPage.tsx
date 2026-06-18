@@ -33,7 +33,7 @@ export default function JewelerDashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">Kuyumcu Paneli</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{restaurant?.name ?? 'İşletme'}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-amber-100">
-          Stok, satış, tamir ve müşteri yönetimini tek panelden takip edin.
+          Stok, satış ve müşteri yönetimini tek panelden takip edin.
         </p>
       </section>
 
@@ -79,16 +79,10 @@ export default function JewelerDashboardPage() {
               accent="emerald"
             />
             <PanelStatCard
-              label="Aktif tamir"
-              value={String(stats.repairs.active_count)}
-              hint="Devam eden işler"
-              accent="violet"
-            />
-            <PanelStatCard
               label="Düşük stok"
               value={String(stats.inventory.low_stock_count)}
               hint={`${stats.inventory.out_of_stock_count} tükenen ürün`}
-              accent="amber"
+              accent="violet"
             />
           </div>
         )}
@@ -104,7 +98,7 @@ export default function JewelerDashboardPage() {
           <PanelActionCard to="/dashboard/jeweler/purchases" title="Ürün Alış Satış" description="Müşteriden alım ve müşteriye satış işlemlerini tek ekrandan yönetin." icon="⇅" />
           <PanelActionCard to="/dashboard/jeweler/history" title="İşlem Geçmişi" description="Geçmiş satış ve alım kayıtlarını inceleyin." icon="☰" />
           <PanelActionCard to="/dashboard/jeweler/vault" title="Kasa Yönetimi" description="Stok değeri, nakit bakiye ve kategori bazlı kasa takibi." icon="▤" />
-          <PanelActionCard to="/dashboard/jeweler/repairs" title="Tamir Takibi" description="Müşteri tamir işlerini takip edin." icon="⚙" />
+          <PanelActionCard to="/dashboard/jeweler/stock-count" title="Stok Takip" description="Barkod ve elle sayım ile stok ve nakit açıklarını tespit edin." icon="▧" />
           <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />
           <PanelActionCard to="/dashboard/jeweler/barcode" title="Barkod Sistemi" description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın." icon="▥" />
           <PanelActionCard to="/dashboard/jeweler/gold-prices" title="Altın Fiyatları" description="Güncel altın alış/satış fiyatlarını kaydedin." icon="★" />

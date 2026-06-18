@@ -6,14 +6,19 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 interface BarcodeScannerModalProps {
   onScan: (barcode: string) => void
   onClose: () => void
+  /** Tek okumada kapanmak yerine ardışık okumaya izin verir. */
+  continuous?: boolean
 }
 
-export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerModalProps) {
+const SCAN_COOLDOWN_MS = 1500
+
+export default function BarcodeScannerModal({ onScan, onClose, continuous = false }: BarcodeScannerModalProps) {
   useBodyScrollLock(true)
 
   const readerId = useId().replace(/:/g, '')
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const handledRef = useRef(false)
+  const lastScanRef = useRef<{ code: string; at: number } | null>(null)
   const [starting, setStarting] = useState(true)
   const [cameraError, setCameraError] = useState<string | null>(null)
 
@@ -45,17 +50,32 @@ export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerM
             },
           },
           (decodedText) => {
-            if (!active || handledRef.current) return
+            if (!active) return
+            if (!continuous && handledRef.current) return
 
             const code = decodedText.trim()
             if (!code) return
 
-            handledRef.current = true
+            const now = Date.now()
+            if (
+              lastScanRef.current?.code === code
+              && now - lastScanRef.current.at < SCAN_COOLDOWN_MS
+            ) {
+              return
+            }
+            lastScanRef.current = { code, at: now }
+
+            if (!continuous) {
+              handledRef.current = true
+            }
+
             if (navigator.vibrate) {
               navigator.vibrate(80)
             }
 
             onScan(code)
+
+            if (continuous) return
 
             const stop = async () => {
               if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
@@ -98,7 +118,7 @@ export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerM
         // Scanner may already be cleared.
       }
     }
-  }, [onClose, onScan, readerId])
+  }, [continuous, onClose, onScan, readerId])
 
   return (
     <div
@@ -112,7 +132,9 @@ export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerM
           <h2 id="barcode-scanner-title" className="text-base font-bold">
             Ürün Okut
           </h2>
-          <p className="text-xs text-slate-300">Barkodu kameranın önüne getirin</p>
+          <p className="text-xs text-slate-300">
+            {continuous ? 'Ürünleri arka arkaya okutabilirsiniz' : 'Barkodu kameranın önüne getirin'}
+          </p>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={onClose}>
           Kapat
@@ -139,7 +161,9 @@ export default function BarcodeScannerModal({ onScan, onClose }: BarcodeScannerM
       </div>
 
       <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-slate-400">
-        Telefonu barkoda yaklaştırın. Okuma otomatik yapılır.
+        {continuous
+          ? 'Kamera açık kaldığı sürece her barkod otomatik sayılır. Bitince Kapat\'a basın.'
+          : 'Telefonu barkoda yaklaştırın. Okuma otomatik yapılır.'}
       </div>
     </div>
   )

@@ -648,6 +648,124 @@ export async function updateJewelryCashTransaction(
   return data.data
 }
 
+export interface JewelryStockCountItem {
+  id: number
+  product_id: number | null
+  name: string
+  barcode: string | null
+  category_name: string | null
+  count_mode: 'barcode' | 'manual'
+  entry_type: 'quantity' | 'weight'
+  expected_quantity: number
+  counted_quantity: number
+  expected_weight_gram: number | null
+  counted_weight_gram: number | null
+  difference: number
+  has_discrepancy: boolean
+  difference_label: string
+}
+
+export interface JewelryStockCountDiscrepancy {
+  type: 'product' | 'cash'
+  item_id?: number
+  product_id?: number | null
+  name: string
+  category_name?: string | null
+  entry_type?: 'quantity' | 'weight' | 'cash'
+  expected: number
+  counted: number
+  difference: number
+  difference_label: string
+  unit: string
+}
+
+export interface JewelryStockCount {
+  id: number
+  status: 'draft' | 'completed' | 'cancelled'
+  status_label: string
+  expected_cash_balance: number
+  counted_cash_balance: number | null
+  cash_difference: number | null
+  started_at: string | null
+  completed_at: string | null
+  notes: string | null
+  item_count: number
+  items: JewelryStockCountItem[]
+  discrepancies: JewelryStockCountDiscrepancy[]
+  discrepancy_count: number
+}
+
+export interface JewelryStockCountSummary {
+  id: number
+  status: 'draft' | 'completed' | 'cancelled'
+  status_label: string
+  expected_cash_balance: number
+  counted_cash_balance: number | null
+  cash_difference: number | null
+  started_at: string | null
+  completed_at: string | null
+  item_count: number
+  discrepancy_count: number
+}
+
+export async function getJewelryStockCountHistory(): Promise<JewelryStockCountSummary[]> {
+  const { data } = await apiClient.get<ApiResponse<JewelryStockCountSummary[]>>('/jeweler/stock-counts')
+  return data.data
+}
+
+export async function getActiveJewelryStockCount(): Promise<JewelryStockCount | null> {
+  const { data } = await apiClient.get<ApiResponse<JewelryStockCount | null>>('/jeweler/stock-counts/active')
+  return data.data
+}
+
+export async function getJewelryStockCount(id: number): Promise<JewelryStockCount> {
+  const { data } = await apiClient.get<ApiResponse<JewelryStockCount>>(`/jeweler/stock-counts/${id}`)
+  return data.data
+}
+
+export async function startJewelryStockCount(): Promise<JewelryStockCount> {
+  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>('/jeweler/stock-counts')
+  return data.data
+}
+
+export async function scanJewelryStockCount(id: number, barcode: string): Promise<JewelryStockCount> {
+  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(`/jeweler/stock-counts/${id}/scan`, { barcode })
+  return data.data
+}
+
+export async function updateJewelryStockCountItem(
+  countId: number,
+  itemId: number,
+  payload: { counted_quantity?: number; counted_weight_gram?: number },
+): Promise<JewelryStockCount> {
+  const { data } = await apiClient.patch<ApiResponse<JewelryStockCount>>(
+    `/jeweler/stock-counts/${countId}/items/${itemId}`,
+    payload,
+  )
+  return data.data
+}
+
+export async function updateJewelryStockCountCash(
+  countId: number,
+  countedCashBalance: number,
+): Promise<JewelryStockCount> {
+  const { data } = await apiClient.patch<ApiResponse<JewelryStockCount>>(
+    `/jeweler/stock-counts/${countId}/cash`,
+    { counted_cash_balance: countedCashBalance },
+  )
+  return data.data
+}
+
+export async function completeJewelryStockCount(id: number): Promise<JewelryStockCount> {
+  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(`/jeweler/stock-counts/${id}/complete`)
+  return data.data
+}
+
+export async function cancelJewelryStockCount(id: number): Promise<JewelryStockCount> {
+  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(`/jeweler/stock-counts/${id}/cancel`)
+  return data.data
+}
+
 export async function getMarketGoldPricesLatest(): Promise<MarketGoldPriceLatestResponse> {
   const { data } = await apiClient.get<ApiResponse<MarketGoldPriceLatestResponse>>('/jeweler/gold-prices/latest')
   return data.data

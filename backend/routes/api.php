@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\Jeweler\JewelrySaleController;
 use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockController;
+use App\Http\Controllers\Api\Jeweler\JewelryStockCountController;
 use App\Http\Controllers\Api\Jeweler\JewelryVaultController;
 use Illuminate\Support\Facades\Route;
 
@@ -172,6 +173,16 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
 
     Route::get('/stock-movements', [JewelryStockController::class, 'index']);
+
+    Route::get('/stock-counts', [JewelryStockCountController::class, 'index']);
+    Route::get('/stock-counts/active', [JewelryStockCountController::class, 'active']);
+    Route::post('/stock-counts', [JewelryStockCountController::class, 'store']);
+    Route::get('/stock-counts/{stockCount}', [JewelryStockCountController::class, 'show']);
+    Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
+    Route::patch('/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem']);
+    Route::patch('/stock-counts/{stockCount}/cash', [JewelryStockCountController::class, 'updateCash']);
+    Route::post('/stock-counts/{stockCount}/complete', [JewelryStockCountController::class, 'complete']);
+    Route::post('/stock-counts/{stockCount}/cancel', [JewelryStockCountController::class, 'cancel']);
 
     Route::get('/vault', [JewelryVaultController::class, 'show']);
     Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
