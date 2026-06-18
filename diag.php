@@ -89,6 +89,26 @@ if (is_file($basePath.'/vendor/autoload.php') && is_file($basePath.'/.env')) {
 }
 line('Laravel bootstrap', $laravelOk, $laravelDetail);
 
+$stockCountOk = false;
+$stockCountDetail = 'Laravel bootstrap gerekli';
+if ($laravelOk) {
+    try {
+        $hasCounts = Illuminate\Support\Facades\Schema::hasTable('jewelry_stock_counts');
+        $hasItems = Illuminate\Support\Facades\Schema::hasTable('jewelry_stock_count_items');
+        $hasController = class_exists(\App\Http\Controllers\Api\Jeweler\JewelryStockCountController::class);
+        $stockCountOk = $hasCounts && $hasItems && $hasController;
+        $stockCountDetail = sprintf(
+            'tablolar: %s/%s, controller: %s',
+            $hasCounts ? 'var' : 'YOK',
+            $hasItems ? 'var' : 'YOK',
+            $hasController ? 'var' : 'YOK',
+        );
+    } catch (Throwable $e) {
+        $stockCountDetail = $e->getMessage();
+    }
+}
+line('Stok sayım modülü', $stockCountOk, $stockCountDetail);
+
 echo "Adistek sunucu kontrolü\n";
 echo str_repeat('=', 40)."\n\n";
 
@@ -117,5 +137,11 @@ if ($failed === 0) {
         echo "  cd backend\n";
         echo "  php artisan key:generate\n";
         echo "  php artisan migrate --force\n";
+        echo "  php artisan optimize:clear\n";
+        if (! $stockCountOk) {
+            echo "\nStok sayım 500 hatası için tarayıcıda bir kez açın:\n";
+            echo '  https://'.($_SERVER['HTTP_HOST'] ?? 'alan-adiniz.com')."/migrate.php\n";
+            echo "Ardından migrate.php dosyasını silin.\n";
+        }
     }
 }
