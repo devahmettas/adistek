@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JewelryProduct;
 use App\Services\JewelryProductPriceService;
 use App\Services\JewelryProductService;
+use App\Support\MenuAssetUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -130,8 +131,35 @@ class JewelryProductController extends Controller
 
     private function validateProduct(Request $request, bool $partial = false): array
     {
+        $restaurantId = $this->restaurantId($request);
+
+        if ($request->has('image_path')) {
+            $normalizedImagePath = MenuAssetUrl::normalizeStoragePath($request->input('image_path'));
+            $request->merge([
+                'image_path' => $normalizedImagePath,
+            ]);
+        }
+
+        if ($request->has('is_manual_price')) {
+            $request->merge([
+                'is_manual_price' => $request->boolean('is_manual_price'),
+            ]);
+        }
+
+        if ($request->has('is_active')) {
+            $request->merge([
+                'is_active' => $request->boolean('is_active'),
+            ]);
+        }
+
         $rules = [
-            'category_id' => ['nullable', 'integer', 'exists:jewelry_categories,id'],
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('jewelry_categories', 'id')->where(
+                    fn ($query) => $query->where('restaurant_id', $restaurantId),
+                ),
+            ],
             'name' => [$partial ? 'sometimes' : 'required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:64'],
             'barcode' => ['nullable', 'string', 'max:64'],
@@ -144,14 +172,24 @@ class JewelryProductController extends Controller
             'labor_cost' => ['nullable', 'numeric', 'min:0'],
             'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
-            'is_manual_price' => ['boolean'],
+            'is_manual_price' => ['sometimes', 'boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
-            'image_path' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
+            'image_path' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:#^(?:(?:menu|jewelry)/[0-9]+/(?:products|categories|slides)|products)/[A-Za-z0-9._-]+$#',
+            ],
+            'is_active' => ['sometimes', 'boolean'],
         ];
 
-        return $request->validate($rules);
+        $messages = [
+            'image_path.regex' => 'Geçersiz görsel yolu. Lütfen görseli yeniden yükleyin.',
+            'category_id.exists' => 'Seçilen kategori geçersiz.',
+        ];
+
+        return $request->validate($rules, $messages);
     }
 
     private function ensureOwnership(Request $request, JewelryProduct $product): void

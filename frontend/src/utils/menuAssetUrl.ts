@@ -106,3 +106,18 @@ export function resolveMenuAssetUrl(
 
   return buildMediaUrl(normalizeStoragePath(url))
 }
+
+export function normalizeImageStoragePath(
+  path: string | null | undefined,
+): string | null {
+  if (!path) {
+    return null
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return extractPathFromUrl(path)
+  }
+
+  const normalized = normalizeStoragePath(path)
+  return normalized || null
+}

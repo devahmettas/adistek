@@ -32,7 +32,7 @@ class PublicMediaController extends Controller
             abort(404);
         }
 
-        $mimeType = strtolower((string) $disk->mimeType($normalizedPath));
+        $mimeType = $this->resolveMimeType($normalizedPath, (string) $disk->mimeType($normalizedPath));
 
         if (! in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
             abort(404);
@@ -46,11 +46,15 @@ class PublicMediaController extends Controller
 
     private function normalizePath(string $path): ?string
     {
-        $normalized = str_replace('\\', '/', $path);
+        $normalized = str_replace('\\', '/', urldecode($path));
         $normalized = ltrim($normalized, '/');
 
         if ($normalized === '' || str_contains($normalized, '..')) {
             return null;
+        }
+
+        if (str_starts_with($normalized, 'api/media/')) {
+            $normalized = substr($normalized, strlen('api/media/'));
         }
 
         if (str_starts_with($normalized, 'storage/')) {
@@ -63,8 +67,24 @@ class PublicMediaController extends Controller
     private function isAllowedPath(string $path): bool
     {
         return preg_match(
-            '#^(?:menu|jewelry)/[0-9]+/(?:products|categories|slides)/[A-Za-z0-9._-]+$#',
+            '#^(?:(?:menu|jewelry)/[0-9]+/(?:products|categories|slides)|products)/[A-Za-z0-9._-]+$#',
             $path,
         ) === 1;
+    }
+
+    private function resolveMimeType(string $path, string $detected): string
+    {
+        $detected = strtolower($detected);
+
+        if (in_array($detected, self::ALLOWED_MIME_TYPES, true)) {
+            return $detected;
+        }
+
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => $detected,
+        };
     }
 }

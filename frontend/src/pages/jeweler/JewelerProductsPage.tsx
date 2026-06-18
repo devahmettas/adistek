@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import ImageUploadField from '../../components/ImageUploadField'
@@ -25,7 +26,7 @@ import {
   type JewelryProduct,
   type MarketGoldPriceRecord,
 } from '../../api/jeweler'
-import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
+import { resolveMenuAssetUrl, normalizeImageStoragePath } from '../../utils/menuAssetUrl'
 import {
   calculateJewelryPrice,
   formatJewelryMoney,
@@ -464,9 +465,12 @@ export default function JewelerProductsPage() {
 
   const applyProductToForm = (product: JewelryProduct) => {
     const form = populateFormFromProduct(product)
+    const categoryStillExists = !form.categoryId
+      || categories.some((category) => String(category.id) === form.categoryId)
+
     setEditingId(product.id)
     setName(form.name)
-    setCategoryId(form.categoryId)
+    setCategoryId(categoryStillExists ? form.categoryId : '')
     setKarat(form.karat)
     setWeightGram(form.weightGram)
     setLaborCost(form.laborCost)
@@ -535,7 +539,7 @@ export default function JewelerProductsPage() {
       labor_cost: String(parseMoneyInput(laborCost) || 0),
       profit_rate: profitRate || '0',
       description: description.trim() || null,
-      image_path: imagePath,
+      image_path: normalizeImageStoragePath(imagePath),
       is_manual_price: isManualPrice,
       sale_price: isManualPrice ? String(parseMoneyInput(manualPrice)) : String(priceBreakdown?.salePrice ?? 0),
       metal_type: 'gold' as const,
@@ -551,8 +555,20 @@ export default function JewelerProductsPage() {
       resetForm()
       setActiveTab('list')
       await load()
-    } catch {
-      setFormError(editingId ? 'Ürün güncellenemedi.' : 'Ürün eklenemedi.')
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const validationMessage = error.response?.data?.errors
+          ? Object.values(error.response.data.errors as Record<string, string[]>).flat()[0]
+          : null
+        const serverMessage = error.response?.data?.message
+        setFormError(
+          validationMessage
+          || serverMessage
+          || (editingId ? 'Ürün güncellenemedi.' : 'Ürün eklenemedi.'),
+        )
+      } else {
+        setFormError(editingId ? 'Ürün güncellenemedi.' : 'Ürün eklenemedi.')
+      }
     } finally {
       setSubmitting(false)
     }

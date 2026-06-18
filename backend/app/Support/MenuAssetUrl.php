@@ -25,13 +25,31 @@ class MenuAssetUrl
         return self::buildMediaUrl($normalizedPath);
     }
 
-    public static function normalizeStoragePath(string $path): ?string
+    public static function normalizeStoragePath(?string $path): ?string
     {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $parsedPath = parse_url($path, PHP_URL_PATH);
+
+            if (! is_string($parsedPath) || $parsedPath === '') {
+                return null;
+            }
+
+            $path = $parsedPath;
+        }
+
         $normalized = str_replace('\\', '/', $path);
         $normalized = ltrim($normalized, '/');
 
         if ($normalized === '' || str_contains($normalized, '..')) {
             return null;
+        }
+
+        if (str_starts_with($normalized, 'api/media/')) {
+            $normalized = substr($normalized, strlen('api/media/'));
         }
 
         if (str_starts_with($normalized, 'storage/')) {
@@ -64,13 +82,7 @@ class MenuAssetUrl
 
     private static function rewriteLegacyUrl(string $url): ?string
     {
-        $parts = parse_url($url);
-
-        if (! is_array($parts) || empty($parts['path'])) {
-            return null;
-        }
-
-        $path = self::normalizeStoragePath($parts['path']);
+        $path = self::normalizeStoragePath($url);
 
         if ($path === null) {
             return null;

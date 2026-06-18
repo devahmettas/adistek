@@ -164,7 +164,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/products', [JewelryProductController::class, 'store']);
     Route::get('/products/{product}', [JewelryProductController::class, 'show']);
     Route::get('/products/{product}/sale-cost', [JewelryProductController::class, 'saleCost']);
-    Route::put('/products/{product}', [JewelryProductController::class, 'update']);
+    Route::match(['put', 'patch', 'post'], '/products/{product}', [JewelryProductController::class, 'update']);
     Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
     Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
 
