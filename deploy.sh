@@ -22,4 +22,4 @@ npm ci
 npm run build
 
 echo "==> Tamamlandı"
-echo "Kontrol: https://alan-adiniz.com/diag.php (sonra diag.php silin)"
+echo "Kontrol: siteyi tarayıcıda açıp giriş yapın."

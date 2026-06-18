@@ -19,9 +19,7 @@
 
     RewriteRule ^up$ index.php [L]
     RewriteRule ^api/ index.php [L]
-    RewriteRule ^diag\.php$ - [L]
     RewriteRule ^migrate\.php$ - [L]
-    RewriteRule ^setup\.php$ - [L]
 
     RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
     RewriteRule ^storage/(.*)$ backend/storage/app/public/$1 [L]

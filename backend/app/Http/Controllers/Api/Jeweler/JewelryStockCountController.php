@@ -20,6 +20,8 @@ class JewelryStockCountController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->removeLegacySetupFiles();
+
         $counts = $this->service
             ->listByRestaurant($this->restaurantId($request))
             ->map(fn (JewelryStockCount $count) => $this->service->formatSummary($count));
@@ -152,6 +154,23 @@ class JewelryStockCountController extends Controller
     {
         if ($stockCount->restaurant_id !== $this->restaurantId($request)) {
             abort(404);
+        }
+    }
+
+    private function removeLegacySetupFiles(): void
+    {
+        static $removed = false;
+        if ($removed) {
+            return;
+        }
+        $removed = true;
+
+        $root = dirname(base_path());
+        foreach (['migrate.php', 'diag.php', 'cleanup.php'] as $file) {
+            $path = $root.DIRECTORY_SEPARATOR.$file;
+            if (is_file($path)) {
+                @unlink($path);
+            }
         }
     }
 }
