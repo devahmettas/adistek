@@ -5,6 +5,13 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+foreach (['migrate.php', 'diag.php', 'cleanup.php'] as $legacySetupFile) {
+    $legacySetupPath = __DIR__.'/'.$legacySetupFile;
+    if (is_file($legacySetupPath)) {
+        @unlink($legacySetupPath);
+    }
+}
+
 $basePath = __DIR__.'/backend';
 $autoload = $basePath.'/vendor/autoload.php';
 $envFile = $basePath.'/.env';
