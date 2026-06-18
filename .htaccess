@@ -18,7 +18,7 @@
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
     RewriteRule ^up$ index.php [L]
-    RewriteRule ^api(/|$) index.php [L]
+    RewriteRule ^api/ index.php [L]
     RewriteRule ^diag\.php$ - [L]
     RewriteRule ^setup\.php$ - [L]
 
@@ -36,6 +36,7 @@
     RewriteRule ^ - [L]
 
     # Eksik JS/CSS dosyası için index.html dönme (MIME hatasını önler)
+    RewriteCond %{REQUEST_URI} !^/api/ [NC]
     RewriteCond %{REQUEST_URI} \.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$ [NC]
     RewriteRule ^ - [R=404,L]
 

@@ -75,6 +75,17 @@ class JewelryProductController extends Controller
         ]);
     }
 
+    public function updateById(Request $request, int $productId): JsonResponse
+    {
+        $restaurantId = $this->restaurantId($request);
+        $product = $this->service->findForRestaurant($restaurantId, $productId);
+        $data = $this->validateProduct($request, true);
+
+        return response()->json([
+            'data' => $this->service->update($restaurantId, $product->id, $data),
+        ]);
+    }
+
     public function destroy(Request $request, JewelryProduct $product): JsonResponse
     {
         $this->ensureOwnership($request, $product);
@@ -133,8 +144,13 @@ class JewelryProductController extends Controller
     {
         $restaurantId = $this->restaurantId($request);
 
-        if ($request->has('image_path')) {
+        if ($request->exists('image_path')) {
             $normalizedImagePath = MenuAssetUrl::normalizeStoragePath($request->input('image_path'));
+
+            if ($normalizedImagePath !== null && ! $this->isValidImagePath($normalizedImagePath)) {
+                $normalizedImagePath = null;
+            }
+
             $request->merge([
                 'image_path' => $normalizedImagePath,
             ]);
@@ -179,13 +195,11 @@ class JewelryProductController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                'regex:#^(?:(?:menu|jewelry)/[0-9]+/(?:products|categories|slides)|products)/[A-Za-z0-9._-]+$#',
             ],
             'is_active' => ['sometimes', 'boolean'],
         ];
 
         $messages = [
-            'image_path.regex' => 'Geçersiz görsel yolu. Lütfen görseli yeniden yükleyin.',
             'category_id.exists' => 'Seçilen kategori geçersiz.',
         ];
 
@@ -197,5 +211,13 @@ class JewelryProductController extends Controller
         if ($product->restaurant_id !== $this->restaurantId($request)) {
             abort(404);
         }
+    }
+
+    private function isValidImagePath(string $path): bool
+    {
+        return preg_match(
+            '#^(?:(?:menu|jewelry)/[0-9]+/(?:products|categories|slides)|products)/[A-Za-z0-9._-]+$#',
+            $path,
+        ) === 1;
     }
 }

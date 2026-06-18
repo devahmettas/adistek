@@ -45,6 +45,7 @@ Route::post('/kitchen/auth/login', [KitchenAuthController::class, 'login']);
 
 Route::post('/admin/auth/login', [AdminAuthController::class, 'login']);
 
+Route::get('/media', [PublicMediaController::class, 'showFromQuery']);
 Route::get('/media/{path}', [PublicMediaController::class, 'show'])
     ->where('path', '.*')
     ->name('media.show');
@@ -164,6 +165,8 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/products', [JewelryProductController::class, 'store']);
     Route::get('/products/{product}', [JewelryProductController::class, 'show']);
     Route::get('/products/{product}/sale-cost', [JewelryProductController::class, 'saleCost']);
+    Route::post('/products/{productId}/update', [JewelryProductController::class, 'updateById'])
+        ->whereNumber('productId');
     Route::match(['put', 'patch', 'post'], '/products/{product}', [JewelryProductController::class, 'update']);
     Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
     Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);

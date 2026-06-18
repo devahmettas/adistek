@@ -32,6 +32,16 @@ class MenuAssetUrl
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $query = parse_url($path, PHP_URL_QUERY);
+
+            if (is_string($query) && $query !== '') {
+                parse_str($query, $params);
+
+                if (! empty($params['path']) && is_string($params['path'])) {
+                    return self::normalizeStoragePath($params['path']);
+                }
+            }
+
             $parsedPath = parse_url($path, PHP_URL_PATH);
 
             if (! is_string($parsedPath) || $parsedPath === '') {
@@ -61,14 +71,9 @@ class MenuAssetUrl
 
     public static function buildMediaUrl(string $normalizedPath): string
     {
-        $encodedPath = implode('/', array_map(
-            rawurlencode(...),
-            explode('/', $normalizedPath),
-        ));
-
         $baseUrl = self::resolveBaseUrl();
 
-        return "{$baseUrl}/api/media/{$encodedPath}";
+        return $baseUrl.'/api/media?path='.rawurlencode($normalizedPath);
     }
 
     private static function resolveBaseUrl(): string

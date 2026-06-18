@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -18,9 +19,19 @@ class PublicMediaController extends Controller
         'image/webp',
     ];
 
+    public function showFromQuery(Request $request): Response|BinaryFileResponse
+    {
+        return $this->serve((string) $request->query('path', ''));
+    }
+
     public function show(string $path): Response|BinaryFileResponse
     {
-        $normalizedPath = $this->normalizePath($path);
+        return $this->serve($path);
+    }
+
+    private function serve(string $rawPath): Response|BinaryFileResponse
+    {
+        $normalizedPath = $this->normalizePath($rawPath);
 
         if ($normalizedPath === null || ! $this->isAllowedPath($normalizedPath)) {
             abort(404);
@@ -32,7 +43,10 @@ class PublicMediaController extends Controller
             abort(404);
         }
 
-        $mimeType = $this->resolveMimeType($normalizedPath, (string) $disk->mimeType($normalizedPath));
+        $mimeType = $this->resolveMimeType(
+            $normalizedPath,
+            (string) $disk->mimeType($normalizedPath),
+        );
 
         if (! in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
             abort(404);
@@ -46,6 +60,24 @@ class PublicMediaController extends Controller
 
     private function normalizePath(string $path): ?string
     {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $query = parse_url($path, PHP_URL_QUERY);
+
+            if (is_string($query) && $query !== '') {
+                parse_str($query, $params);
+
+                if (! empty($params['path']) && is_string($params['path'])) {
+                    $path = $params['path'];
+                }
+            }
+
+            $parsedPath = parse_url($path, PHP_URL_PATH);
+
+            if (is_string($parsedPath) && $parsedPath !== '') {
+                $path = $parsedPath;
+            }
+        }
+
         $normalized = str_replace('\\', '/', urldecode($path));
         $normalized = ltrim($normalized, '/');
 

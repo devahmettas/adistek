@@ -31,25 +31,23 @@ function normalizeStoragePath(path: string): string {
   return normalized
 }
 
-function encodeMediaPath(path: string): string {
-  return path
-    .split('/')
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join('/')
-}
-
 function buildMediaUrl(normalizedPath: string): string | null {
   if (!normalizedPath || normalizedPath.includes('..')) {
     return null
   }
 
-  return `${getAssetOrigin()}/api/media/${encodeMediaPath(normalizedPath)}`
+  return `${getAssetOrigin()}/api/media?path=${encodeURIComponent(normalizedPath)}`
 }
 
 function extractPathFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url, getAssetOrigin())
+    const queryPath = parsed.searchParams.get('path')
+
+    if (queryPath) {
+      return normalizeStoragePath(queryPath)
+    }
+
     const normalized = normalizeStoragePath(parsed.pathname)
 
     return normalized || null
@@ -59,13 +57,9 @@ function extractPathFromUrl(url: string): string | null {
 }
 
 function rewriteLegacyAssetUrl(url: string): string | null {
-  if (url.includes('/api/media/')) {
-    try {
-      const parsed = new URL(url, getAssetOrigin())
-      return `${getAssetOrigin()}${parsed.pathname}`
-    } catch {
-      return url
-    }
+  if (url.includes('/api/media')) {
+    const path = extractPathFromUrl(url)
+    return path ? buildMediaUrl(path) : null
   }
 
   const path = extractPathFromUrl(url)
@@ -92,12 +86,9 @@ export function resolveMenuAssetUrl(
     return rewriteLegacyAssetUrl(url) ?? url
   }
 
-  if (url.startsWith('/api/media/')) {
-    return `${getAssetOrigin()}${url}`
-  }
-
-  if (url.startsWith('api/media/')) {
-    return `${getAssetOrigin()}/${url}`
+  if (url.startsWith('/api/media') || url.startsWith('api/media')) {
+    const pathFromUrl = extractPathFromUrl(`${getAssetOrigin()}/${url.replace(/^\/+/, '')}`)
+    return pathFromUrl ? buildMediaUrl(pathFromUrl) : `${getAssetOrigin()}/${url.replace(/^\/+/, '')}`
   }
 
   if (url.startsWith('/storage/') || url.startsWith('storage/')) {

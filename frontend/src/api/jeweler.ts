@@ -380,7 +380,10 @@ export async function updateJewelryProduct(
   id: number,
   payload: Partial<JewelryProduct>,
 ): Promise<JewelryProduct> {
-  const { data } = await apiClient.put<ApiResponse<JewelryProduct>>(`/jeweler/products/${id}`, payload)
+  const { data } = await apiClient.post<ApiResponse<JewelryProduct>>(
+    `/jeweler/products/${id}/update`,
+    payload,
+  )
   return data.data
 }
 
