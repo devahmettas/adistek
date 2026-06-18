@@ -63,7 +63,7 @@ function populateFormFromProduct(product: JewelryProduct) {
     isManualPrice: product.is_manual_price,
     manualPrice: formatMoneyInputFromNumber(product.sale_price),
     imagePath: product.image_path,
-    imageUrl: resolveMenuAssetUrl(null, product.image_path),
+    imageUrl: resolveMenuAssetUrl(product.image_url, product.image_path),
   }
 }
 
@@ -682,7 +682,7 @@ export default function JewelerProductsPage() {
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filteredProducts.map((product) => {
-              const previewUrl = resolveMenuAssetUrl(null, product.image_path)
+              const previewUrl = resolveMenuAssetUrl(product.image_url, product.image_path)
               const categoryName = product.category_id
                 ? categoryNameById.get(product.category_id)
                 : null

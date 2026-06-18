@@ -2,6 +2,7 @@ import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 
 interface JewelrySaleItemThumbProps {
   imagePath?: string | null
+  imageUrl?: string | null
   name: string
   size?: 'xs' | 'sm' | 'md'
   className?: string
@@ -15,11 +16,12 @@ const SIZE_CLASSES = {
 
 export default function JewelrySaleItemThumb({
   imagePath,
+  imageUrl,
   name,
   size = 'sm',
   className = '',
 }: JewelrySaleItemThumbProps) {
-  const previewUrl = resolveMenuAssetUrl(null, imagePath ?? null)
+  const previewUrl = resolveMenuAssetUrl(imageUrl, imagePath ?? null)
 
   return (
     <div

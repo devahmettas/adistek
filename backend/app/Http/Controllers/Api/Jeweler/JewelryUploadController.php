@@ -19,6 +19,7 @@ class JewelryUploadController extends Controller
             $request->user()->id,
             $request->file('image'),
             $request->validated('context'),
+            'jeweler',
         );
 
         return response()->json([

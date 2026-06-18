@@ -2,6 +2,9 @@
     AddType application/javascript js mjs
     AddType text/css css
     AddType image/svg+xml svg svgz
+    AddType image/jpeg jpeg jpg jpe
+    AddType image/png png
+    AddType image/webp webp
 </IfModule>
 
 <IfModule mod_rewrite.c>

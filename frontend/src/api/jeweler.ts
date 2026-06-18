@@ -30,6 +30,7 @@ export interface JewelryProduct {
   stock_quantity: number
   description: string | null
   image_path: string | null
+  image_url?: string | null
   is_active: boolean
   created_at: string
   category?: JewelryCategory

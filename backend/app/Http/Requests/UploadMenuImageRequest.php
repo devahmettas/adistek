@@ -18,7 +18,8 @@ class UploadMenuImageRequest extends FormRequest
                 'required',
                 'file',
                 'max:5120',
-                'mimetypes:image/jpeg,image/png,image/webp,image/pjpeg,image/x-png',
+                'mimes:jpg,jpeg,png,webp',
+                'mimetypes:image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp',
             ],
             'context' => ['required', 'in:product,slide,category'],
         ];
@@ -28,6 +29,7 @@ class UploadMenuImageRequest extends FormRequest
     {
         return [
             'image.mimetypes' => 'Yalnızca JPEG, JPG, PNG veya WebP görselleri yüklenebilir.',
+            'image.mimes' => 'Yalnızca JPEG, JPG, PNG veya WebP görselleri yüklenebilir.',
             'image.max' => 'Görsel boyutu en fazla 5 MB olabilir.',
         ];
     }

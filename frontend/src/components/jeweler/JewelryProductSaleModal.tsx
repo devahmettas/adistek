@@ -55,7 +55,7 @@ export default function JewelryProductSaleModal({
   const { addItem, getReservedQuantity, notifySaleCompleted } = useJewelrySaleCart()
 
   const catalogPrice = Number(product.sale_price)
-  const previewUrl = resolveMenuAssetUrl(null, product.image_path)
+  const previewUrl = resolveMenuAssetUrl(product.image_url, product.image_path)
   const reservedInCart = variant === 'standalone' ? getReservedQuantity(product.id) : 0
   const availableStock = Math.max(0, product.stock_quantity - reservedInCart - reservedQuantity + extraStock)
 

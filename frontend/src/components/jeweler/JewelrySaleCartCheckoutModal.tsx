@@ -294,7 +294,7 @@ export default function JewelrySaleCartCheckoutModal() {
                           unitCostOverride: lineUnitCosts[item.id],
                         },
                       )
-                      const previewUrl = resolveMenuAssetUrl(null, item.image_path)
+                      const previewUrl = resolveMenuAssetUrl(item.image_url, item.image_path)
 
                       return (
                         <li key={item.id} className="bg-white px-3 py-2">

@@ -92,6 +92,7 @@ export default function JewelrySaleDetailModal({ sale, onClose, onEdit }: Jewelr
                       <div className="flex items-center gap-3">
                         <JewelrySaleItemThumb
                           imagePath={item.product?.image_path}
+                          imageUrl={item.product?.image_url}
                           name={item.product_name}
                           size="sm"
                         />

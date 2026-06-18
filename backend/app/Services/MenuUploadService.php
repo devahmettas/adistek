@@ -14,10 +14,14 @@ class MenuUploadService
 
     private const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
-    public function upload(int $restaurantId, UploadedFile $file, string $context): array
+    public function upload(int $restaurantId, UploadedFile $file, string $context, string $module = 'menu'): array
     {
         if (! in_array($context, ['product', 'slide', 'category'], true)) {
             throw new UnprocessableEntityHttpException('Geçersiz yükleme türü.');
+        }
+
+        if (! in_array($module, ['menu', 'jeweler'], true)) {
+            throw new UnprocessableEntityHttpException('Geçersiz modül.');
         }
 
         if (! $this->isAllowedImage($file)) {
@@ -28,23 +32,20 @@ class MenuUploadService
             throw new UnprocessableEntityHttpException('Görsel boyutu en fazla 5 MB olabilir.');
         }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: '');
-        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            $extension = match (strtolower((string) $file->getMimeType())) {
-                'image/png', 'image/x-png' => 'png',
-                'image/webp' => 'webp',
-                default => 'jpg',
-            };
-        }
-
+        $extension = $this->resolveExtension($file);
         $filename = Str::uuid().'.'.$extension;
         $directoryNames = [
             'product' => 'products',
             'slide' => 'slides',
             'category' => 'categories',
         ];
-        $directory = "menu/{$restaurantId}/{$directoryNames[$context]}";
+        $modulePrefix = $module === 'jeweler' ? 'jewelry' : 'menu';
+        $directory = "{$modulePrefix}/{$restaurantId}/{$directoryNames[$context]}";
         $path = $file->storeAs($directory, $filename, 'public');
+
+        if (! $path) {
+            throw new UnprocessableEntityHttpException('Görsel kaydedilemedi.');
+        }
 
         return [
             'path' => $path,
@@ -92,5 +93,20 @@ class MenuUploadService
         ];
 
         return in_array($mime, $allowedMimes, true);
+    }
+
+    private function resolveExtension(UploadedFile $file): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: '');
+
+        if (in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            return $extension === 'jpeg' ? 'jpg' : $extension;
+        }
+
+        return match (strtolower((string) $file->getMimeType())) {
+            'image/png', 'image/x-png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
     }
 }

@@ -24,7 +24,7 @@ export default function JewelryProductDetailModal({
 }: JewelryProductDetailModalProps) {
   useBodyScrollLock(true)
 
-  const previewUrl = resolveMenuAssetUrl(null, product.image_path)
+  const previewUrl = resolveMenuAssetUrl(product.image_url, product.image_path)
   const metrics = useMemo(
     () => resolveProductMetalMetrics(
       Number(product.weight_gram),

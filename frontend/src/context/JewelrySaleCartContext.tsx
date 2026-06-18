@@ -22,6 +22,7 @@ export interface JewelrySaleCartLine {
   quantity: number
   unit_price: number
   image_path: string | null
+  image_url?: string | null
 }
 
 interface AddCartItemInput {
@@ -145,6 +146,7 @@ export function JewelrySaleCartProvider({ children }: { children: ReactNode }) {
         quantity: qty,
         unit_price,
         image_path: product.image_path,
+        image_url: product.image_url,
       },
     ])
 

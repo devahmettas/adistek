@@ -261,6 +261,7 @@ export default function JewelerSalesSection({
                               <JewelrySaleItemThumb
                                 key={item.id}
                                 imagePath={item.product?.image_path}
+                                imageUrl={item.product?.image_url}
                                 name={item.product_name}
                                 size="xs"
                               />
