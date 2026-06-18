@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import BarcodeScannerModal from '../../components/jeweler/BarcodeScannerModal'
@@ -26,6 +27,17 @@ import {
   parseMoneyInput,
 } from '../../utils/moneyInput'
 
+function stockCountErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const message = error.response?.data?.message
+    if (typeof message === 'string' && message.trim() !== '') {
+      return message
+    }
+  }
+
+  return fallback
+}
+
 function formatDifference(value: number, unit: string): string {
   const prefix = value > 0 ? '+' : ''
   if (unit === '₺') {
@@ -35,22 +47,6 @@ function formatDifference(value: number, unit: string): string {
     return `${prefix}${value.toFixed(3)} gr`
   }
   return `${prefix}${value} adet`
-}
-
-function hasStockCountEntries(count: JewelryStockCount): boolean {
-  const hasProductEntries = count.items.some((item) => {
-    if (item.count_mode === 'barcode') {
-      return item.counted_quantity > 0
-    }
-
-    if (item.entry_type === 'weight') {
-      return (item.counted_weight_gram ?? 0) > 0
-    }
-
-    return item.counted_quantity > 0
-  })
-
-  return hasProductEntries || count.counted_cash_balance !== null
 }
 
 function DiscrepancyBadge({ label }: { label: string }) {
@@ -154,6 +150,7 @@ function ManualItemRow({
       : String(item.counted_quantity),
   )
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setValue(
@@ -165,12 +162,15 @@ function ManualItemRow({
 
   const save = async () => {
     setSaving(true)
+    setError(null)
     try {
       const payload = item.entry_type === 'weight'
         ? { counted_weight_gram: Number(value) || 0 }
         : { counted_quantity: Math.max(0, Number.parseInt(value, 10) || 0) }
       const updated = await updateJewelryStockCountItem(countId, item.id, payload)
       onUpdated(updated)
+    } catch (err) {
+      setError(stockCountErrorMessage(err, 'Sayım kalemi kaydedilemedi.'))
     } finally {
       setSaving(false)
     }
@@ -206,6 +206,7 @@ function ManualItemRow({
       {item.has_discrepancy && (
         <DiscrepancyBadge label={item.difference_label} />
       )}
+      {error && <p className="text-xs text-red-700 sm:basis-full">{error}</p>}
     </div>
   )
 }
@@ -303,8 +304,8 @@ function ActiveStockCount({
         const item = updated.items.find((row) => row.barcode === trimmed)
         setScanMessage(item ? `${item.name} sayıldı (${item.counted_quantity})` : 'Ürün sayıldı.')
         setBarcodeInput('')
-      } catch {
-        setError('Barkod okunamadı veya ürün listede yok.')
+      } catch (err) {
+        setError(stockCountErrorMessage(err, 'Barkod okunamadı veya ürün listede yok.'))
       }
     }
 
@@ -337,8 +338,8 @@ function ActiveStockCount({
     try {
       const updated = await updateJewelryStockCountCash(count.id, amount)
       onCountChange(updated)
-    } catch {
-      setError('Nakit tutarı kaydedilemedi.')
+    } catch (err) {
+      setError(stockCountErrorMessage(err, 'Nakit tutarı kaydedilemedi.'))
     } finally {
       setCashSaving(false)
     }
@@ -350,8 +351,8 @@ function ActiveStockCount({
     try {
       await completeJewelryStockCount(count.id)
       onCompleted()
-    } catch {
-      setError('Sayım tamamlanamadı. Nakit girişi yapıldığından emin olun.')
+    } catch (err) {
+      setError(stockCountErrorMessage(err, 'Sayım tamamlanamadı. Nakit girişi yapıldığından emin olun.'))
     } finally {
       setCompleting(false)
     }
@@ -361,9 +362,12 @@ function ActiveStockCount({
     if (!window.confirm('Devam eden sayım iptal edilsin mi?')) return
 
     setCancelling(true)
+    setError(null)
     try {
       await cancelJewelryStockCount(count.id)
       onCompleted()
+    } catch (err) {
+      setError(stockCountErrorMessage(err, 'Sayım iptal edilemedi.'))
     } finally {
       setCancelling(false)
     }
@@ -506,7 +510,6 @@ function ActiveStockCount({
 
 export default function JewelerStockCountPage() {
   const [activeCount, setActiveCount] = useState<JewelryStockCount | null>(null)
-  const activeCountRef = useRef<JewelryStockCount | null>(null)
   const [history, setHistory] = useState<JewelryStockCountSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
@@ -532,19 +535,6 @@ export default function JewelerStockCountPage() {
   useEffect(() => {
     void load()
   }, [load])
-
-  useEffect(() => {
-    activeCountRef.current = activeCount
-  }, [activeCount])
-
-  useEffect(() => {
-    return () => {
-      const count = activeCountRef.current
-      if (count && !hasStockCountEntries(count)) {
-        void cancelJewelryStockCount(count.id).catch(() => {})
-      }
-    }
-  }, [])
 
   const startCount = async () => {
     setStarting(true)

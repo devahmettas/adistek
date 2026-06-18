@@ -383,7 +383,7 @@ class JewelryStockCountService
 
     private function ensureItemBelongsToCount(JewelryStockCount $count, JewelryStockCountItem $item): void
     {
-        if ($item->stock_count_id !== $count->id) {
+        if ((int) $item->stock_count_id !== (int) $count->id) {
             throw new NotFoundHttpException('Sayım kalemi bulunamadı.');
         }
     }
