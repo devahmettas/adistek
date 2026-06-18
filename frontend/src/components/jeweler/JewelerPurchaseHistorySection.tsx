@@ -4,6 +4,15 @@ import JewelryPurchaseDetailModal from './JewelryPurchaseDetailModal'
 import LoadingState from '../LoadingState'
 import { getJewelryPurchases, type JewelryPurchase } from '../../api/jeweler'
 import { formatPanelMoney, PanelStatCard } from '../restaurant/ManagementPanelWidgets'
+import {
+  computePurchaseSummary,
+  createDefaultPurchaseFilters,
+  filterAndSortPurchases,
+  getPaymentLabel,
+  HISTORY_PERIOD_OPTIONS,
+  HISTORY_SORT_OPTIONS,
+  type PurchasePageFilters,
+} from '../../utils/jewelrySalesAnalytics'
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Nakit',
@@ -24,6 +33,7 @@ export default function JewelerPurchaseHistorySection({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPurchase, setSelectedPurchase] = useState<JewelryPurchase | null>(null)
+  const [filters, setFilters] = useState<PurchasePageFilters>(createDefaultPurchaseFilters)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -41,18 +51,32 @@ export default function JewelerPurchaseHistorySection({
     void load()
   }, [load, refreshKey])
 
-  const summary = useMemo(() => {
-    const totalPaid = purchases.reduce((sum, purchase) => sum + Number(purchase.total), 0)
-    const itemCount = purchases.reduce(
-      (sum, purchase) => sum + (purchase.items ?? []).reduce((lineSum, item) => lineSum + item.quantity, 0),
-      0,
-    )
-    return {
-      count: purchases.length,
-      totalPaid,
-      itemCount,
-    }
+  const filteredPurchases = useMemo(
+    () => filterAndSortPurchases(purchases, filters),
+    [purchases, filters],
+  )
+
+  const summary = useMemo(
+    () => computePurchaseSummary(filteredPurchases),
+    [filteredPurchases],
+  )
+
+  const paymentFilterOptions = useMemo(() => {
+    const methods = [...new Set(purchases.map((purchase) => purchase.payment_method))]
+    return [
+      { value: '', label: 'Tüm ödemeler' },
+      ...methods.map((method) => ({ value: method, label: getPaymentLabel(method) })),
+    ]
   }, [purchases])
+
+  const hasActiveFilters = (
+    filters.search !== ''
+    || filters.period !== createDefaultPurchaseFilters().period
+    || filters.paymentMethod !== ''
+    || filters.sort !== 'newest'
+  )
+
+  const resetFilters = () => setFilters(createDefaultPurchaseFilters())
 
   if (loading) {
     return <LoadingState />
@@ -63,17 +87,99 @@ export default function JewelerPurchaseHistorySection({
       {error && <p className="alert-error">{error}</p>}
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <PanelStatCard label="Toplam alım" value={String(summary.count)} hint="Kayıt sayısı" accent="brand" />
-        <PanelStatCard label="Alınan kalem" value={String(summary.itemCount)} hint="Ürün adedi" accent="amber" />
-        <PanelStatCard label="Ödenen tutar" value={formatPanelMoney(summary.totalPaid)} hint="Tüm alımlar" accent="emerald" />
+        <PanelStatCard
+          label="Filtrelenen alım"
+          value={String(summary.count)}
+          hint="Kayıt sayısı"
+          accent="brand"
+        />
+        <PanelStatCard
+          label="Alınan kalem"
+          value={String(summary.itemCount)}
+          hint={`Ortalama ${formatPanelMoney(summary.averagePurchase)}`}
+          accent="amber"
+        />
+        <PanelStatCard
+          label="Ödenen tutar"
+          value={formatPanelMoney(summary.totalPaid)}
+          hint="Seçili dönem"
+          accent="emerald"
+        />
       </section>
 
-      <Card title={`Alım Kayıtları (${purchases.length})`}>
-        {purchases.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-500">Henüz alım kaydı yok.</p>
+      <Card title={`Alım Kayıtları (${filteredPurchases.length})`}>
+        <div className="mb-4 space-y-2.5 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 sm:p-3">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+            <input
+              type="search"
+              placeholder="Alım no, ürün, müşteri..."
+              value={filters.search}
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+              className="input-field h-9 min-w-0 flex-1 px-3 text-sm"
+            />
+            <div className="flex flex-wrap items-center gap-1">
+              {HISTORY_PERIOD_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFilters((current) => ({ ...current, period: option.value }))}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                    filters.period === option.value
+                      ? 'bg-brand-700 text-white'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="rounded-lg px-2.5 py-1 text-xs font-semibold text-brand-700 transition hover:bg-brand-50"
+                >
+                  Temizle
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <select
+              value={filters.paymentMethod}
+              onChange={(event) => setFilters((current) => ({ ...current, paymentMethod: event.target.value }))}
+              className="input-field h-10 px-2 md:h-9 md:text-sm"
+              aria-label="Ödeme yöntemi"
+            >
+              {paymentFilterOptions.map((option) => (
+                <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <select
+              value={filters.sort}
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                sort: event.target.value as PurchasePageFilters['sort'],
+              }))}
+              className="input-field col-span-2 h-10 px-2 sm:col-span-1 md:h-9 md:text-sm"
+              aria-label="Sıralama"
+            >
+              {HISTORY_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {filteredPurchases.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">
+            {purchases.length === 0
+              ? 'Henüz alım kaydı yok.'
+              : 'Filtrelere uygun alım bulunamadı.'}
+          </p>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {purchases.map((purchase) => {
+            {filteredPurchases.map((purchase) => {
               const itemLabels = (purchase.items ?? []).map((item) => item.item_description).join(' · ')
 
               return (

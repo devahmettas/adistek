@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Button from '../Button'
 import Card from '../Card'
 import JewelrySaleDetailModal from './JewelrySaleDetailModal'
 import JewelrySaleItemThumb from './JewelrySaleItemThumb'
@@ -17,34 +16,17 @@ import {
   computeCategoryBreakdown,
   computePaymentBreakdown,
   computeSalesSummary,
+  createDefaultSalesFilters,
   filterAndSortSales,
   getPaymentLabel,
   getSaleItemCategoryName,
+  HISTORY_PERIOD_OPTIONS,
+  HISTORY_SORT_OPTIONS,
   type SalesPageFilters,
-  type SalesPeriodFilter,
 } from '../../utils/jewelrySalesAnalytics'
 
-const PERIOD_OPTIONS: Array<{ value: SalesPeriodFilter; label: string }> = [
-  { value: 'all', label: 'Tümü' },
-  { value: 'today', label: 'Bugün' },
-  { value: 'week', label: 'Son 7 Gün' },
-  { value: 'month', label: 'Bu Ay' },
-]
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'En yeni' },
-  { value: 'oldest', label: 'En eski' },
-  { value: 'amount_desc', label: 'En yüksek tutar' },
-  { value: 'amount_asc', label: 'En düşük tutar' },
-]
-
-const EMPTY_FILTERS: SalesPageFilters = {
-  search: '',
-  period: 'all',
-  paymentMethod: '',
-  categoryId: '',
-  sort: 'newest',
-}
+const PERIOD_OPTIONS = HISTORY_PERIOD_OPTIONS
+const SORT_OPTIONS = HISTORY_SORT_OPTIONS
 
 function getSaleCategoryLabels(sale: JewelrySale): string[] {
   const labels = new Set<string>()
@@ -59,12 +41,12 @@ export default function JewelerSalesSection({
 }: {
   onEdit?: (sale: JewelrySale) => void
 }) {
-  const { itemCount, openCheckout, saleVersion } = useJewelrySaleCart()
+  const { saleVersion } = useJewelrySaleCart()
   const [sales, setSales] = useState<JewelrySale[]>([])
   const [categories, setCategories] = useState<JewelryCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState<SalesPageFilters>(EMPTY_FILTERS)
+  const [filters, setFilters] = useState<SalesPageFilters>(createDefaultSalesFilters)
   const [selectedSale, setSelectedSale] = useState<JewelrySale | null>(null)
 
   const load = useCallback(async () => {
@@ -113,43 +95,26 @@ export default function JewelerSalesSection({
 
   const hasActiveFilters = (
     filters.search !== ''
-    || filters.period !== 'all'
+    || filters.period !== createDefaultSalesFilters().period
     || filters.paymentMethod !== ''
     || filters.categoryId !== ''
     || filters.sort !== 'newest'
   )
 
-  const resetFilters = () => setFilters(EMPTY_FILTERS)
+  const resetFilters = () => setFilters(createDefaultSalesFilters())
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button type="button" onClick={openCheckout}>
-          {itemCount > 0 ? `Sepeti Aç (${itemCount})` : 'Yeni Satış'}
-        </Button>
-      </div>
-
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
 
       {!loading && (
         <>
-          {itemCount > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 px-4 py-3">
-              <p className="text-sm text-brand-900">
-                Aktif sepette <strong>{itemCount}</strong> ürün bekliyor.
-              </p>
-              <Button type="button" size="sm" onClick={openCheckout}>
-                Sepeti Aç
-              </Button>
-            </div>
-          )}
-
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <PanelStatCard
               label="Filtrelenen ciro"
               value={formatPanelMoney(summary.revenue)}
-              hint={`${summary.count} satış kaydı`}
+              hint={`${summary.count} satış · seçili dönem`}
               accent="brand"
             />
             <PanelStatCard

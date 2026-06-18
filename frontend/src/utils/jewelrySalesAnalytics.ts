@@ -1,7 +1,23 @@
-import type { JewelrySale } from '../api/jeweler'
+import type { JewelryPurchase, JewelrySale } from '../api/jeweler'
 
 export type SalesPeriodFilter = 'all' | 'today' | 'week' | 'month'
 export type SalesSortOption = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc'
+
+export const DEFAULT_HISTORY_PERIOD: SalesPeriodFilter = 'today'
+
+export const HISTORY_PERIOD_OPTIONS: Array<{ value: SalesPeriodFilter; label: string }> = [
+  { value: 'today', label: 'Bugün' },
+  { value: 'week', label: 'Son 7 Gün' },
+  { value: 'month', label: 'Bu Ay' },
+  { value: 'all', label: 'Tümü' },
+]
+
+export const HISTORY_SORT_OPTIONS: Array<{ value: SalesSortOption; label: string }> = [
+  { value: 'newest', label: 'En yeni' },
+  { value: 'oldest', label: 'En eski' },
+  { value: 'amount_desc', label: 'En yüksek tutar' },
+  { value: 'amount_asc', label: 'En düşük tutar' },
+]
 
 export interface SalesPageFilters {
   search: string
@@ -9,6 +25,32 @@ export interface SalesPageFilters {
   paymentMethod: string
   categoryId: string
   sort: SalesSortOption
+}
+
+export interface PurchasePageFilters {
+  search: string
+  period: SalesPeriodFilter
+  paymentMethod: string
+  sort: SalesSortOption
+}
+
+export function createDefaultSalesFilters(): SalesPageFilters {
+  return {
+    search: '',
+    period: DEFAULT_HISTORY_PERIOD,
+    paymentMethod: '',
+    categoryId: '',
+    sort: 'newest',
+  }
+}
+
+export function createDefaultPurchaseFilters(): PurchasePageFilters {
+  return {
+    search: '',
+    period: DEFAULT_HISTORY_PERIOD,
+    paymentMethod: '',
+    sort: 'newest',
+  }
 }
 
 export interface SalesSummary {
@@ -70,25 +112,84 @@ function startOfDay(date: Date): Date {
   return next
 }
 
-function isWithinPeriod(soldAt: string, period: SalesPeriodFilter): boolean {
+function isWithinPeriod(dateValue: string, period: SalesPeriodFilter): boolean {
   if (period === 'all') return true
 
-  const saleDate = new Date(soldAt)
+  const transactionDate = new Date(dateValue)
   const now = new Date()
   const todayStart = startOfDay(now)
 
   if (period === 'today') {
-    return saleDate >= todayStart
+    return transactionDate >= todayStart
   }
 
   if (period === 'week') {
     const weekStart = new Date(todayStart)
     weekStart.setDate(weekStart.getDate() - 6)
-    return saleDate >= weekStart
+    return transactionDate >= weekStart
   }
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  return saleDate >= monthStart
+  return transactionDate >= monthStart
+}
+
+export function purchaseMatchesSearch(purchase: JewelryPurchase, search: string): boolean {
+  const query = search.trim().toLocaleLowerCase('tr-TR')
+  if (!query) return true
+
+  const haystack = [
+    purchase.purchase_number,
+    purchase.customer?.name,
+    purchase.customer?.phone,
+    purchase.notes,
+    ...(purchase.items ?? []).map((item) => item.item_description),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('tr-TR')
+
+  return haystack.includes(query)
+}
+
+export function filterAndSortPurchases(
+  purchases: JewelryPurchase[],
+  filters: PurchasePageFilters,
+): JewelryPurchase[] {
+  const filtered = purchases.filter((purchase) => (
+    isWithinPeriod(purchase.purchased_at, filters.period)
+    && (filters.paymentMethod === '' || purchase.payment_method === filters.paymentMethod)
+    && purchaseMatchesSearch(purchase, filters.search)
+  ))
+
+  return [...filtered].sort((left, right) => {
+    switch (filters.sort) {
+      case 'oldest':
+        return new Date(left.purchased_at).getTime() - new Date(right.purchased_at).getTime()
+      case 'amount_desc':
+        return Number(right.total) - Number(left.total)
+      case 'amount_asc':
+        return Number(left.total) - Number(right.total)
+      default:
+        return new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime()
+    }
+  })
+}
+
+export function computePurchaseSummary(purchases: JewelryPurchase[]) {
+  const totalPaid = purchases.reduce((sum, purchase) => sum + Number(purchase.total), 0)
+  const itemCount = purchases.reduce(
+    (sum, purchase) => sum + (purchase.items ?? []).reduce((lineSum, item) => lineSum + item.quantity, 0),
+    0,
+  )
+
+  return {
+    count: purchases.length,
+    totalPaid: Math.round(totalPaid * 100) / 100,
+    itemCount,
+    averagePurchase: purchases.length > 0
+      ? Math.round((totalPaid / purchases.length) * 100) / 100
+      : 0,
+  }
 }
 
 export function saleMatchesSearch(sale: JewelrySale, search: string): boolean {

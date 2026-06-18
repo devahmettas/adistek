@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageHeader from '../../components/PageHeader'
 import JewelerPurchaseHistorySection from '../../components/jeweler/JewelerPurchaseHistorySection'
 import JewelerSalesSection from '../../components/jeweler/JewelerSalesSection'
@@ -32,14 +32,6 @@ export default function JewelerTransactionHistoryPage() {
       <PageHeader
         title="İşlem Geçmişi"
         description="Kayıtlı satış ve alım işlemlerini inceleyin, hatalı kayıtları düzenleyin."
-        actions={(
-          <Link
-            to={tab === 'purchases' ? '/dashboard/jeweler/purchases' : '/dashboard/jeweler/purchases?mode=sale'}
-            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-200 hover:text-brand-800"
-          >
-            Yeni işlem
-          </Link>
-        )}
       />
 
       <div
