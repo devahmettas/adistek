@@ -319,6 +319,7 @@ class JewelerStatisticsService
             return [
                 'date' => $date->toDateString(),
                 'label' => $date->locale('tr')->isoFormat('D MMM'),
+                'short_label' => $date->format('j'),
                 'revenue' => (float) $daySales->sum('total'),
                 'sales_count' => $daySales->count(),
             ];

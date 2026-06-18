@@ -278,6 +278,7 @@ export interface JewelerStats {
   revenue_trend: Array<{
     date: string
     label: string
+    short_label?: string
     revenue: number
     sales_count: number
   }>

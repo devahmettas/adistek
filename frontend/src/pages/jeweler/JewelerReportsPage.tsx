@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   getJewelerStats,
   getJewelrySettings,
@@ -31,6 +31,28 @@ function trendTitle(period: JewelerStatsPeriod): string {
   if (period === 'day') return 'Bugünkü saatlik satış trendi'
   if (period === 'week') return 'Son 7 gün satış trendi'
   return 'Son 30 gün satış trendi'
+}
+
+function ReportSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-end justify-between gap-3 border-b border-slate-200 pb-3">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">{title}</h2>
+          {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
+  )
 }
 
 export default function JewelerReportsPage() {
@@ -118,16 +140,20 @@ export default function JewelerReportsPage() {
       />
 
       {stats && (
-        <p className="text-sm text-slate-500">
-          <span className="font-semibold text-brand-700">{stats.period_label}</span> rapor ·{' '}
-          {stats.date_range.start === stats.date_range.end
-            ? new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })
-            : `${new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR')} – ${new Date(`${stats.date_range.end}T00:00:00`).toLocaleDateString('tr-TR')}`}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm text-slate-600">
+          <span className="inline-flex items-center rounded-full bg-brand-700 px-2.5 py-0.5 text-xs font-bold text-white">
+            {stats.period_label}
+          </span>
+          <span>
+            {stats.date_range.start === stats.date_range.end
+              ? new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })
+              : `${new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR')} – ${new Date(`${stats.date_range.end}T00:00:00`).toLocaleDateString('tr-TR')}`}
+          </span>
+        </div>
       )}
 
       {loading && <LoadingState />}
@@ -135,8 +161,10 @@ export default function JewelerReportsPage() {
 
       {stats && periodSummary && (
         <>
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900">{stats.period_label} Satış Özeti</h2>
+          <ReportSection
+            title={`${stats.period_label} satış özeti`}
+            description="Seçili dönemin temel performans göstergeleri"
+          >
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <PanelStatCard
                 label="Ciro"
@@ -163,11 +191,16 @@ export default function JewelerReportsPage() {
                 accent="brand"
               />
             </div>
-          </section>
+          </ReportSection>
 
-          <StatsTrendChart title={trendTitle(stats.period)} points={stats.revenue_trend} />
+          <StatsTrendChart
+            title={trendTitle(stats.period)}
+            points={stats.revenue_trend}
+            valueFormatter={formatPanelMoney}
+          />
 
-          <section className="grid gap-4 xl:grid-cols-2">
+          <ReportSection title="Satış analizi" description="Ürün, kategori ve ödeme dağılımları">
+            <div className="grid gap-4 xl:grid-cols-2">
             <StatsBarChart
               title={`${stats.period_label} en çok satan ürünler`}
               items={stats.top_products.map((product) => ({
@@ -176,6 +209,7 @@ export default function JewelerReportsPage() {
                 hint: `${product.quantity} adet satıldı`,
               }))}
               valueFormatter={formatPanelMoney}
+              accentHex="#f59e0b"
             />
             <StatsBarChart
               title={`${stats.period_label} kategori bazlı satış`}
@@ -186,10 +220,11 @@ export default function JewelerReportsPage() {
               }))}
               valueFormatter={formatPanelMoney}
               colorClass="bg-brand-500"
+              accentHex="#0f766e"
             />
-          </section>
+            </div>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
             <StatsBarChart
               title={`${stats.period_label} ödeme dağılımı`}
               items={stats.payment_breakdown.map((row) => ({
@@ -199,11 +234,15 @@ export default function JewelerReportsPage() {
               }))}
               valueFormatter={formatPanelMoney}
               colorClass="bg-emerald-500"
+              accentHex="#059669"
             />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-              <h3 className="text-sm font-bold text-slate-900">Karlılık detayı</h3>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-white px-5 py-4">
+                <h3 className="text-sm font-bold text-slate-900">Karlılık detayı</h3>
+                <p className="mt-0.5 text-xs text-slate-500">FIFO maliyet bazlı hesaplama</p>
+              </div>
+              <ul className="grid gap-3 p-4 sm:grid-cols-2">
                 {[
                   { label: 'Ciro', value: formatPanelMoney(periodSummary.revenue) },
                   { label: 'Maliyet', value: formatPanelMoney(periodSummary.cost) },
@@ -212,22 +251,22 @@ export default function JewelerReportsPage() {
                 ].map((item) => (
                   <li
                     key={item.label}
-                    className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                    className="rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white px-4 py-3"
                   >
-                    <p className="text-xs text-slate-500">{item.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
                     <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-xs text-slate-500">
+              <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
                 Kar hesabı her satışta FIFO alış maliyetine göre yapılır. Aynı ürün farklı fiyatlardan
                 alındıysa sırayla en eski lot kullanılır.
               </p>
             </div>
-          </section>
+            </div>
+          </ReportSection>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900">Stok & Envanter</h2>
+          <ReportSection title="Stok & envanter" description="Güncel stok durumu ve değer analizi">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <PanelStatCard
                 label="Toplam ürün"
@@ -254,9 +293,10 @@ export default function JewelerReportsPage() {
                 accent="violet"
               />
             </div>
-          </section>
+          </ReportSection>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+          <ReportSection title="Stok dağılımı & tamir" description="Ayar bazlı stok ve tamir süreçleri">
+            <div className="grid gap-4 xl:grid-cols-2">
             <StatsBarChart
               title="Ayar bazlı stok dağılımı"
               items={stats.karat_breakdown.map((row) => ({
@@ -265,11 +305,15 @@ export default function JewelerReportsPage() {
                 hint: `${row.product_count} ürün · ${row.total_weight_gram} gr`,
               }))}
               colorClass="bg-amber-600"
+              accentHex="#d97706"
             />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-              <h3 className="text-sm font-bold text-slate-900">Tamir durumu</h3>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50/80 to-white px-5 py-4">
+                <h3 className="text-sm font-bold text-slate-900">Tamir durumu</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Aktif ve tamamlanan tamir kayıtları</p>
+              </div>
+              <ul className="grid gap-3 p-4 sm:grid-cols-2">
                 {[
                   { label: 'Aktif tamir', value: stats.repairs.active_count },
                   { label: 'Teslim alındı', value: stats.repairs.received_count },
@@ -279,25 +323,28 @@ export default function JewelerReportsPage() {
                 ].map((item) => (
                   <li
                     key={item.label}
-                    className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                    className="rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white px-4 py-3"
                   >
-                    <p className="text-xs text-slate-500">{item.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
                     <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
                   </li>
                 ))}
               </ul>
             </div>
-          </section>
+            </div>
+          </ReportSection>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900">Tüm Ürünler</h2>
+          <ReportSection
+            title="Tüm ürünler"
+            description={`${stats.all_products.length} aktif ürün kaydı`}
+          >
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
               {stats.all_products.length === 0 ? (
                 <p className="px-5 py-8 text-center text-sm text-slate-500">Henüz ürün kaydı yok.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <thead className="bg-slate-50/90 text-left text-xs uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">Ürün</th>
                         <th className="px-4 py-3">Kategori</th>
@@ -314,7 +361,7 @@ export default function JewelerReportsPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {stats.all_products.map((product) => (
-                        <tr key={product.id}>
+                        <tr key={product.id} className="transition hover:bg-slate-50/70">
                           <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
                           <td className="px-4 py-3 text-slate-600">{product.category_name}</td>
                           <td className="px-4 py-3 text-right text-slate-700">
@@ -349,7 +396,7 @@ export default function JewelerReportsPage() {
                 </div>
               )}
             </div>
-          </section>
+          </ReportSection>
         </>
       )}
     </div>
