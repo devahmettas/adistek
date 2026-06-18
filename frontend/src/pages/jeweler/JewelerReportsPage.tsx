@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getJewelerStats, type JewelerStats } from '../../api/jeweler'
+import {
+  getJewelerStats,
+  getJewelrySettings,
+  type JewelerStats,
+  type JewelerStatsPeriod,
+} from '../../api/jeweler'
+import Button from '../../components/Button'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import StatsBarChart from '../../components/jeweler/StatsBarChart'
 import StatsTrendChart from '../../components/jeweler/StatsTrendChart'
 import { formatPanelMoney, PanelStatCard } from '../../components/restaurant/ManagementPanelWidgets'
+import { useAuth } from '../../store/AuthStore'
+import { downloadJewelerReportPdf } from '../../utils/jewelerReportPdf'
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Nakit',
@@ -13,107 +21,155 @@ const PAYMENT_LABELS: Record<string, string> = {
   gold_exchange: 'Altın Takas',
 }
 
+const PERIOD_OPTIONS: Array<{ value: JewelerStatsPeriod; label: string }> = [
+  { value: 'day', label: 'Günlük' },
+  { value: 'week', label: 'Haftalık' },
+  { value: 'month', label: 'Aylık' },
+]
+
+function trendTitle(period: JewelerStatsPeriod): string {
+  if (period === 'day') return 'Bugünkü saatlik satış trendi'
+  if (period === 'week') return 'Son 7 gün satış trendi'
+  return 'Son 30 gün satış trendi'
+}
+
 export default function JewelerReportsPage() {
+  const { restaurant } = useAuth()
+  const [period, setPeriod] = useState<JewelerStatsPeriod>('month')
   const [stats, setStats] = useState<JewelerStats | null>(null)
+  const [companyName, setCompanyName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setStats(await getJewelerStats())
+      setStats(await getJewelerStats(period))
     } catch {
       setError('Raporlar yüklenemedi.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [period])
 
   useEffect(() => {
     void load()
   }, [load])
 
+  useEffect(() => {
+    void getJewelrySettings()
+      .then((settings) => setCompanyName(settings.company_name))
+      .catch(() => undefined)
+  }, [])
+
+  const handleDownloadPdf = async () => {
+    if (!stats) return
+    setDownloading(true)
+    try {
+      await downloadJewelerReportPdf(stats, {
+        companyName,
+        restaurantName: restaurant?.name,
+      })
+    } catch {
+      setError('PDF indirilemedi. Lütfen tekrar deneyin.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const periodSummary = stats?.period_summary
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Raporlama & İstatistikler"
-        description="Satış, stok, tamir ve müşteri performansını tek ekranda takip edin"
+        description="Satış, stok, tamir ve müşteri performansını dönem bazında takip edin"
+        actions={
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
+            <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:w-auto">
+              {PERIOD_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPeriod(option.value)}
+                  className={`min-h-10 flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition sm:flex-none ${
+                    period === option.value
+                      ? 'bg-brand-700 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              disabled={!stats || loading || downloading}
+              onClick={() => void handleDownloadPdf()}
+            >
+              {downloading ? 'PDF hazırlanıyor…' : 'PDF İndir'}
+            </Button>
+          </div>
+        }
       />
+
+      {stats && (
+        <p className="text-sm text-slate-500">
+          <span className="font-semibold text-brand-700">{stats.period_label}</span> rapor ·{' '}
+          {stats.date_range.start === stats.date_range.end
+            ? new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })
+            : `${new Date(`${stats.date_range.start}T00:00:00`).toLocaleDateString('tr-TR')} – ${new Date(`${stats.date_range.end}T00:00:00`).toLocaleDateString('tr-TR')}`}
+        </p>
+      )}
 
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
 
-      {stats && (
+      {stats && periodSummary && (
         <>
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900">Satış Özeti</h2>
+            <h2 className="text-lg font-bold text-slate-900">{stats.period_label} Satış Özeti</h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <PanelStatCard
-                label="Bugünkü ciro"
-                value={formatPanelMoney(stats.summary.today_revenue)}
-                hint={`${stats.summary.today_sales_count} satış · Ort. ${formatPanelMoney(stats.summary.average_sale)}`}
+                label="Ciro"
+                value={formatPanelMoney(periodSummary.revenue)}
+                hint={`${periodSummary.sales_count} satış · Ort. ${formatPanelMoney(periodSummary.average_sale)}`}
                 accent="amber"
               />
               <PanelStatCard
-                label="Haftalık ciro"
-                value={formatPanelMoney(stats.summary.week_revenue)}
-                hint={`${stats.summary.week_sales_count} satış`}
-                accent="brand"
-              />
-              <PanelStatCard
-                label="Aylık ciro"
-                value={formatPanelMoney(stats.summary.month_revenue)}
-                hint={`${stats.summary.month_sales_count} satış · Ort. ${formatPanelMoney(stats.summary.month_average_sale)}`}
+                label="Net kar"
+                value={formatPanelMoney(periodSummary.profit)}
+                hint={`Maliyet ${formatPanelMoney(periodSummary.cost)} · Marj %${periodSummary.profit_margin}`}
                 accent="emerald"
               />
               <PanelStatCard
                 label="Müşteri kayıtlı satış"
-                value={String(stats.customers.month_sales_with_customer)}
+                value={String(periodSummary.sales_with_customer)}
                 hint={`Toplam ${stats.customers.total_count} müşteri`}
                 accent="violet"
               />
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900">Karlılık Analizi</h2>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <PanelStatCard
-                label="Bugünkü net kar"
-                value={formatPanelMoney(stats.summary.today_profit)}
-                hint={`Maliyet ${formatPanelMoney(stats.summary.today_cost)} · Marj %${stats.summary.today_profit_margin}`}
-                accent="emerald"
-              />
-              <PanelStatCard
-                label="Haftalık net kar"
-                value={formatPanelMoney(stats.summary.week_profit)}
-                hint={`Maliyet ${formatPanelMoney(stats.summary.week_cost)} · Marj %${stats.summary.week_profit_margin}`}
+                label="Stok değeri"
+                value={formatPanelMoney(stats.inventory.inventory_sale_value)}
+                hint={`${stats.inventory.total_stock_units} adet stok`}
                 accent="brand"
               />
-              <PanelStatCard
-                label="Aylık net kar"
-                value={formatPanelMoney(stats.summary.month_profit)}
-                hint={`Maliyet ${formatPanelMoney(stats.summary.month_cost)} · Marj %${stats.summary.month_profit_margin}`}
-                accent="amber"
-              />
-              <PanelStatCard
-                label="Aylık ciro"
-                value={formatPanelMoney(stats.summary.month_revenue)}
-                hint={`${stats.summary.month_sales_count} satış`}
-                accent="violet"
-              />
             </div>
-            <p className="text-xs text-slate-500">
-              Kar hesabı her satışta FIFO alış maliyetine göre yapılır. Aynı ürün farklı fiyatlardan alındıysa sırayla en eski lot kullanılır.
-            </p>
           </section>
 
-          <StatsTrendChart title="Son 7 gün satış trendi" points={stats.revenue_trend} />
+          <StatsTrendChart title={trendTitle(stats.period)} points={stats.revenue_trend} />
 
           <section className="grid gap-4 xl:grid-cols-2">
             <StatsBarChart
-              title="Ayın en çok satan ürünleri"
+              title={`${stats.period_label} en çok satan ürünler`}
               items={stats.top_products.map((product) => ({
                 label: product.product_name,
                 value: product.revenue,
@@ -122,7 +178,7 @@ export default function JewelerReportsPage() {
               valueFormatter={formatPanelMoney}
             />
             <StatsBarChart
-              title="Kategori bazlı aylık satış"
+              title={`${stats.period_label} kategori bazlı satış`}
               items={stats.category_breakdown.map((row) => ({
                 label: row.category_name,
                 value: row.revenue,
@@ -135,7 +191,7 @@ export default function JewelerReportsPage() {
 
           <section className="grid gap-4 xl:grid-cols-2">
             <StatsBarChart
-              title="Bugünkü ödeme dağılımı"
+              title={`${stats.period_label} ödeme dağılımı`}
               items={stats.payment_breakdown.map((row) => ({
                 label: PAYMENT_LABELS[row.payment_method] ?? row.payment_method,
                 value: row.total,
@@ -144,16 +200,30 @@ export default function JewelerReportsPage() {
               valueFormatter={formatPanelMoney}
               colorClass="bg-emerald-500"
             />
-            <StatsBarChart
-              title="Aylık ödeme dağılımı"
-              items={stats.month_payment_breakdown.map((row) => ({
-                label: PAYMENT_LABELS[row.payment_method] ?? row.payment_method,
-                value: row.total,
-                hint: `${row.count} işlem`,
-              }))}
-              valueFormatter={formatPanelMoney}
-              colorClass="bg-violet-500"
-            />
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <h3 className="text-sm font-bold text-slate-900">Karlılık detayı</h3>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: 'Ciro', value: formatPanelMoney(periodSummary.revenue) },
+                  { label: 'Maliyet', value: formatPanelMoney(periodSummary.cost) },
+                  { label: 'Net kar', value: formatPanelMoney(periodSummary.profit) },
+                  { label: 'Kar marjı', value: `%${periodSummary.profit_margin}` },
+                ].map((item) => (
+                  <li
+                    key={item.label}
+                    className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                  >
+                    <p className="text-xs text-slate-500">{item.label}</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs text-slate-500">
+                Kar hesabı her satışta FIFO alış maliyetine göre yapılır. Aynı ürün farklı fiyatlardan
+                alındıysa sırayla en eski lot kullanılır.
+              </p>
+            </div>
           </section>
 
           <section className="space-y-3">
@@ -218,6 +288,7 @@ export default function JewelerReportsPage() {
               </ul>
             </div>
           </section>
+
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">Tüm Ürünler</h2>
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
@@ -250,13 +321,27 @@ export default function JewelerReportsPage() {
                             {product.karat ? `${product.karat} ayar` : '—'}
                           </td>
                           <td className="px-4 py-3 text-right text-slate-700">{product.weight_gram} gr</td>
-                          <td className="px-4 py-3 text-right font-medium text-slate-900">{product.stock_quantity}</td>
-                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(product.average_unit_cost)}</td>
-                          <td className="px-4 py-3 text-right text-amber-700">{formatPanelMoney(product.metal_value)}</td>
-                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(product.unit_cost)}</td>
-                          <td className="px-4 py-3 text-right font-medium text-brand-700">{formatPanelMoney(product.fifo_unit_cost)}</td>
-                          <td className="px-4 py-3 text-right text-slate-700">{formatPanelMoney(Number(product.sale_price))}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-brand-700">{formatPanelMoney(product.stock_value)}</td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-900">
+                            {product.stock_quantity}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatPanelMoney(product.average_unit_cost)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-amber-700">
+                            {formatPanelMoney(product.metal_value)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatPanelMoney(product.unit_cost)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-brand-700">
+                            {formatPanelMoney(product.fifo_unit_cost)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatPanelMoney(Number(product.sale_price))}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-brand-700">
+                            {formatPanelMoney(product.stock_value)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -18,11 +18,12 @@ class JewelerStatisticsService
         private readonly JewelryInventoryCostService $inventoryCostService,
     ) {}
 
-    public function getDashboardStats(int $restaurantId): array
+    public function getDashboardStats(int $restaurantId, string $period = 'month'): array
     {
         $today = Carbon::today();
         $weekStart = Carbon::now()->startOfWeek();
         $monthStart = Carbon::now()->startOfMonth();
+        [$periodStart, $periodEnd, $periodLabel] = $this->resolvePeriodRange($period);
 
         $todaySales = JewelrySale::query()
             ->where('restaurant_id', $restaurantId)
@@ -73,7 +74,7 @@ class JewelerStatisticsService
             ])
             ->join('jewelry_sales', 'jewelry_sales.id', '=', 'jewelry_sale_items.sale_id')
             ->where('jewelry_sales.restaurant_id', $restaurantId)
-            ->where('jewelry_sales.sold_at', '>=', $monthStart)
+            ->whereBetween('jewelry_sales.sold_at', [$periodStart, $periodEnd])
             ->groupBy('jewelry_sale_items.product_name')
             ->orderByDesc('quantity')
             ->limit(8)
@@ -89,48 +90,24 @@ class JewelerStatisticsService
             ->leftJoin('jewelry_products', 'jewelry_products.id', '=', 'jewelry_sale_items.product_id')
             ->leftJoin('jewelry_categories', 'jewelry_categories.id', '=', 'jewelry_products.category_id')
             ->where('jewelry_sales.restaurant_id', $restaurantId)
-            ->where('jewelry_sales.sold_at', '>=', $monthStart)
+            ->whereBetween('jewelry_sales.sold_at', [$periodStart, $periodEnd])
             ->groupBy('category_name')
             ->orderByDesc('revenue')
             ->limit(6)
             ->get();
 
-        $todayPaymentBreakdown = JewelrySale::query()
+        $paymentBreakdown = JewelrySale::query()
             ->select([
                 'payment_method',
                 DB::raw('SUM(total) as total'),
                 DB::raw('COUNT(*) as count'),
             ])
             ->where('restaurant_id', $restaurantId)
-            ->whereDate('sold_at', $today)
+            ->whereBetween('sold_at', [$periodStart, $periodEnd])
             ->groupBy('payment_method')
             ->get();
 
-        $monthPaymentBreakdown = JewelrySale::query()
-            ->select([
-                'payment_method',
-                DB::raw('SUM(total) as total'),
-                DB::raw('COUNT(*) as count'),
-            ])
-            ->where('restaurant_id', $restaurantId)
-            ->where('sold_at', '>=', $monthStart)
-            ->groupBy('payment_method')
-            ->get();
-
-        $revenueTrend = collect(range(6, 0))->map(function (int $daysAgo) use ($restaurantId) {
-            $date = Carbon::today()->subDays($daysAgo);
-            $daySales = JewelrySale::query()
-                ->where('restaurant_id', $restaurantId)
-                ->whereDate('sold_at', $date)
-                ->get();
-
-            return [
-                'date' => $date->toDateString(),
-                'label' => $date->locale('tr')->isoFormat('D MMM'),
-                'revenue' => (float) $daySales->sum('total'),
-                'sales_count' => $daySales->count(),
-            ];
-        })->values()->all();
+        $revenueTrend = $this->buildRevenueTrend($restaurantId, $period);
 
         $karatBreakdown = JewelryProduct::query()
             ->select([
@@ -163,9 +140,37 @@ class JewelerStatisticsService
             ->whereNotNull('customer_id')
             ->count();
 
+        $periodSalesWithCustomer = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereBetween('sold_at', [$periodStart, $periodEnd])
+            ->whereNotNull('customer_id')
+            ->count();
+
         $profitSummary = $this->buildProfitSummary($restaurantId, $today, $weekStart, $monthStart);
+        $periodProfit = $this->profitForPeriod($restaurantId, $periodStart, $periodEnd);
+        $periodSales = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereBetween('sold_at', [$periodStart, $periodEnd])
+            ->get();
 
         return [
+            'period' => $period,
+            'period_label' => $periodLabel,
+            'date_range' => [
+                'start' => $periodStart->toDateString(),
+                'end' => $periodEnd->toDateString(),
+            ],
+            'period_summary' => [
+                'revenue' => (float) $periodSales->sum('total'),
+                'sales_count' => $periodSales->count(),
+                'average_sale' => $periodSales->count() > 0
+                    ? round((float) $periodSales->sum('total') / $periodSales->count(), 2)
+                    : 0,
+                'cost' => $periodProfit['cost'],
+                'profit' => $periodProfit['profit'],
+                'profit_margin' => $periodProfit['margin'],
+                'sales_with_customer' => $periodSalesWithCustomer,
+            ],
             'summary' => [
                 'today_revenue' => (float) $todaySales->sum('total'),
                 'today_sales_count' => $todaySales->count(),
@@ -217,16 +222,26 @@ class JewelerStatisticsService
                 'stock_units' => (int) $row->stock_units,
                 'total_weight_gram' => round((float) $row->total_weight_gram, 3),
             ])->values()->all(),
-            'payment_breakdown' => $todayPaymentBreakdown->map(fn ($row) => [
+            'payment_breakdown' => $paymentBreakdown->map(fn ($row) => [
                 'payment_method' => $row->payment_method,
                 'total' => (float) $row->total,
                 'count' => (int) $row->count,
             ])->values()->all(),
-            'month_payment_breakdown' => $monthPaymentBreakdown->map(fn ($row) => [
-                'payment_method' => $row->payment_method,
-                'total' => (float) $row->total,
-                'count' => (int) $row->count,
-            ])->values()->all(),
+            'month_payment_breakdown' => JewelrySale::query()
+                ->select([
+                    'payment_method',
+                    DB::raw('SUM(total) as total'),
+                    DB::raw('COUNT(*) as count'),
+                ])
+                ->where('restaurant_id', $restaurantId)
+                ->where('sold_at', '>=', $monthStart)
+                ->groupBy('payment_method')
+                ->get()
+                ->map(fn ($row) => [
+                    'payment_method' => $row->payment_method,
+                    'total' => (float) $row->total,
+                    'count' => (int) $row->count,
+                ])->values()->all(),
             'all_products' => $allProducts->map(function (JewelryProduct $product) {
                 $averagePurchaseCost = $this->inventoryCostService->getWeightedAverageUnitCost($product);
                 $fifoPreview = $this->inventoryCostService->previewSaleCost($product, 1);
@@ -256,6 +271,58 @@ class JewelerStatisticsService
                 ];
             })->values()->all(),
         ];
+    }
+
+    /**
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon, 2: string}
+     */
+    private function resolvePeriodRange(string $period): array
+    {
+        $today = Carbon::today();
+
+        return match ($period) {
+            'day' => [$today->copy()->startOfDay(), $today->copy()->endOfDay(), 'Günlük'],
+            'week' => [Carbon::now()->startOfWeek(), Carbon::now()->endOfDay(), 'Haftalık'],
+            default => [Carbon::now()->startOfMonth(), Carbon::now()->endOfDay(), 'Aylık'],
+        };
+    }
+
+    private function buildRevenueTrend(int $restaurantId, string $period): array
+    {
+        if ($period === 'day') {
+            return collect(range(0, 23))->map(function (int $hour) use ($restaurantId) {
+                $start = Carbon::today()->setHour($hour)->startOfHour();
+                $end = $start->copy()->endOfHour();
+                $hourSales = JewelrySale::query()
+                    ->where('restaurant_id', $restaurantId)
+                    ->whereBetween('sold_at', [$start, $end])
+                    ->get();
+
+                return [
+                    'date' => $start->toIso8601String(),
+                    'label' => sprintf('%02d:00', $hour),
+                    'revenue' => (float) $hourSales->sum('total'),
+                    'sales_count' => $hourSales->count(),
+                ];
+            })->values()->all();
+        }
+
+        $days = $period === 'week' ? 6 : 29;
+
+        return collect(range($days, 0))->map(function (int $daysAgo) use ($restaurantId) {
+            $date = Carbon::today()->subDays($daysAgo);
+            $daySales = JewelrySale::query()
+                ->where('restaurant_id', $restaurantId)
+                ->whereDate('sold_at', $date)
+                ->get();
+
+            return [
+                'date' => $date->toDateString(),
+                'label' => $date->locale('tr')->isoFormat('D MMM'),
+                'revenue' => (float) $daySales->sum('total'),
+                'sales_count' => $daySales->count(),
+            ];
+        })->values()->all();
     }
 
     private function buildProfitSummary(int $restaurantId, $today, $weekStart, $monthStart): array

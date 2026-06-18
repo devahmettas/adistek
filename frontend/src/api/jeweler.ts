@@ -217,7 +217,26 @@ export interface JewelrySettings {
   created_at: string
 }
 
+export type JewelerStatsPeriod = 'day' | 'week' | 'month'
+
+export interface JewelerPeriodSummary {
+  revenue: number
+  sales_count: number
+  average_sale: number
+  cost: number
+  profit: number
+  profit_margin: number
+  sales_with_customer: number
+}
+
 export interface JewelerStats {
+  period: JewelerStatsPeriod
+  period_label: string
+  date_range: {
+    start: string
+    end: string
+  }
+  period_summary: JewelerPeriodSummary
   summary: {
     today_revenue: number
     today_sales_count: number
@@ -313,8 +332,10 @@ export interface JewelryProductSaleCost {
   unit_cost_with_labor: number
 }
 
-export async function getJewelerStats(): Promise<JewelerStats> {
-  const { data } = await apiClient.get<ApiResponse<JewelerStats>>('/jeweler/stats')
+export async function getJewelerStats(period: JewelerStatsPeriod = 'month'): Promise<JewelerStats> {
+  const { data } = await apiClient.get<ApiResponse<JewelerStats>>('/jeweler/stats', {
+    params: { period },
+  })
   return data.data
 }
 

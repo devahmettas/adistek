@@ -18,8 +18,13 @@ class JewelerStatisticsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $period = $request->query('period', 'month');
+        if (! in_array($period, ['day', 'week', 'month'], true)) {
+            $period = 'month';
+        }
+
         return response()->json([
-            'data' => $this->service->getDashboardStats($this->restaurantId($request)),
+            'data' => $this->service->getDashboardStats($this->restaurantId($request), $period),
         ]);
     }
 }
