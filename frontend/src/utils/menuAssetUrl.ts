@@ -18,28 +18,58 @@ function getAssetOrigin(): string {
 }
 
 function normalizeStoragePath(path: string): string {
-  return path.replace(/^\/+/, '').replace(/^storage\//, '')
+  let normalized = path.replace(/^\/+/, '')
+
+  if (normalized.startsWith('api/media/')) {
+    normalized = normalized.slice('api/media/'.length)
+  }
+
+  if (normalized.startsWith('storage/')) {
+    normalized = normalized.slice('storage/'.length)
+  }
+
+  return normalized
 }
 
-function harmonizeLocalhostUrl(url: string): string {
-  try {
-    const parsed = new URL(url)
-    const assetOrigin = new URL(getAssetOrigin() || window.location.origin)
+function encodeMediaPath(path: string): string {
+  return path
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
 
-    if (
-      (parsed.hostname === 'localhost' && assetOrigin.hostname === '127.0.0.1') ||
-      (parsed.hostname === '127.0.0.1' && assetOrigin.hostname === 'localhost')
-    ) {
-      parsed.protocol = assetOrigin.protocol
-      parsed.hostname = assetOrigin.hostname
-      parsed.port = assetOrigin.port
-      return parsed.toString()
-    }
-
-    return url
-  } catch {
-    return url
+function buildMediaUrl(normalizedPath: string): string | null {
+  if (!normalizedPath || normalizedPath.includes('..')) {
+    return null
   }
+
+  return `${getAssetOrigin()}/api/media/${encodeMediaPath(normalizedPath)}`
+}
+
+function extractPathFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url, getAssetOrigin())
+    const normalized = normalizeStoragePath(parsed.pathname)
+
+    return normalized || null
+  } catch {
+    return null
+  }
+}
+
+function rewriteLegacyAssetUrl(url: string): string | null {
+  if (url.includes('/api/media/')) {
+    try {
+      const parsed = new URL(url, getAssetOrigin())
+      return `${getAssetOrigin()}${parsed.pathname}`
+    } catch {
+      return url
+    }
+  }
+
+  const path = extractPathFromUrl(url)
+  return path ? buildMediaUrl(path) : null
 }
 
 export function resolveMenuAssetUrl(
@@ -48,15 +78,10 @@ export function resolveMenuAssetUrl(
 ): string | null {
   if (path) {
     if (/^https?:\/\//i.test(path)) {
-      return harmonizeLocalhostUrl(path)
+      return rewriteLegacyAssetUrl(path) ?? path
     }
 
-    const normalizedPath = normalizeStoragePath(path)
-    if (!normalizedPath) {
-      return null
-    }
-
-    return `${getAssetOrigin()}/storage/${normalizedPath}`
+    return buildMediaUrl(normalizeStoragePath(path))
   }
 
   if (!url) {
@@ -64,18 +89,20 @@ export function resolveMenuAssetUrl(
   }
 
   if (/^https?:\/\//i.test(url)) {
-    return harmonizeLocalhostUrl(url)
+    return rewriteLegacyAssetUrl(url) ?? url
   }
 
-  const origin = getAssetOrigin()
-
-  if (url.startsWith('/storage/')) {
-    return `${origin}${url}`
+  if (url.startsWith('/api/media/')) {
+    return `${getAssetOrigin()}${url}`
   }
 
-  if (url.startsWith('storage/')) {
-    return `${origin}/${url}`
+  if (url.startsWith('api/media/')) {
+    return `${getAssetOrigin()}/${url}`
   }
 
-  return `${origin}/storage/${normalizeStoragePath(url)}`
+  if (url.startsWith('/storage/') || url.startsWith('storage/')) {
+    return buildMediaUrl(normalizeStoragePath(url))
+  }
+
+  return buildMediaUrl(normalizeStoragePath(url))
 }

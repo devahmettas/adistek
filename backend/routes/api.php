@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\GuestTableOrderController;
 use App\Http\Controllers\Api\MenuSettingsController;
 use App\Http\Controllers\Api\MenuSlideController;
 use App\Http\Controllers\Api\MenuUploadController;
+use App\Http\Controllers\Api\PublicMediaController;
 use App\Http\Controllers\Api\PublicMenuController;
 use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\TableController;
@@ -43,6 +44,10 @@ Route::post('/waiter/auth/login', [WaiterAuthController::class, 'login']);
 Route::post('/kitchen/auth/login', [KitchenAuthController::class, 'login']);
 
 Route::post('/admin/auth/login', [AdminAuthController::class, 'login']);
+
+Route::get('/media/{path}', [PublicMediaController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.show');
 
 Route::get('/public/menu/{identifier}', [PublicMenuController::class, 'show']);
 Route::get('/public/table/{token}', [GuestTableOrderController::class, 'show']);
