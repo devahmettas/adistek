@@ -179,8 +179,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::post('/stock-counts', [JewelryStockCountController::class, 'store']);
     Route::get('/stock-counts/{stockCount}', [JewelryStockCountController::class, 'show']);
     Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
-    Route::match(['patch', 'post'], '/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem'])
-        ->scopeBindings();
+    Route::match(['patch', 'post'], '/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem']);
     Route::match(['patch', 'post'], '/stock-counts/{stockCount}/cash', [JewelryStockCountController::class, 'updateCash']);
     Route::post('/stock-counts/{stockCount}/complete', [JewelryStockCountController::class, 'complete']);
     Route::post('/stock-counts/{stockCount}/cancel', [JewelryStockCountController::class, 'cancel']);

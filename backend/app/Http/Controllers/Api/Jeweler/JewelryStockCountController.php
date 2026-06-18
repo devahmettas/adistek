@@ -152,7 +152,7 @@ class JewelryStockCountController extends Controller
 
     private function ensureOwnership(Request $request, JewelryStockCount $stockCount): void
     {
-        if (! $this->ownsRestaurantRecord($request, $stockCount)) {
+        if ((int) $stockCount->restaurant_id !== $this->restaurantId($request)) {
             abort(404);
         }
     }

@@ -22,8 +22,6 @@ class JewelryStockCountItem extends Model
     ];
 
     protected $casts = [
-        'stock_count_id' => 'integer',
-        'product_id' => 'integer',
         'expected_quantity' => 'integer',
         'counted_quantity' => 'integer',
         'expected_weight_gram' => 'decimal:3',

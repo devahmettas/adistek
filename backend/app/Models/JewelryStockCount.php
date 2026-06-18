@@ -20,7 +20,6 @@ class JewelryStockCount extends Model
     ];
 
     protected $casts = [
-        'restaurant_id' => 'integer',
         'status' => JewelryStockCountStatus::class,
         'expected_cash_balance' => 'decimal:2',
         'counted_cash_balance' => 'decimal:2',

@@ -34,13 +34,4 @@ trait ResolvesRestaurantId
 
         return $user instanceof Waiter ? $user->id : null;
     }
-
-    protected function ownsRestaurantRecord(Request $request, object $record): bool
-    {
-        if (! property_exists($record, 'restaurant_id')) {
-            return false;
-        }
-
-        return (int) $record->restaurant_id === $this->restaurantId($request);
-    }
 }

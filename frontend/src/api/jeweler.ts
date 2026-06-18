@@ -738,7 +738,7 @@ export async function updateJewelryStockCountItem(
   itemId: number,
   payload: { counted_quantity?: number; counted_weight_gram?: number },
 ): Promise<JewelryStockCount> {
-  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(
+  const { data } = await apiClient.patch<ApiResponse<JewelryStockCount>>(
     `/jeweler/stock-counts/${countId}/items/${itemId}`,
     payload,
   )
@@ -749,7 +749,7 @@ export async function updateJewelryStockCountCash(
   countId: number,
   countedCashBalance: number,
 ): Promise<JewelryStockCount> {
-  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(
+  const { data } = await apiClient.patch<ApiResponse<JewelryStockCount>>(
     `/jeweler/stock-counts/${countId}/cash`,
     { counted_cash_balance: countedCashBalance },
   )
