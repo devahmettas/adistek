@@ -3,7 +3,9 @@
 namespace App\Repositories;
 
 use App\Models\Restaurant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class RestaurantRepository
 {
@@ -16,17 +18,10 @@ class RestaurantRepository
 
     public function allWithStats(): Collection
     {
-        return Restaurant::query()
-            ->withCount([
-                'categories',
-                'products',
-                'tables',
-                'jewelryCategories',
-                'jewelryProducts',
-                'jewelryCustomers',
-                'jewelrySales',
-                'jewelryRepairs',
-            ])
+        $query = Restaurant::query();
+        $this->applyStatsCounts($query);
+
+        return $query
             ->orderByDesc('created_at')
             ->get();
     }
@@ -43,18 +38,10 @@ class RestaurantRepository
 
     public function findWithStats(int $id): ?Restaurant
     {
-        return Restaurant::query()
-            ->withCount([
-                'categories',
-                'products',
-                'tables',
-                'jewelryCategories',
-                'jewelryProducts',
-                'jewelryCustomers',
-                'jewelrySales',
-                'jewelryRepairs',
-            ])
-            ->find($id);
+        $query = Restaurant::query();
+        $this->applyStatsCounts($query);
+
+        return $query->find($id);
     }
 
     public function update(Restaurant $restaurant, array $data): Restaurant
@@ -68,5 +55,26 @@ class RestaurantRepository
     {
         $restaurant->tokens()->delete();
         $restaurant->delete();
+    }
+
+    private function applyStatsCounts(Builder $query): void
+    {
+        $relations = ['categories', 'products', 'tables'];
+
+        $optionalRelations = [
+            'jewelryCategories' => 'jewelry_categories',
+            'jewelryProducts' => 'jewelry_products',
+            'jewelryCustomers' => 'jewelry_customers',
+            'jewelrySales' => 'jewelry_sales',
+            'jewelryRepairs' => 'jewelry_repairs',
+        ];
+
+        foreach ($optionalRelations as $relation => $table) {
+            if (Schema::hasTable($table)) {
+                $relations[] = $relation;
+            }
+        }
+
+        $query->withCount($relations);
     }
 }

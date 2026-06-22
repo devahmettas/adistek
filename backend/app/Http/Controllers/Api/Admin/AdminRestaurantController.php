@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAdminRestaurantRequest;
 use App\Http\Requests\UpdateAdminRestaurantFeaturesRequest;
 use App\Http\Requests\UpdateAdminRestaurantRequest;
 use App\Services\AdminRestaurantService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 
 class AdminRestaurantController extends Controller
@@ -66,9 +67,27 @@ class AdminRestaurantController extends Controller
         ExtendAdminRestaurantMembershipRequest $request,
         int $restaurant,
     ): JsonResponse {
-        return response()->json([
-            'data' => $this->service->extendMembership($restaurant, (int) $request->validated('days')),
-        ]);
+        try {
+            return response()->json([
+                'data' => $this->service->extendMembership($restaurant, (int) $request->validated('days')),
+            ]);
+        } catch (QueryException $exception) {
+            if ($this->isMembershipSchemaError($exception)) {
+                return response()->json([
+                    'message' => 'Üyelik alanları veritabanında eksik. Sunucuda php artisan migrate --force çalıştırın.',
+                ], 503);
+            }
+
+            throw $exception;
+        } catch (\RuntimeException $exception) {
+            if (str_contains($exception->getMessage(), 'Üyelik alanları')) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                ], 503);
+            }
+
+            throw $exception;
+        }
     }
 
     public function destroy(int $restaurant): JsonResponse
@@ -78,5 +97,13 @@ class AdminRestaurantController extends Controller
         return response()->json([
             'message' => 'İşletme silindi.',
         ]);
+    }
+
+    private function isMembershipSchemaError(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'membership_end_date')
+            || str_contains($message, 'service_fee');
     }
 }

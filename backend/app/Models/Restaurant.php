@@ -6,6 +6,8 @@ use App\Enums\BusinessType;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
 
 class Restaurant extends Authenticatable
@@ -149,7 +151,7 @@ class Restaurant extends Authenticatable
             return false;
         }
 
-        return $this->membership_end_date->endOfDay()->isPast();
+        return $this->membership_end_date->copy()->endOfDay()->isPast();
     }
 
     public function getMembershipDaysRemainingAttribute(): int
@@ -158,7 +160,10 @@ class Restaurant extends Authenticatable
             return 0;
         }
 
-        return max(0, (int) now()->startOfDay()->diffInDays($this->membership_end_date->startOfDay(), false));
+        $today = now()->startOfDay();
+        $endDate = $this->membership_end_date->copy()->startOfDay();
+
+        return max(0, (int) $today->diffInDays($endDate, false));
     }
 
     public function getMembershipExpiredAttribute(): bool
@@ -172,12 +177,24 @@ class Restaurant extends Authenticatable
             return;
         }
 
-        if ($days > 0) {
-            $base = $this->membership_end_date && ! $this->isMembershipExpired()
-                ? $this->membership_end_date->copy()->startOfDay()
-                : now()->startOfDay();
+        if (! Schema::hasColumn($this->getTable(), 'membership_end_date')) {
+            throw new \RuntimeException('Üyelik alanları veritabanında tanımlı değil.');
+        }
 
-            $this->membership_end_date = $base->addDays($days);
+        $today = now()->startOfDay();
+
+        if ($days > 0) {
+            $currentEnd = $this->membership_end_date instanceof Carbon
+                ? $this->membership_end_date->copy()->startOfDay()
+                : ($this->membership_end_date
+                    ? Carbon::parse($this->membership_end_date)->startOfDay()
+                    : null);
+
+            $base = ($currentEnd && $currentEnd->greaterThanOrEqualTo($today))
+                ? $currentEnd
+                : $today;
+
+            $this->membership_end_date = $base->copy()->addDays($days)->toDateString();
             $this->save();
 
             return;
@@ -186,16 +203,21 @@ class Restaurant extends Authenticatable
         $reduceBy = abs($days);
 
         if (! $this->membership_end_date) {
-            $this->membership_end_date = now()->startOfDay()->subDay();
+            $this->membership_end_date = $today->copy()->subDay()->toDateString();
             $this->save();
 
             return;
         }
 
-        $newEnd = $this->membership_end_date->copy()->startOfDay()->subDays($reduceBy);
-        $today = now()->startOfDay();
+        $currentEnd = $this->membership_end_date instanceof Carbon
+            ? $this->membership_end_date->copy()->startOfDay()
+            : Carbon::parse($this->membership_end_date)->startOfDay();
 
-        $this->membership_end_date = $newEnd->lt($today) ? $today->copy()->subDay() : $newEnd;
+        $newEnd = $currentEnd->copy()->subDays($reduceBy);
+
+        $this->membership_end_date = $newEnd->lessThan($today)
+            ? $today->copy()->subDay()->toDateString()
+            : $newEnd->toDateString();
         $this->save();
     }
 

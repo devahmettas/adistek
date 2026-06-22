@@ -8,6 +8,7 @@ use App\Models\Restaurant;
 use App\Repositories\RestaurantRepository;
 use App\Support\RestaurantSlugGenerator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AdminRestaurantService
@@ -92,6 +93,10 @@ class AdminRestaurantService
 
     public function extendMembership(int $id, int $days): Restaurant
     {
+        if (! Schema::hasColumn('restaurants', 'membership_end_date')) {
+            throw new \RuntimeException('Üyelik alanları veritabanında tanımlı değil. Migration çalıştırılmalı.');
+        }
+
         $restaurant = $this->getById($id);
         $restaurant->adjustMembership($days);
 
