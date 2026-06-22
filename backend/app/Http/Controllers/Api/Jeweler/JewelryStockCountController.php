@@ -80,6 +80,25 @@ class JewelryStockCountController extends Controller
         ]);
     }
 
+    public function unscanItem(
+        Request $request,
+        JewelryStockCount $stockCount,
+        JewelryStockCountItem $item,
+    ): JsonResponse {
+        $this->ensureOwnership($request, $stockCount);
+
+        $count = $this->service->findForRestaurant(
+            $this->restaurantId($request),
+            $stockCount->id,
+        );
+
+        $this->service->unscanItem($count, $item);
+
+        return response()->json([
+            'data' => $this->service->formatCount($count->fresh(['items.product'])),
+        ]);
+    }
+
     public function updateItem(
         Request $request,
         JewelryStockCount $stockCount,

@@ -138,6 +138,28 @@ class JewelryStockCountService
         return $item->fresh(['product']);
     }
 
+    public function unscanItem(
+        JewelryStockCount $count,
+        JewelryStockCountItem $item,
+    ): JewelryStockCountItem {
+        $this->ensureDraft($count);
+        $this->ensureItemBelongsToCount($count, $item);
+
+        if ($item->count_mode !== 'barcode') {
+            throw new BadRequestHttpException('Bu ürünün barkod okuması iptal edilemez.');
+        }
+
+        if ((int) $item->counted_quantity <= 0) {
+            throw new BadRequestHttpException('Bu ürün henüz sayılmamış.');
+        }
+
+        $item->update([
+            'counted_quantity' => max(0, (int) $item->counted_quantity - 1),
+        ]);
+
+        return $item->fresh(['product']);
+    }
+
     public function updateItem(
         JewelryStockCount $count,
         JewelryStockCountItem $item,

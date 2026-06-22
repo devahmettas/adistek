@@ -733,6 +733,16 @@ export async function scanJewelryStockCount(id: number, barcode: string): Promis
   return data.data
 }
 
+export async function unscanJewelryStockCountItem(
+  countId: number,
+  itemId: number,
+): Promise<JewelryStockCount> {
+  const { data } = await apiClient.post<ApiResponse<JewelryStockCount>>(
+    `/jeweler/stock-counts/${countId}/items/${itemId}/unscan`,
+  )
+  return data.data
+}
+
 export async function updateJewelryStockCountItem(
   countId: number,
   itemId: number,

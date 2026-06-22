@@ -3,6 +3,7 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import BarcodeScannerModal from '../../components/jeweler/BarcodeScannerModal'
 import Input from '../../components/Input'
+import Select from '../../components/Select'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import {
@@ -12,6 +13,7 @@ import {
   getJewelryStockCountHistory,
   scanJewelryStockCount,
   startJewelryStockCount,
+  unscanJewelryStockCountItem,
   updateJewelryStockCountCash,
   updateJewelryStockCountItem,
   type JewelryStockCount,
@@ -215,15 +217,52 @@ function ManualItemRow({
   )
 }
 
-function BarcodeItemRow({ item }: { item: JewelryStockCountItem }) {
+function findBarcodeCountItem(
+  items: JewelryStockCountItem[],
+  barcode: string,
+): JewelryStockCountItem | undefined {
+  return items.find((item) => item.count_mode === 'barcode' && item.barcode === barcode)
+}
+
+function isBarcodeItemFullyCounted(item: JewelryStockCountItem): boolean {
+  return item.counted_quantity >= item.expected_quantity
+}
+
+function formatBarcodeCountProgress(item: JewelryStockCountItem): string {
+  return `${item.counted_quantity}/${item.expected_quantity}`
+}
+
+function BarcodeItemRow({
+  item,
+  onActivate,
+  onUnscan,
+  activating = false,
+  unscanning = false,
+}: {
+  item: JewelryStockCountItem
+  onActivate?: (item: JewelryStockCountItem) => void
+  onUnscan?: (item: JewelryStockCountItem) => void
+  activating?: boolean
+  unscanning?: boolean
+}) {
   const progress = item.expected_quantity > 0
     ? Math.min(100, Math.round((item.counted_quantity / item.expected_quantity) * 100))
     : item.counted_quantity > 0 ? 100 : 0
 
+  const isComplete = isBarcodeItemFullyCounted(item)
+  const canActivate = Boolean(onActivate && item.barcode && !isComplete)
+  const canUnscan = Boolean(onUnscan && item.counted_quantity > 0)
+  const showActions = Boolean(onActivate || onUnscan)
+  const activateLabel = isComplete
+    ? 'Tamamlandı'
+    : item.counted_quantity > 0
+      ? `Okundu işaretle (${formatBarcodeCountProgress(item)})`
+      : 'Okundu işaretle'
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-medium text-slate-900">{item.name}</p>
           <p className="text-xs text-slate-500">
             {item.barcode} · {item.category_name ?? 'Kategori yok'}
@@ -245,7 +284,240 @@ function BarcodeItemRow({ item }: { item: JewelryStockCountItem }) {
           style={{ width: `${progress}%` }}
         />
       </div>
+      {showActions && (
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          {onUnscan && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!canUnscan || unscanning || activating}
+              onClick={() => onUnscan(item)}
+            >
+              {unscanning ? '...' : 'Okumayı iptal et'}
+            </Button>
+          )}
+          {onActivate && (
+            <Button
+              type="button"
+              size="sm"
+              variant={isComplete ? 'secondary' : 'primary'}
+              disabled={!canActivate || activating || unscanning}
+              onClick={() => onActivate(item)}
+            >
+              {activating ? '...' : activateLabel}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+type StatPanelKey = 'barcode' | 'manual' | 'discrepancy'
+
+function ClickableStatCard({
+  title,
+  value,
+  subtitle,
+  active,
+  onClick,
+  valueClassName = 'text-slate-900',
+}: {
+  title: string
+  value: number | string
+  subtitle: string
+  active: boolean
+  onClick: () => void
+  valueClassName?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`panel-surface w-full p-4 text-left transition hover:border-brand-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+        active ? 'border-brand-300 ring-2 ring-brand-200' : ''
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
+      <p className={`mt-1 text-2xl font-bold ${valueClassName}`}>{value}</p>
+      <p className="text-xs text-slate-500">{subtitle}</p>
+      <p className="mt-2 text-xs font-medium text-brand-700">{active ? 'Listeyi gizle' : 'Listeyi göster'}</p>
+    </button>
+  )
+}
+
+type HistoryStatusFilter = 'all' | 'completed' | 'cancelled'
+type HistoryDiscrepancyFilter = 'all' | 'with' | 'without'
+type HistoryPeriodFilter = 'all' | 'today' | 'week' | 'month' | 'quarter' | 'year'
+
+function getStartOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function getStartOfWeek(date: Date): Date {
+  const start = getStartOfDay(date)
+  const weekday = start.getDay()
+  const daysFromMonday = weekday === 0 ? 6 : weekday - 1
+  start.setDate(start.getDate() - daysFromMonday)
+  return start
+}
+
+function filterStockCountHistory(
+  rows: JewelryStockCountSummary[],
+  statusFilter: HistoryStatusFilter,
+  discrepancyFilter: HistoryDiscrepancyFilter,
+  periodFilter: HistoryPeriodFilter,
+): JewelryStockCountSummary[] {
+  const now = new Date()
+
+  return rows.filter((row) => {
+    if (statusFilter !== 'all' && row.status !== statusFilter) {
+      return false
+    }
+
+    if (discrepancyFilter === 'with' && row.discrepancy_count === 0) {
+      return false
+    }
+
+    if (discrepancyFilter === 'without' && row.discrepancy_count > 0) {
+      return false
+    }
+
+    if (periodFilter !== 'all' && row.started_at) {
+      const started = new Date(row.started_at)
+
+      if (periodFilter === 'today') {
+        const startOfToday = getStartOfDay(now)
+        const startOfTomorrow = new Date(startOfToday)
+        startOfTomorrow.setDate(startOfTomorrow.getDate() + 1)
+        return started >= startOfToday && started < startOfTomorrow
+      }
+
+      if (periodFilter === 'week') {
+        return started >= getStartOfWeek(now)
+      }
+
+      if (periodFilter === 'month') {
+        return started.getFullYear() === now.getFullYear() && started.getMonth() === now.getMonth()
+      }
+
+      if (periodFilter === 'quarter') {
+        const threeMonthsAgo = new Date(now)
+        threeMonthsAgo.setMonth(now.getMonth() - 3)
+        return started >= threeMonthsAgo
+      }
+
+      if (periodFilter === 'year') {
+        return started.getFullYear() === now.getFullYear()
+      }
+    }
+
+    if (periodFilter !== 'all' && !row.started_at) {
+      return false
+    }
+
+    return true
+  })
+}
+
+function StockCountHistorySection({ history }: { history: JewelryStockCountSummary[] }) {
+  const [statusFilter, setStatusFilter] = useState<HistoryStatusFilter>('all')
+  const [discrepancyFilter, setDiscrepancyFilter] = useState<HistoryDiscrepancyFilter>('all')
+  const [periodFilter, setPeriodFilter] = useState<HistoryPeriodFilter>('all')
+
+  const filteredHistory = useMemo(
+    () => filterStockCountHistory(history, statusFilter, discrepancyFilter, periodFilter),
+    [history, statusFilter, discrepancyFilter, periodFilter],
+  )
+
+  if (history.length === 0) {
+    return null
+  }
+
+  return (
+    <Card title="Geçmiş sayımlar" className="overflow-hidden p-0 [&>div:first-child]:px-5 [&>div:first-child]:pt-4">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Select
+            label="Durum"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as HistoryStatusFilter)}
+            options={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'completed', label: 'Tamamlanan' },
+              { value: 'cancelled', label: 'İptal edilen' },
+            ]}
+          />
+          <Select
+            label="Açık durumu"
+            value={discrepancyFilter}
+            onChange={(event) => setDiscrepancyFilter(event.target.value as HistoryDiscrepancyFilter)}
+            options={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'with', label: 'Açığı olan' },
+              { value: 'without', label: 'Açıksız' },
+            ]}
+          />
+          <Select
+            label="Dönem"
+            value={periodFilter}
+            onChange={(event) => setPeriodFilter(event.target.value as HistoryPeriodFilter)}
+            options={[
+              { value: 'all', label: 'Tüm zamanlar' },
+              { value: 'today', label: 'Bugün' },
+              { value: 'week', label: 'Bu hafta' },
+              { value: 'month', label: 'Bu ay' },
+              { value: 'quarter', label: 'Son 3 ay' },
+              { value: 'year', label: 'Bu yıl' },
+            ]}
+          />
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          {filteredHistory.length} / {history.length} kayıt gösteriliyor
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        {filteredHistory.length > 0 ? (
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50/90 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Tarih</th>
+                <th className="px-4 py-3">Durum</th>
+                <th className="px-4 py-3 text-right">Ürün</th>
+                <th className="px-4 py-3 text-right">Açık</th>
+                <th className="px-4 py-3 text-right">Nakit fark</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredHistory.map((row) => (
+                <tr key={row.id} className="hover:bg-slate-50/60">
+                  <td className="px-4 py-3 text-slate-700">
+                    {row.started_at
+                      ? new Date(row.started_at).toLocaleString('tr-TR')
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3">{row.status_label}</td>
+                  <td className="px-4 py-3 text-right">{row.item_count}</td>
+                  <td className="px-4 py-3 text-right">
+                    <span className={row.discrepancy_count > 0 ? 'font-semibold text-red-700' : 'text-emerald-700'}>
+                      {row.discrepancy_count}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {row.cash_difference !== null
+                      ? formatDifference(row.cash_difference, '₺')
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">Seçilen filtrelere uygun sayım bulunamadı.</p>
+        )}
+      </div>
+    </Card>
   )
 }
 
@@ -259,6 +531,10 @@ function BarcodeCountSection({
   scanFeedback,
   barcodeItems,
   showItemList = true,
+  onActivateBarcodeItem,
+  onUnscanBarcodeItem,
+  activatingItemId = null,
+  unscanningItemId = null,
 }: {
   barcodeInput: string
   onBarcodeInputChange: (value: string) => void
@@ -269,6 +545,10 @@ function BarcodeCountSection({
   scanFeedback: BarcodeScanFeedback | null
   barcodeItems: JewelryStockCountItem[]
   showItemList?: boolean
+  onActivateBarcodeItem?: (item: JewelryStockCountItem) => void
+  onUnscanBarcodeItem?: (item: JewelryStockCountItem) => void
+  activatingItemId?: number | null
+  unscanningItemId?: number | null
 }) {
   return (
     <Card
@@ -311,7 +591,14 @@ function BarcodeCountSection({
         barcodeItems.length > 0 ? (
           <div className="grid gap-3 md:grid-cols-2">
             {barcodeItems.map((item) => (
-              <BarcodeItemRow key={item.id} item={item} />
+              <BarcodeItemRow
+                key={item.id}
+                item={item}
+                onActivate={onActivateBarcodeItem}
+                onUnscan={onUnscanBarcodeItem}
+                activating={activatingItemId === item.id}
+                unscanning={unscanningItemId === item.id}
+              />
             ))}
           </div>
         ) : (
@@ -344,19 +631,16 @@ function ActiveStockCount({
   const [completing, setCompleting] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activePanel, setActivePanel] = useState<StatPanelKey | null>(null)
+  const [activatingItemId, setActivatingItemId] = useState<number | null>(null)
+  const [unscanningItemId, setUnscanningItemId] = useState<number | null>(null)
   const scanQueueRef = useRef<Array<{ code: string; resolve: (feedback: BarcodeScanFeedback | null) => void }>>([])
   const processingScanRef = useRef(false)
-  const scannedBarcodesRef = useRef<Map<string, string>>(new Map())
+  const countRef = useRef(count)
 
   useEffect(() => {
-    const seeded = new Map<string, string>()
-    for (const item of count.items) {
-      if (item.count_mode === 'barcode' && item.barcode && item.counted_quantity > 0) {
-        seeded.set(item.barcode, item.name)
-      }
-    }
-    scannedBarcodesRef.current = seeded
-  }, [count.id])
+    countRef.current = count
+  }, [count])
 
   const manualItems = useMemo(
     () => count.items.filter((item) => item.count_mode === 'manual'),
@@ -392,10 +676,10 @@ function ActiveStockCount({
 
       setScanFeedback(null)
 
-      const knownName = scannedBarcodesRef.current.get(trimmed)
-      if (knownName) {
+      const existingItem = findBarcodeCountItem(countRef.current.items, trimmed)
+      if (existingItem && isBarcodeItemFullyCounted(existingItem)) {
         const feedback: BarcodeScanFeedback = {
-          message: `${knownName} daha önce okundu`,
+          message: `${existingItem.name} tamamlandı (${formatBarcodeCountProgress(existingItem)})`,
           tone: 'warning',
         }
         setScanFeedback(feedback)
@@ -405,20 +689,18 @@ function ActiveStockCount({
       }
 
       try {
-        const updated = await scanJewelryStockCount(count.id, trimmed)
+        const updated = await scanJewelryStockCount(countRef.current.id, trimmed)
         onCountChange(updated)
-        const item = updated.items.find((row) => row.barcode === trimmed)
+        countRef.current = updated
+        const item = findBarcodeCountItem(updated.items, trimmed)
         const productName = item?.name ?? 'Ürün'
-        scannedBarcodesRef.current.set(trimmed, productName)
         const feedback: BarcodeScanFeedback = {
-          message: `${productName} okundu`,
+          message: item
+            ? `${productName} okundu (${formatBarcodeCountProgress(item)})`
+            : `${productName} okundu`,
           tone: 'success',
         }
-        setScanFeedback(
-          item
-            ? { message: `${productName} okundu (${item.counted_quantity})`, tone: 'success' }
-            : feedback,
-        )
+        setScanFeedback(feedback)
         setBarcodeInput('')
         void playBarcodeScanFeedback('success')
         job.resolve(feedback)
@@ -435,7 +717,7 @@ function ActiveStockCount({
 
     processingScanRef.current = false
     setScanning(false)
-  }, [count.id, onCountChange])
+  }, [onCountChange])
 
   const handleScan = useCallback((code: string): Promise<BarcodeScanFeedback | null> => {
     const trimmed = code.trim()
@@ -450,6 +732,73 @@ function ActiveStockCount({
   const handleBarcodeSubmit = (event: FormEvent) => {
     event.preventDefault()
     void handleScan(barcodeInput)
+  }
+
+  const togglePanel = (panel: StatPanelKey) => {
+    setActivePanel((current) => (current === panel ? null : panel))
+  }
+
+  const handleActivateBarcodeItem = async (item: JewelryStockCountItem) => {
+    if (!item.barcode || isBarcodeItemFullyCounted(item)) {
+      if (isBarcodeItemFullyCounted(item)) {
+        setScanFeedback({
+          message: `${item.name} tamamlandı (${formatBarcodeCountProgress(item)})`,
+          tone: 'warning',
+        })
+        void playBarcodeScanFeedback('warning')
+      }
+      return
+    }
+
+    setActivatingItemId(item.id)
+    setError(null)
+
+    try {
+      const updated = await scanJewelryStockCount(count.id, item.barcode)
+      onCountChange(updated)
+      countRef.current = updated
+      const updatedItem = updated.items.find((row) => row.id === item.id)
+      setScanFeedback({
+        message: updatedItem
+          ? `${item.name} okundu (${formatBarcodeCountProgress(updatedItem)})`
+          : `${item.name} okundu`,
+        tone: 'success',
+      })
+      void playBarcodeScanFeedback('success')
+    } catch {
+      const feedback: BarcodeScanFeedback = {
+        message: 'Stokta yok',
+        tone: 'error',
+      }
+      setScanFeedback(feedback)
+      void playBarcodeScanFeedback('error')
+    } finally {
+      setActivatingItemId(null)
+    }
+  }
+
+  const handleUnscanBarcodeItem = async (item: JewelryStockCountItem) => {
+    if (item.counted_quantity <= 0) return
+
+    setUnscanningItemId(item.id)
+    setError(null)
+
+    try {
+      const updated = await unscanJewelryStockCountItem(count.id, item.id)
+      onCountChange(updated)
+      countRef.current = updated
+      const updatedItem = updated.items.find((row) => row.id === item.id)
+      setScanFeedback({
+        message: updatedItem
+          ? `${item.name} okuması iptal edildi (${formatBarcodeCountProgress(updatedItem)})`
+          : `${item.name} okuması iptal edildi`,
+        tone: 'warning',
+      })
+    } catch {
+      setError('Okuma iptal edilemedi.')
+    } finally {
+      setUnscanningItemId(null)
+    }
   }
 
   const saveCash = async () => {
@@ -520,46 +869,82 @@ function ActiveStockCount({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="panel-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Barkodlu ürün</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{barcodeItems.length}</p>
-          <p className="text-xs text-slate-500">{scannedTotal} adet okutuldu</p>
-        </div>
-        <div className="panel-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Elle giriş</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{manualItems.length}</p>
-          <p className="text-xs text-slate-500">Gram / çeyrek altın</p>
-        </div>
-        <div className="panel-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Açık sayısı</p>
-          <p className={`mt-1 text-2xl font-bold ${count.discrepancy_count > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-            {count.discrepancy_count}
-          </p>
-          <p className="text-xs text-slate-500">Ürün ve nakit farkları</p>
-        </div>
+        <ClickableStatCard
+          title="Barkodlu ürün"
+          value={barcodeItems.length}
+          subtitle={`${scannedTotal} adet okutuldu`}
+          active={activePanel === 'barcode'}
+          onClick={() => togglePanel('barcode')}
+        />
+        <ClickableStatCard
+          title="Elle giriş"
+          value={manualItems.length}
+          subtitle="Gram / çeyrek altın"
+          active={activePanel === 'manual'}
+          onClick={() => togglePanel('manual')}
+        />
+        <ClickableStatCard
+          title="Açık sayısı"
+          value={count.discrepancy_count}
+          subtitle="Ürün ve nakit farkları"
+          active={activePanel === 'discrepancy'}
+          onClick={() => togglePanel('discrepancy')}
+          valueClassName={count.discrepancy_count > 0 ? 'text-red-700' : 'text-emerald-700'}
+        />
       </div>
 
-      {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      {activePanel === 'barcode' && (
+        <Card title="Barkodlu ürünler" description="Aynı barkodu stok adedi kadar okutun. Örn. 3 adet varsa 3 kez okutun veya butona basın." className="space-y-4">
+          {barcodeItems.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {barcodeItems.map((item) => (
+                <BarcodeItemRow
+                  key={item.id}
+                  item={item}
+                  onActivate={(row) => void handleActivateBarcodeItem(row)}
+                  onUnscan={(row) => void handleUnscanBarcodeItem(row)}
+                  activating={activatingItemId === item.id}
+                  unscanning={unscanningItemId === item.id}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Barkodlu ürün bulunmuyor.</p>
+          )}
+        </Card>
       )}
 
-      {manualItems.length > 0 && (
+      {activePanel === 'manual' && (
         <Card
           title="Elle giriş (Gram / Çeyrek)"
           description="Gram altın için ağırlık, çeyrek için adet girin."
           className="space-y-4"
         >
-          <div className="space-y-3">
-            {manualItems.map((item) => (
-              <ManualItemRow
-                key={item.id}
-                item={item}
-                countId={count.id}
-                onUpdated={onCountChange}
-              />
-            ))}
-          </div>
+          {manualItems.length > 0 ? (
+            <div className="space-y-3">
+              {manualItems.map((item) => (
+                <ManualItemRow
+                  key={item.id}
+                  item={item}
+                  countId={count.id}
+                  onUpdated={onCountChange}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Elle giriş gereken ürün bulunmuyor.</p>
+          )}
         </Card>
+      )}
+
+      {activePanel === 'discrepancy' && (
+        <Card title="Açık / fark listesi" description="Kayıt ile sayım arasında fark olan kalemler." className="space-y-4">
+          <DiscrepancyTable items={count.discrepancies} />
+        </Card>
+      )}
+
+      {error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
       )}
 
       <Card
@@ -591,8 +976,6 @@ function ActiveStockCount({
         )}
       </Card>
 
-      <DiscrepancyTable items={count.discrepancies} />
-
       <BarcodeCountSection
         barcodeInput={barcodeInput}
         onBarcodeInputChange={setBarcodeInput}
@@ -603,6 +986,10 @@ function ActiveStockCount({
         scanFeedback={scanFeedback}
         barcodeItems={barcodeItems}
         showItemList
+        onActivateBarcodeItem={(row) => void handleActivateBarcodeItem(row)}
+        onUnscanBarcodeItem={(row) => void handleUnscanBarcodeItem(row)}
+        activatingItemId={activatingItemId}
+        unscanningItemId={unscanningItemId}
       />
 
       {scannerOpen && (
@@ -733,46 +1120,7 @@ export default function JewelerStockCountPage() {
         </Card>
       )}
 
-      {history.length > 0 && (
-        <Card title="Geçmiş sayımlar" className="overflow-hidden p-0 [&>div:first-child]:px-5 [&>div:first-child]:pt-4">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50/90 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Tarih</th>
-                  <th className="px-4 py-3">Durum</th>
-                  <th className="px-4 py-3 text-right">Ürün</th>
-                  <th className="px-4 py-3 text-right">Açık</th>
-                  <th className="px-4 py-3 text-right">Nakit fark</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {history.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3 text-slate-700">
-                      {row.started_at
-                        ? new Date(row.started_at).toLocaleString('tr-TR')
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3">{row.status_label}</td>
-                    <td className="px-4 py-3 text-right">{row.item_count}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={row.discrepancy_count > 0 ? 'font-semibold text-red-700' : 'text-emerald-700'}>
-                        {row.discrepancy_count}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {row.cash_difference !== null
-                        ? formatDifference(row.cash_difference, '₺')
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+      {history.length > 0 && <StockCountHistorySection history={history} />}
     </div>
   )
 }
