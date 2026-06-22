@@ -1,3 +1,5 @@
+import type { JewelerFeatureKey } from './jewelerFeatures'
+
 export interface JewelerNavItem {
   to: string
   label: string
@@ -5,17 +7,22 @@ export interface JewelerNavItem {
   end?: boolean
 }
 
-export const JEWELER_NAV_ITEMS: JewelerNavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: '⌂', end: true },
+export interface JewelerNavItemWithFeature extends JewelerNavItem {
+  feature?: JewelerFeatureKey
+  always?: boolean
+}
+
+export const JEWELER_NAV_ITEMS: JewelerNavItemWithFeature[] = [
+  { to: '/dashboard', label: 'Dashboard', icon: '⌂', end: true, always: true },
   { to: '/dashboard/jeweler/products', label: 'Ürün Yönetimi', icon: '◆' },
   { to: '/dashboard/jeweler/purchases', label: 'Ürün Alış Satış', icon: '⇅' },
   { to: '/dashboard/jeweler/history', label: 'İşlem Geçmişi', icon: '☰' },
   { to: '/dashboard/jeweler/vault', label: 'Kasa Yönetimi', icon: '▤' },
   { to: '/dashboard/jeweler/stock-count', label: 'Stok Takip', icon: '▧' },
   { to: '/dashboard/jeweler/customers', label: 'Müşteri Yönetimi', icon: '◉' },
-  { to: '/dashboard/jeweler/barcode', label: 'Barkod Sistemi', icon: '▥' },
+  { to: '/dashboard/jeweler/barcode', label: 'Barkod Sistemi', icon: '▥', feature: 'barcode' },
   { to: '/dashboard/jeweler/gold-prices', label: 'Altın Fiyatları', icon: '★' },
-  { to: '/dashboard/jeweler/reports', label: 'Raporlama', icon: '▦' },
+  { to: '/dashboard/jeweler/reports', label: 'Raporlama', icon: '▦', feature: 'reports' },
   { to: '/dashboard/jeweler/settings', label: 'Ayarlar', icon: '⚙' },
 ]
 

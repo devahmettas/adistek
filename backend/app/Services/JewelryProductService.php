@@ -6,6 +6,8 @@ use App\Enums\JewelryStockMovementType;
 use App\Models\JewelryProduct;
 use App\Models\JewelrySetting;
 use App\Models\JewelryStockMovement;
+use App\Models\Restaurant;
+use App\Support\RestaurantFeatures;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -63,7 +65,11 @@ class JewelryProductService
     public function create(int $restaurantId, array $data): JewelryProduct
     {
         return DB::transaction(function () use ($restaurantId, $data) {
-            if (! empty($data['barcode'])) {
+            $barcodeEnabled = $this->isBarcodeEnabled($restaurantId);
+
+            if (! $barcodeEnabled) {
+                unset($data['barcode']);
+            } elseif (! empty($data['barcode'])) {
                 $data['barcode'] = trim((string) $data['barcode']);
 
                 if ($data['barcode'] === '') {
@@ -73,7 +79,7 @@ class JewelryProductService
                 }
             }
 
-            if (empty($data['barcode'])) {
+            if ($barcodeEnabled && empty($data['barcode'])) {
                 $data['barcode'] = $this->generateBarcode($restaurantId);
             }
 
@@ -232,6 +238,13 @@ class JewelryProductService
         $sequence = JewelryProduct::where('restaurant_id', $restaurantId)->count() + 1;
 
         return sprintf('%s%06d', strtoupper($prefix), $sequence);
+    }
+
+    private function isBarcodeEnabled(int $restaurantId): bool
+    {
+        $restaurant = Restaurant::find($restaurantId);
+
+        return $restaurant && RestaurantFeatures::isEnabled($restaurant, RestaurantFeatures::JEWELER_BARCODE);
     }
 
     private function applySalePrice(array $data, ?JewelryProduct $existing = null): array

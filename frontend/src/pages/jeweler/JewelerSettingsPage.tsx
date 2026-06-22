@@ -5,8 +5,11 @@ import Input from '../../components/Input'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import { getJewelrySettings, updateJewelrySettings, type JewelrySettings } from '../../api/jeweler'
+import JewelerFeatureDisabledNotice from '../../components/jeweler/JewelerFeatureDisabledNotice'
+import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 
 export default function JewelerSettingsPage() {
+  const { barcodeEnabled } = useJewelerFeatures()
   const [settings, setSettings] = useState<JewelrySettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -98,11 +101,27 @@ export default function JewelerSettingsPage() {
             value={String(settings.default_karat)}
             onChange={(e) => setSettings({ ...settings, default_karat: Number(e.target.value) })}
           />
-          <Input
-            label="Barkod Öneki"
-            value={settings.barcode_prefix ?? ''}
-            onChange={(e) => setSettings({ ...settings, barcode_prefix: e.target.value })}
-          />
+          {barcodeEnabled ? (
+            <>
+              <Input
+                label="Barkod Öneki"
+                value={settings.barcode_prefix ?? ''}
+                onChange={(e) => setSettings({ ...settings, barcode_prefix: e.target.value })}
+              />
+              <label className="flex items-center gap-2 text-sm text-slate-700 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={settings.auto_generate_barcode}
+                  onChange={(e) => setSettings({ ...settings, auto_generate_barcode: e.target.checked })}
+                />
+                Otomatik barkod oluştur
+              </label>
+            </>
+          ) : (
+            <div className="md:col-span-2">
+              <JewelerFeatureDisabledNotice feature="barcode" compact />
+            </div>
+          )}
           <Input
             label="Firma Adı"
             value={settings.company_name ?? ''}
@@ -113,14 +132,6 @@ export default function JewelerSettingsPage() {
             value={settings.receipt_footer ?? ''}
             onChange={(e) => setSettings({ ...settings, receipt_footer: e.target.value })}
           />
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={settings.auto_generate_barcode}
-              onChange={(e) => setSettings({ ...settings, auto_generate_barcode: e.target.checked })}
-            />
-            Otomatik barkod oluştur
-          </label>
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>

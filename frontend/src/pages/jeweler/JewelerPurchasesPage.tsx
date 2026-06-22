@@ -7,6 +7,7 @@ import SaleBarcodeSearch from '../../components/jeweler/SaleBarcodeSearch'
 import PageHeader from '../../components/PageHeader'
 import type { JewelryCategory, JewelryProduct } from '../../api/jeweler'
 import type { SaleFormItem } from '../../utils/jewelrySaleGold'
+import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 import { useState } from 'react'
 
 function parseMode(value: string | null): PurchaseSaleMode {
@@ -14,6 +15,7 @@ function parseMode(value: string | null): PurchaseSaleMode {
 }
 
 export default function JewelerPurchasesPage() {
+  const { barcodeEnabled } = useJewelerFeatures()
   const [searchParams, setSearchParams] = useSearchParams()
   const mode = parseMode(searchParams.get('mode'))
   const editParam = searchParams.get('edit')
@@ -57,7 +59,7 @@ export default function JewelerPurchasesPage() {
             <PurchaseSaleModeToggle mode={mode} onChange={setMode} />
           </div>
 
-          {mode === 'sale' && (
+          {mode === 'sale' && barcodeEnabled && (
             <div className="grid min-w-0 flex-1 gap-2 md:grid-cols-[auto_minmax(0,1fr)] md:items-end">
               <SaleBarcodeScanButton
                 variant="toolbar"
@@ -83,6 +85,7 @@ export default function JewelerPurchasesPage() {
 
       {mode === 'sale' ? (
         <JewelerSaleFormSection
+          barcodeEnabled={barcodeEnabled}
           scannerOpen={saleScannerOpen}
           onScannerOpenChange={setSaleScannerOpen}
           barcodeSearchQuery={saleBarcodeQuery}

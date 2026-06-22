@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Jeweler;
 use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
 use App\Models\JewelrySetting;
+use App\Models\Restaurant;
+use App\Support\RestaurantFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,6 +36,12 @@ class JewelrySettingController extends Controller
             'receipt_footer' => ['nullable', 'string', 'max:255'],
             'auto_generate_barcode' => ['boolean'],
         ]);
+
+        $restaurant = Restaurant::find($this->restaurantId($request));
+
+        if (! $restaurant || ! RestaurantFeatures::isEnabled($restaurant, RestaurantFeatures::JEWELER_BARCODE)) {
+            unset($data['barcode_prefix'], $data['auto_generate_barcode']);
+        }
 
         $settings = JewelrySetting::firstOrCreate(
             ['restaurant_id' => $this->restaurantId($request)],

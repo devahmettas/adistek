@@ -21,6 +21,8 @@ class StoreAdminRestaurantRequest extends FormRequest
             'contact_person' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string', 'max:500'],
+            'service_fee' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
+            'membership_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
             'email' => ['required', 'email', 'max:255', 'unique:restaurants,email'],
             'password' => ['required', 'string', 'min:6'],
         ];

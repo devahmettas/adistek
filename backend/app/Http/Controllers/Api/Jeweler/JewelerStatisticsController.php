@@ -27,4 +27,11 @@ class JewelerStatisticsController extends Controller
             'data' => $this->service->getDashboardStats($this->restaurantId($request), $period),
         ]);
     }
+
+    public function dashboardOverview(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->service->getDashboardOverview($this->restaurantId($request)),
+        ]);
+    }
 }

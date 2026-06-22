@@ -3,6 +3,7 @@ import BrandLogo from './BrandLogo'
 import Button from './Button'
 import { isJewelerBusiness } from '../constants/businessType'
 import { JEWELER_NAV_ITEMS } from '../constants/jewelerNav'
+import { isJewelerFeatureEnabled, type JewelerFeatureKey } from '../constants/jewelerFeatures'
 import {
   RESTAURANT_NAV_ITEMS,
   canAccessRestaurantNavItem,
@@ -20,6 +21,12 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
     isActive
       ? 'bg-brand-700 text-white shadow-sm'
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+  }`
+}
+
+function disabledNavLinkClass({ isActive }: { isActive: boolean }) {
+  return `flex min-h-11 items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-400 transition ${
+    isActive ? 'border-amber-200 bg-amber-50 text-amber-800' : 'hover:border-slate-300 hover:bg-slate-100'
   }`
 }
 
@@ -43,18 +50,31 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {visibleNavItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={navLinkClass}
-            onClick={onCloseMobile}
-          >
-            <span className="text-xs opacity-80">{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+        {visibleNavItems.map((item) => {
+          const isLocked = Boolean(
+            isJeweler &&
+            item.feature &&
+            !isJewelerFeatureEnabled(restaurant, item.feature as JewelerFeatureKey),
+          )
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={isLocked ? disabledNavLinkClass : navLinkClass}
+              onClick={onCloseMobile}
+            >
+              <span className="text-xs opacity-80">{isLocked ? '🔒' : item.icon}</span>
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {isLocked && (
+                <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                  Kapalı
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       <div className="border-t border-slate-200 p-4">

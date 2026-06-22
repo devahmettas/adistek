@@ -35,6 +35,7 @@ import {
   type JewelryPriceBreakdown,
 } from '../../utils/jewelryPrice'
 import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyInput'
+import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 
 type ProductsTab = 'list' | 'add' | 'edit'
 type CategoryFilter = 'all' | 'uncategorized' | number
@@ -363,6 +364,7 @@ function ProductForm({
 }
 
 export default function JewelerProductsPage() {
+  const { barcodeEnabled } = useJewelerFeatures()
   const [products, setProducts] = useState<JewelryProduct[]>([])
   const [categories, setCategories] = useState<JewelryCategory[]>([])
   const [goldPrices, setGoldPrices] = useState<MarketGoldPriceRecord[]>([])
@@ -565,7 +567,7 @@ export default function JewelerProductsPage() {
       sale_price: isManualPrice ? String(parseMoneyInput(manualPrice)) : String(priceBreakdown?.salePrice ?? 0),
       metal_type: 'gold' as const,
       stock_quantity: Number(stockQuantity) || 0,
-      ...(pendingBarcode && !editingId ? { barcode: pendingBarcode } : {}),
+      ...(barcodeEnabled && pendingBarcode && !editingId ? { barcode: pendingBarcode } : {}),
     }
 
     try {
@@ -648,12 +650,14 @@ export default function JewelerProductsPage() {
     submitting,
     onSubmit: handleSubmit,
     priceBreakdown,
-    pendingBarcode: addMode === 'barcode-form' ? pendingBarcode : null,
-    onChangeBarcode: () => {
-      setPendingBarcode(null)
-      setAddMode('barcode-scan')
-      setFormError(null)
-    },
+    pendingBarcode: barcodeEnabled && addMode === 'barcode-form' ? pendingBarcode : null,
+    onChangeBarcode: barcodeEnabled
+      ? () => {
+          setPendingBarcode(null)
+          setAddMode('barcode-scan')
+          setFormError(null)
+        }
+      : undefined,
   }
 
   const filterChips: Array<{ id: CategoryFilter; label: string }> = [
@@ -742,7 +746,7 @@ export default function JewelerProductsPage() {
                     className="flex flex-1 cursor-pointer flex-col text-left"
                   >
                     <div className="relative flex aspect-square items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4">
-                      <ProductBarcode value={product.barcode} corner="top-right" />
+                      <ProductBarcode value={barcodeEnabled ? product.barcode : null} corner="top-right" />
                       {previewUrl ? (
                         <img
                           src={previewUrl}
@@ -788,7 +792,7 @@ export default function JewelerProductsPage() {
                     >
                       Düzenle
                     </Button>
-                    {product.barcode && (
+                    {barcodeEnabled && product.barcode && (
                       <Button
                         type="button"
                         size="sm"
@@ -826,7 +830,7 @@ export default function JewelerProductsPage() {
       )}
 
       {!loading && activeTab === 'add' && addMode === 'choose' && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={`grid gap-4 ${barcodeEnabled ? 'md:grid-cols-2' : ''}`}>
           <button
             type="button"
             onClick={() => setAddMode('standard')}
@@ -839,10 +843,13 @@ export default function JewelerProductsPage() {
             </div>
             <h3 className="text-lg font-semibold text-slate-900">Standart Ürün Ekle</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Ürün bilgilerini girin. Sistem barkodu otomatik oluşturur.
+              {barcodeEnabled
+                ? 'Ürün bilgilerini girin. Sistem barkodu otomatik oluşturur.'
+                : 'Ürün bilgilerini girerek kaydedin.'}
             </p>
           </button>
 
+          {barcodeEnabled && (
           <button
             type="button"
             onClick={() => setAddMode('barcode-scan')}
@@ -859,10 +866,11 @@ export default function JewelerProductsPage() {
               Üretimden gelen barkodu okutun, ürün bilgilerini girin ve aynı barkodla kaydedin.
             </p>
           </button>
+          )}
         </div>
       )}
 
-      {!loading && activeTab === 'add' && addMode === 'barcode-scan' && (
+      {!loading && activeTab === 'add' && barcodeEnabled && addMode === 'barcode-scan' && (
         <BarcodeProductAddFlow
           onBarcodeConfirmed={(barcode) => {
             setPendingBarcode(barcode)
@@ -885,7 +893,7 @@ export default function JewelerProductsPage() {
         </div>
       )}
 
-      {!loading && activeTab === 'add' && addMode === 'barcode-form' && pendingBarcode && (
+      {!loading && activeTab === 'add' && barcodeEnabled && addMode === 'barcode-form' && pendingBarcode && (
         <div className="space-y-4">
           <div className="flex justify-start">
             <Button
@@ -966,6 +974,7 @@ export default function JewelerProductsPage() {
               : null
           }
           goldPrices={goldPrices}
+          barcodeEnabled={barcodeEnabled}
           onClose={() => setDetailProduct(null)}
           onSell={() => {
             setSaleProduct(detailProduct)

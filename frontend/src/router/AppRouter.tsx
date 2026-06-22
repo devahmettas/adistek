@@ -4,9 +4,10 @@ import MainLayout from '../layouts/MainLayout'
 import KitchenMainLayout from '../layouts/KitchenMainLayout'
 import WaiterMainLayout from '../layouts/WaiterMainLayout'
 import AdminLoginPage from '../pages/AdminLoginPage'
+import AdminBusinessListPage from '../pages/AdminBusinessListPage'
+import AdminDashboardPage from '../pages/AdminDashboardPage'
 import AdminRestaurantCreatePage from '../pages/AdminRestaurantCreatePage'
 import AdminRestaurantDetailPage from '../pages/AdminRestaurantDetailPage'
-import AdminRestaurantsPage from '../pages/AdminRestaurantsPage'
 import KitchenDashboardPage from '../pages/KitchenDashboardPage'
 import KitchenLoginPage from '../pages/KitchenLoginPage'
 import LoginPage from '../pages/LoginPage'
@@ -38,6 +39,7 @@ import AdminProtectedRoute from './AdminProtectedRoute'
 import KitchenProtectedRoute from './KitchenProtectedRoute'
 import ProtectedRoute from './ProtectedRoute'
 import { JewelerOnlyRoute, RestaurantOnlyRoute } from './BusinessTypeRoute'
+import JewelerFeatureRoute from './JewelerFeatureRoute'
 import RestaurantFeatureRoute from './RestaurantFeatureRoute'
 import WaiterProtectedRoute from './WaiterProtectedRoute'
 
@@ -67,9 +69,11 @@ export default function AppRouter() {
             <Route path="/dashboard/jeweler/sales" element={<Navigate to="/dashboard/jeweler/history" replace />} />
             <Route path="/dashboard/jeweler/repairs" element={<Navigate to="/dashboard/jeweler/stock-count" replace />} />
             <Route path="/dashboard/jeweler/customers" element={<JewelerCustomersPage />} />
-            <Route path="/dashboard/jeweler/barcode" element={<JewelerBarcodePage />} />
+            <Route element={<JewelerFeatureRoute />}>
+              <Route path="/dashboard/jeweler/barcode" element={<JewelerBarcodePage />} />
+              <Route path="/dashboard/jeweler/reports" element={<JewelerReportsPage />} />
+            </Route>
             <Route path="/dashboard/jeweler/gold-prices" element={<JewelerGoldPricesPage />} />
-            <Route path="/dashboard/jeweler/reports" element={<JewelerReportsPage />} />
             <Route path="/dashboard/jeweler/settings" element={<JewelerSettingsPage />} />
           </Route>
           <Route element={<RestaurantOnlyRoute />}>
@@ -101,7 +105,8 @@ export default function AppRouter() {
 
       <Route element={<AdminProtectedRoute />}>
         <Route element={<AdminLayout />}>
-          <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
+          <Route path="/admin/restaurants" element={<AdminDashboardPage />} />
+          <Route path="/admin/restaurants/list" element={<AdminBusinessListPage />} />
           <Route path="/admin/restaurants/new" element={<AdminRestaurantCreatePage />} />
           <Route path="/admin/restaurants/:id" element={<AdminRestaurantDetailPage />} />
         </Route>

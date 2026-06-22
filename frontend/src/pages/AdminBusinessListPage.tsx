@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminRestaurantCard from '../components/admin/AdminRestaurantCard'
-import { AdminEmptyState, AdminStatsGrid } from '../components/admin/AdminDashboardWidgets'
+import { AdminEmptyState } from '../components/admin/AdminDashboardWidgets'
 import Input from '../components/Input'
 import LoadingState from '../components/LoadingState'
 import PageHeader from '../components/PageHeader'
 import useAdminRestaurants from '../hooks/useAdminRestaurants'
-import { useAdminAuth } from '../store/AdminAuthStore'
-import { computeAdminDashboardStats } from '../utils/adminDashboard'
 
-export default function AdminRestaurantsPage() {
-  const { admin } = useAdminAuth()
+export default function AdminBusinessListPage() {
   const { restaurants, loading, error } = useAdminRestaurants()
   const [search, setSearch] = useState('')
 
-  const stats = useMemo(() => computeAdminDashboardStats(restaurants), [restaurants])
+  const expiredCount = useMemo(
+    () => restaurants.filter((restaurant) => restaurant.membership_expired).length,
+    [restaurants],
+  )
 
   const filteredRestaurants = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -40,37 +40,27 @@ export default function AdminRestaurantsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-700 via-brand-800 to-slate-900 px-6 py-8 text-white shadow-panel lg:px-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-200">
-              Süper Admin Dashboard
-            </p>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
-              Hoş geldiniz, {admin?.name ?? 'Admin'}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-100">
-              Platformdaki tüm restoran ve kuyumcu işletmelerini buradan yönetin. Yeni işletme eklemek
-              için sağ üstteki veya aşağıdaki butonu kullanın.
-            </p>
-          </div>
-
+      <PageHeader
+        title="İşletme Listesi"
+        description={`${restaurants.length} kayıtlı işletme${expiredCount > 0 ? ` · ${expiredCount} süresi dolmuş` : ''}`}
+        actions={
           <Link
             to="/admin/restaurants/new"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-brand-800 shadow-sm transition hover:bg-brand-50"
+            className="inline-flex items-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
           >
-            <span aria-hidden>＋</span>
-            İşletme Ekle
+            ＋ İşletme Ekle
           </Link>
-        </div>
-      </section>
-
-      {!loading && !error && restaurants.length > 0 && <AdminStatsGrid stats={stats} />}
-
-      <PageHeader
-        title="İşletmeler"
-        description={`${restaurants.length} kayıtlı işletme`}
+        }
       />
+
+      {expiredCount > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800 shadow-card">
+          <p className="font-bold">{expiredCount} işletmenin üyelik süresi dolmuş</p>
+          <p className="mt-1 text-red-700">
+            İşletmeye tıklayarak üyelik yönetimi bölümünden gün ekleyebilirsiniz.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
         <Input
@@ -82,7 +72,7 @@ export default function AdminRestaurantsPage() {
         />
       </div>
 
-      {loading && <LoadingState label="Restoranlar yükleniyor..." />}
+      {loading && <LoadingState label="İşletmeler yükleniyor..." />}
       {error && <p className="alert-error">{error}</p>}
 
       {!loading && !error && filteredRestaurants.length === 0 && (

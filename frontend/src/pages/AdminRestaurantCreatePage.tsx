@@ -21,6 +21,8 @@ export default function AdminRestaurantCreatePage() {
   const [address, setAddress] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [serviceFee, setServiceFee] = useState('0')
+  const [membershipDays, setMembershipDays] = useState('30')
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -38,9 +40,11 @@ export default function AdminRestaurantCreatePage() {
         address: address.trim(),
         email: email.trim(),
         password,
+        service_fee: Number.parseFloat(serviceFee.replace(',', '.')) || 0,
+        membership_days: Number.parseInt(membershipDays, 10) || 30,
       })
 
-      navigate('/admin/restaurants')
+      navigate('/admin/restaurants/list')
     } catch (submitError) {
       setFormError(getApiErrorMessage(submitError, 'Restoran eklenemedi.'))
     } finally {
@@ -55,7 +59,7 @@ export default function AdminRestaurantCreatePage() {
         description="Yeni restoran veya kuyumcu işletmesini sisteme kaydedin. İşletme sahibi verdiğiniz e-posta ve şifre ile panele giriş yapabilir."
         actions={
           <Link
-            to="/admin/restaurants"
+            to="/admin/restaurants/list"
             className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             ← Geri Dön
@@ -135,6 +139,27 @@ export default function AdminRestaurantCreatePage() {
               placeholder="En az 6 karakter"
               required
             />
+            <Input
+              label="Aylık Hizmet Bedeli (₺)"
+              name="serviceFee"
+              type="number"
+              min={0}
+              step="0.01"
+              value={serviceFee}
+              onChange={(event) => setServiceFee(event.target.value)}
+              placeholder="Örn: 1500"
+            />
+            <Input
+              label="Başlangıç Üyelik Süresi (gün)"
+              name="membershipDays"
+              type="number"
+              min={1}
+              max={3650}
+              value={membershipDays}
+              onChange={(event) => setMembershipDays(event.target.value)}
+              placeholder="Örn: 30"
+              required
+            />
 
             {formError && <p className="alert-error md:col-span-2">{formError}</p>}
 
@@ -143,7 +168,7 @@ export default function AdminRestaurantCreatePage() {
                 {submitting ? 'Kaydediliyor...' : 'İşletmeyi Kaydet'}
               </Button>
               <Link
-                to="/admin/restaurants"
+                to="/admin/restaurants/list"
                 className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 İptal
@@ -158,6 +183,7 @@ export default function AdminRestaurantCreatePage() {
             <ul className="mt-3 space-y-2 text-sm text-brand-900/80">
               <li>İşletme hemen listeye eklenir.</li>
               <li>İşletme sahibi giriş e-postası ve şifre ile panele girebilir.</li>
+              <li>Üyelik süresi dolunca işletme giriş yapamaz; süper admin gün ekleyerek yeniler.</li>
               <li>
                 {businessType === 'jeweler'
                   ? 'Kuyumcu panelinde ürün, stok, satış ve tamir modülleri açılır.'

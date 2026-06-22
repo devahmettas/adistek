@@ -155,7 +155,11 @@ Route::middleware(['auth:sanctum', 'kitchen'])->prefix('kitchen')->group(functio
 });
 
 Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')->group(function () {
-    Route::get('/stats', [JewelerStatisticsController::class, 'index']);
+    Route::get('/dashboard-overview', [JewelerStatisticsController::class, 'dashboardOverview']);
+
+    Route::middleware('restaurant.feature:feature_jeweler_reports')->group(function () {
+        Route::get('/stats', [JewelerStatisticsController::class, 'index']);
+    });
 
     Route::get('/categories', [JewelryCategoryController::class, 'index']);
     Route::post('/categories', [JewelryCategoryController::class, 'store']);
@@ -179,12 +183,15 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::get('/stock-counts/active', [JewelryStockCountController::class, 'active']);
     Route::post('/stock-counts', [JewelryStockCountController::class, 'store']);
     Route::get('/stock-counts/{stockCount}', [JewelryStockCountController::class, 'show']);
-    Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
-    Route::post('/stock-counts/{stockCount}/items/{item}/unscan', [JewelryStockCountController::class, 'unscanItem']);
     Route::match(['patch', 'post'], '/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem']);
     Route::match(['patch', 'post'], '/stock-counts/{stockCount}/cash', [JewelryStockCountController::class, 'updateCash']);
     Route::post('/stock-counts/{stockCount}/complete', [JewelryStockCountController::class, 'complete']);
     Route::post('/stock-counts/{stockCount}/cancel', [JewelryStockCountController::class, 'cancel']);
+
+    Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
+        Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
+        Route::post('/stock-counts/{stockCount}/items/{item}/unscan', [JewelryStockCountController::class, 'unscanItem']);
+    });
 
     Route::get('/vault', [JewelryVaultController::class, 'show']);
     Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
@@ -216,8 +223,10 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::put('/customers/{customer}', [JewelryCustomerController::class, 'update']);
     Route::delete('/customers/{customer}', [JewelryCustomerController::class, 'destroy']);
 
-    Route::get('/barcode/{barcode}/check', [JewelryBarcodeController::class, 'check']);
-    Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
+    Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
+        Route::get('/barcode/{barcode}/check', [JewelryBarcodeController::class, 'check']);
+        Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
+    });
 
     Route::get('/gold-prices/live', [MarketGoldPriceController::class, 'live']);
     Route::get('/gold-prices/wait', [MarketGoldPriceController::class, 'wait']);
@@ -239,4 +248,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/restaurants/{restaurant}', [AdminRestaurantController::class, 'show']);
     Route::put('/restaurants/{restaurant}', [AdminRestaurantController::class, 'update']);
     Route::patch('/restaurants/{restaurant}/features', [AdminRestaurantController::class, 'updateFeatures']);
+    Route::post('/restaurants/{restaurant}/extend-membership', [AdminRestaurantController::class, 'extendMembership']);
+    Route::delete('/restaurants/{restaurant}', [AdminRestaurantController::class, 'destroy']);
 });

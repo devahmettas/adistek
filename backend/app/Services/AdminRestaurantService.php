@@ -35,7 +35,8 @@ class AdminRestaurantService
     public function create(array $data): Restaurant
     {
         $businessType = BusinessType::tryFrom($data['business_type'] ?? '') ?? BusinessType::Restaurant;
-        unset($data['business_type']);
+        $membershipDays = (int) ($data['membership_days'] ?? 30);
+        unset($data['business_type'], $data['membership_days']);
 
         $isJeweler = $businessType === BusinessType::Jeweler;
 
@@ -46,6 +47,10 @@ class AdminRestaurantService
             'feature_order_tracking' => ! $isJeweler,
             'feature_qr_menu' => ! $isJeweler,
             'feature_reservations' => ! $isJeweler,
+            'feature_jeweler_barcode' => $isJeweler,
+            'feature_jeweler_reports' => $isJeweler,
+            'service_fee' => $data['service_fee'] ?? 0,
+            'membership_end_date' => now()->addDays(max(1, $membershipDays))->toDateString(),
         ]);
 
         if ($isJeweler) {
@@ -83,5 +88,19 @@ class AdminRestaurantService
         $this->repository->update($restaurant, $updates);
 
         return $this->getById($id);
+    }
+
+    public function extendMembership(int $id, int $days): Restaurant
+    {
+        $restaurant = $this->getById($id);
+        $restaurant->adjustMembership($days);
+
+        return $this->getById($id);
+    }
+
+    public function delete(int $id): void
+    {
+        $restaurant = $this->getById($id);
+        $this->repository->delete($restaurant);
     }
 }

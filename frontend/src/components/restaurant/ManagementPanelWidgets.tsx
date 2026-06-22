@@ -41,9 +41,37 @@ interface PanelActionCardProps {
   description: string
   icon: string
   badge?: string
+  locked?: boolean
 }
 
-export function PanelActionCard({ to, title, description, icon, badge }: PanelActionCardProps) {
+export function PanelActionCard({ to, title, description, icon, badge, locked = false }: PanelActionCardProps) {
+  if (locked) {
+    return (
+      <Link
+        to={to}
+        className="group flex items-start gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 shadow-sm transition hover:border-amber-200 hover:bg-amber-50/60"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg text-slate-400">
+          🔒
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-slate-500">{title}</p>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+              Kapalı
+            </span>
+          </div>
+          <p className="mt-1 text-sm leading-relaxed text-slate-500">
+            Bu modül kapatılmış. Kullanmak için yöneticinizle iletişime geçin.
+          </p>
+          <p className="mt-2 text-xs font-semibold text-amber-700 group-hover:text-amber-800">
+            Detay →
+          </p>
+        </div>
+      </Link>
+    )
+  }
+
   return (
     <Link
       to={to}

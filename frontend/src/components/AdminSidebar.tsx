@@ -1,12 +1,8 @@
-import { NavLink } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { ADMIN_NAV_ITEMS, type AdminNavItem } from '../constants/adminNav'
+import { useAdminAuth } from '../store/AdminAuthStore'
 import BrandLogo from './BrandLogo'
 import Button from './Button'
-import { useAdminAuth } from '../store/AdminAuthStore'
-
-const navItems = [
-  { to: '/admin/restaurants/new', label: 'İşletme Ekle', icon: '＋' },
-  { to: '/admin/restaurants', label: 'İşletme Listesi', icon: '☰', end: true },
-]
 
 interface AdminSidebarProps {
   open: boolean
@@ -22,7 +18,20 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
   }`
 }
 
+function isNavItemActive(item: AdminNavItem, pathname: string): boolean {
+  if (item.isActiveMatch) {
+    return item.isActiveMatch(pathname)
+  }
+
+  if (item.end) {
+    return pathname === item.to
+  }
+
+  return pathname === item.to || pathname.startsWith(`${item.to}/`)
+}
+
 export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminSidebarProps) {
+  const location = useLocation()
   const { admin, logout } = useAdminAuth()
 
   const handleLogout = async () => {
@@ -32,9 +41,9 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="border-b border-white/10 px-4 py-5">
-        <NavLink to="/admin/restaurants" onClick={onCloseMobile} className="block">
+        <Link to="/admin/restaurants" onClick={onCloseMobile} className="block">
           <BrandLogo subtitle="Süper Admin" inverted />
-        </NavLink>
+        </Link>
         {admin && (
           <p className="mt-3 truncate rounded-lg bg-white/10 px-3 py-2 text-xs text-slate-300">
             {admin.name}
@@ -43,17 +52,16 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.label}
+        {ADMIN_NAV_ITEMS.map((item) => (
+          <Link
+            key={item.to}
             to={item.to}
-            end={item.end}
-            className={navLinkClass}
+            className={navLinkClass({ isActive: isNavItemActive(item, location.pathname) })}
             onClick={onCloseMobile}
           >
             <span className="text-xs opacity-90">{item.icon}</span>
             {item.label}
-          </NavLink>
+          </Link>
         ))}
       </nav>
 
@@ -70,18 +78,24 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
-          onClick={onCloseMobile}
           aria-label="Menüyü kapat"
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+          onClick={onCloseMobile}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-slate-900 via-slate-900 to-brand-950 shadow-panel transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 shrink-0 bg-gradient-to-b from-slate-900 via-slate-900 to-brand-950 shadow-panel transition-all duration-200 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${open ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
+        } lg:translate-x-0 ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:shadow-none'}`}
       >
-        {sidebarContent}
+        <div
+          className={`flex h-screen w-64 flex-col transition-opacity duration-200 ease-in-out ${
+            open ? 'lg:opacity-100' : 'lg:pointer-events-none lg:opacity-0'
+          }`}
+        >
+          {sidebarContent}
+        </div>
       </aside>
     </>
   )

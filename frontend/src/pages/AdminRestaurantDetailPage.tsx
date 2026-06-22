@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { getAdminRestaurant, updateAdminRestaurant, updateAdminRestaurantFeatures } from '../api/adminAuth'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  deleteAdminRestaurant,
+  extendAdminRestaurantMembership,
+  getAdminRestaurant,
+  updateAdminRestaurant,
+  updateAdminRestaurantFeatures,
+} from '../api/adminAuth'
 import type { RestaurantListItem } from '../api/types'
+import AdminJewelerFeatureSettings from '../components/admin/AdminJewelerFeatureSettings'
 import AdminRestaurantFeatureSettings from '../components/admin/AdminRestaurantFeatureSettings'
+import AdminRestaurantMembershipSettings from '../components/admin/AdminRestaurantMembershipSettings'
+import GoogleMapsDirectionsButton from '../components/admin/GoogleMapsDirectionsButton'
+import Button from '../components/Button'
 import LoadingState from '../components/LoadingState'
 import { BUSINESS_TYPE_LABELS, isJewelerBusiness } from '../constants/businessType'
 import { displayAdminValue, getApiErrorMessage } from '../utils/adminDashboard'
@@ -35,6 +45,7 @@ interface DetailListRowProps {
   saving: boolean
   error?: string | null
   editContent?: React.ReactNode
+  footer?: React.ReactNode
 }
 
 function DetailListRow({
@@ -49,6 +60,7 @@ function DetailListRow({
   saving,
   error,
   editContent,
+  footer,
 }: DetailListRowProps) {
   return (
     <div className="border-b border-slate-100 last:border-b-0">
@@ -88,6 +100,7 @@ function DetailListRow({
           ) : (
             <span className="break-words text-sm font-medium text-slate-900">{value}</span>
           )}
+          {!isEditing && footer}
         </dd>
 
         {editable && !isEditing && (
@@ -105,6 +118,7 @@ function DetailListRow({
 }
 
 export default function AdminRestaurantDetailPage() {
+  const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const restaurantId = Number(id)
 
@@ -115,6 +129,7 @@ export default function AdminRestaurantDetailPage() {
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadRestaurant = useCallback(async () => {
     if (Number.isNaN(restaurantId)) {
@@ -198,10 +213,10 @@ export default function AdminRestaurantDetailPage() {
       <div className="space-y-4">
         <p className="alert-error">{error ?? 'Restoran bulunamadı.'}</p>
         <Link
-          to="/admin/restaurants"
-          className="inline-flex text-sm font-semibold text-brand-700 hover:text-brand-800"
+          to="/admin/restaurants/list"
+          className="text-sm font-medium text-slate-500 transition hover:text-brand-700"
         >
-          ← Restoran listesine dön
+          ← İşletme Listesi
         </Link>
       </div>
     )
@@ -225,14 +240,34 @@ export default function AdminRestaurantDetailPage() {
     error: editingField === field ? rowError : null,
   })
 
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `"${restaurant.name}" işletmesini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setDeleting(true)
+
+    try {
+      await deleteAdminRestaurant(restaurant.id)
+      navigate('/admin/restaurants/list')
+    } catch (deleteError) {
+      setError(getApiErrorMessage(deleteError, 'İşletme silinemedi.'))
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
         <Link
-          to="/admin/restaurants"
+          to="/admin/restaurants/list"
           className="text-sm font-medium text-slate-500 transition hover:text-brand-700"
         >
-          ← İşletmeler
+          ← İşletme Listesi
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{restaurant.name}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -329,6 +364,7 @@ export default function AdminRestaurantDetailPage() {
             label="Adres"
             value={displayAdminValue(restaurant.address)}
             {...rowProps('address')}
+            footer={<GoogleMapsDirectionsButton address={restaurant.address} className="mt-2" />}
             editContent={
               <textarea
                 className={`${fieldClassName} min-h-[72px] resize-y`}
@@ -371,6 +407,20 @@ export default function AdminRestaurantDetailPage() {
         </dl>
       </section>
 
+      <AdminRestaurantMembershipSettings
+        restaurant={restaurant}
+        onAdjustMembership={async (businessId, days) => {
+          const updated = await extendAdminRestaurantMembership(businessId, days)
+          setRestaurant(updated)
+          return updated
+        }}
+        onUpdate={async (businessId, payload) => {
+          const updated = await updateAdminRestaurant(businessId, payload)
+          setRestaurant(updated)
+          return updated
+        }}
+      />
+
       {!isJeweler && (
         <AdminRestaurantFeatureSettings
           restaurant={restaurant}
@@ -380,6 +430,22 @@ export default function AdminRestaurantDetailPage() {
           }}
         />
       )}
+
+      {isJeweler && (
+        <AdminJewelerFeatureSettings
+          restaurant={restaurant}
+          onUpdate={async (payload) => {
+            const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
+            setRestaurant(updated)
+          }}
+        />
+      )}
+
+      <div className="flex justify-end">
+        <Button type="button" variant="danger" disabled={deleting} onClick={() => void handleDelete()}>
+          {deleting ? 'Siliniyor...' : 'İşletmeyi Sil'}
+        </Button>
+      </div>
     </div>
   )
 }

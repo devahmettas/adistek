@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ExtendAdminRestaurantMembershipRequest;
 use App\Http\Requests\StoreAdminRestaurantRequest;
 use App\Http\Requests\UpdateAdminRestaurantFeaturesRequest;
 use App\Http\Requests\UpdateAdminRestaurantRequest;
@@ -58,6 +59,24 @@ class AdminRestaurantController extends Controller
     {
         return response()->json([
             'data' => $this->service->updateFeatures($restaurant, $request->validated()),
+        ]);
+    }
+
+    public function extendMembership(
+        ExtendAdminRestaurantMembershipRequest $request,
+        int $restaurant,
+    ): JsonResponse {
+        return response()->json([
+            'data' => $this->service->extendMembership($restaurant, (int) $request->validated('days')),
+        ]);
+    }
+
+    public function destroy(int $restaurant): JsonResponse
+    {
+        $this->service->delete($restaurant);
+
+        return response()->json([
+            'message' => 'İşletme silindi.',
         ]);
     }
 }

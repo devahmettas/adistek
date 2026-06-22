@@ -8,10 +8,16 @@ export interface Restaurant {
   contact_person?: string | null
   phone?: string | null
   address?: string | null
+  service_fee?: string | number | null
+  membership_end_date?: string | null
+  membership_days_remaining?: number
+  membership_expired?: boolean
   email: string
   feature_order_tracking?: boolean
   feature_qr_menu?: boolean
   feature_reservations?: boolean
+  feature_jeweler_barcode?: boolean
+  feature_jeweler_reports?: boolean
   reservation_duration_minutes?: number
   reservation_visible_before_minutes?: number
   created_at: string

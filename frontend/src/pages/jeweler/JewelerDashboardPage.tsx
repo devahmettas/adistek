@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getJewelerStats, type JewelerStats } from '../../api/jeweler'
+import { getJewelerDashboardOverview, type JewelerDashboardOverview } from '../../api/jeweler'
+import JewelerDashboardOverviewPanel from '../../components/jeweler/JewelerDashboardOverviewPanel'
 import LoadingState from '../../components/LoadingState'
-import { formatPanelMoney, PanelActionCard, PanelStatCard } from '../../components/restaurant/ManagementPanelWidgets'
+import { PanelActionCard } from '../../components/restaurant/ManagementPanelWidgets'
+import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 import { useAuth } from '../../store/AuthStore'
 
 export default function JewelerDashboardPage() {
   const { restaurant } = useAuth()
-  const [stats, setStats] = useState<JewelerStats | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { barcodeEnabled, reportsEnabled } = useJewelerFeatures()
+  const [overview, setOverview] = useState<JewelerDashboardOverview | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  const loadStats = useCallback(async () => {
+  const loadOverview = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
-      setStats(await getJewelerStats())
+      setOverview(await getJewelerDashboardOverview())
     } catch {
       setError(true)
     } finally {
@@ -24,8 +27,8 @@ export default function JewelerDashboardPage() {
   }, [])
 
   useEffect(() => {
-    void loadStats()
-  }, [loadStats])
+    void loadOverview()
+  }, [loadOverview])
 
   return (
     <div className="space-y-8">
@@ -33,7 +36,7 @@ export default function JewelerDashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">Kuyumcu Paneli</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{restaurant?.name ?? 'İşletme'}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-amber-100">
-          Stok, satış ve müşteri yönetimini tek panelden takip edin.
+          Stok, satış ve müşteri yönetimini tek panelden takip edin. Günlük, haftalık ve aylık performansınızı anlık görün.
         </p>
       </section>
 
@@ -41,14 +44,18 @@ export default function JewelerDashboardPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Bugünün özeti</h2>
-            <p className="text-sm text-slate-600">Günlük satış ve stok durumu</p>
+            <p className="text-sm text-slate-600">
+              Günlük, haftalık ve aylık ciro · kar · stok ve satış analizi
+            </p>
           </div>
-          <Link
-            to="/dashboard/jeweler/reports"
-            className="text-sm font-semibold text-amber-700 hover:text-amber-800"
-          >
-            Detaylı raporlar →
-          </Link>
+          {reportsEnabled && (
+            <Link
+              to="/dashboard/jeweler/reports"
+              className="text-sm font-semibold text-amber-700 hover:text-amber-800"
+            >
+              Detaylı raporlar →
+            </Link>
+          )}
         </div>
 
         {loading && <LoadingState label="Özet yükleniyor..." />}
@@ -58,33 +65,8 @@ export default function JewelerDashboardPage() {
           </p>
         )}
 
-        {!loading && stats && (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <PanelStatCard
-              label="Günlük ciro"
-              value={formatPanelMoney(stats.summary.today_revenue)}
-              hint={`${stats.summary.today_sales_count} satış`}
-              accent="amber"
-            />
-            <PanelStatCard
-              label="Aylık ciro"
-              value={formatPanelMoney(stats.summary.month_revenue)}
-              hint={`${stats.summary.month_sales_count} satış`}
-              accent="brand"
-            />
-            <PanelStatCard
-              label="Haftalık ciro"
-              value={formatPanelMoney(stats.summary.week_revenue)}
-              hint={`${stats.summary.week_sales_count} satış`}
-              accent="emerald"
-            />
-            <PanelStatCard
-              label="Düşük stok"
-              value={String(stats.inventory.low_stock_count)}
-              hint={`${stats.inventory.out_of_stock_count} tükenen ürün`}
-              accent="violet"
-            />
-          </div>
+        {!loading && overview && (
+          <JewelerDashboardOverviewPanel overview={overview} reportsEnabled={reportsEnabled} />
         )}
       </section>
 
@@ -98,11 +80,23 @@ export default function JewelerDashboardPage() {
           <PanelActionCard to="/dashboard/jeweler/purchases" title="Ürün Alış Satış" description="Müşteriden alım ve müşteriye satış işlemlerini tek ekrandan yönetin." icon="⇅" />
           <PanelActionCard to="/dashboard/jeweler/history" title="İşlem Geçmişi" description="Geçmiş satış ve alım kayıtlarını inceleyin." icon="☰" />
           <PanelActionCard to="/dashboard/jeweler/vault" title="Kasa Yönetimi" description="Stok değeri, nakit bakiye ve kategori bazlı kasa takibi." icon="▤" />
-          <PanelActionCard to="/dashboard/jeweler/stock-count" title="Stok Takip" description="Barkod ve elle sayım ile stok ve nakit açıklarını tespit edin." icon="▧" />
+          <PanelActionCard to="/dashboard/jeweler/stock-count" title="Stok Takip" description="Elle sayım ile stok ve nakit açıklarını tespit edin." icon="▧" />
           <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />
-          <PanelActionCard to="/dashboard/jeweler/barcode" title="Barkod Sistemi" description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın." icon="▥" />
+          <PanelActionCard
+            to="/dashboard/jeweler/barcode"
+            title="Barkod Sistemi"
+            description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın."
+            icon="▥"
+            locked={!barcodeEnabled}
+          />
           <PanelActionCard to="/dashboard/jeweler/gold-prices" title="Altın Fiyatları" description="Güncel altın alış/satış fiyatlarını kaydedin." icon="★" />
-          <PanelActionCard to="/dashboard/jeweler/reports" title="Raporlama" description="Satış ve performans raporları." icon="▦" />
+          <PanelActionCard
+            to="/dashboard/jeweler/reports"
+            title="Raporlama"
+            description="Satış ve performans raporları."
+            icon="▦"
+            locked={!reportsEnabled}
+          />
           <PanelActionCard to="/dashboard/jeweler/settings" title="Ayarlar" description="Kuyumcu panel ayarlarını yapılandırın." icon="⚙" />
         </div>
       </section>

@@ -22,6 +22,7 @@ interface SaleStockProductPickerProps {
   externalSearchQuery?: string
   extraStockByProductId?: Map<number, number>
   compact?: boolean
+  searchByBarcode?: boolean
   onSelect: (product: JewelryProduct) => void
 }
 
@@ -32,6 +33,7 @@ export default function SaleStockProductPicker({
   externalSearchQuery = '',
   extraStockByProductId,
   compact = false,
+  searchByBarcode = true,
   onSelect,
 }: SaleStockProductPickerProps) {
   const [search, setSearch] = useState('')
@@ -96,7 +98,7 @@ export default function SaleStockProductPicker({
               : ''
 
             return product.name.toLowerCase().includes(query)
-              || product.barcode?.toLowerCase().includes(query)
+              || (searchByBarcode && product.barcode?.toLowerCase().includes(query))
               || categoryName.toLowerCase().includes(query)
           }),
         }))

@@ -14,9 +14,11 @@ class UpdateAdminRestaurantFeaturesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'feature_order_tracking' => ['required', 'boolean'],
-            'feature_qr_menu' => ['required', 'boolean'],
-            'feature_reservations' => ['required', 'boolean'],
+            'feature_order_tracking' => ['sometimes', 'boolean'],
+            'feature_qr_menu' => ['sometimes', 'boolean'],
+            'feature_reservations' => ['sometimes', 'boolean'],
+            'feature_jeweler_barcode' => ['sometimes', 'boolean'],
+            'feature_jeweler_reports' => ['sometimes', 'boolean'],
         ];
     }
 }

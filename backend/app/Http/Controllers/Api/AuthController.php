@@ -40,6 +40,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($restaurant->isMembershipExpired()) {
+            throw ValidationException::withMessages([
+                'email' => ['Üyelik süreniz dolmuştur. Lütfen hizmet bedelini ödeyerek üyeliğinizi yenileyin.'],
+            ]);
+        }
+
         $token = $restaurant->createToken('auth')->plainTextToken;
 
         return response()->json([
@@ -52,8 +58,19 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        /** @var Restaurant $restaurant */
+        $restaurant = $request->user();
+
+        if ($restaurant->isMembershipExpired()) {
+            $restaurant->currentAccessToken()?->delete();
+
+            return response()->json([
+                'message' => 'Üyelik süreniz dolmuştur. Lütfen hizmet bedelini ödeyerek üyeliğinizi yenileyin.',
+            ], 403);
+        }
+
         return response()->json([
-            'data' => $request->user(),
+            'data' => $restaurant,
         ]);
     }
 

@@ -284,6 +284,188 @@ class JewelerStatisticsService
         ];
     }
 
+    public function getDashboardOverview(int $restaurantId): array
+    {
+        $today = Carbon::today();
+        $weekStart = Carbon::now()->startOfWeek();
+        $monthStart = Carbon::now()->startOfMonth();
+
+        $todaySales = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereDate('sold_at', $today)
+            ->get();
+
+        $weekSales = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('sold_at', '>=', $weekStart)
+            ->get();
+
+        $monthSales = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('sold_at', '>=', $monthStart)
+            ->get();
+
+        $productStats = JewelryProduct::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->selectRaw('COUNT(*) as total_products')
+            ->selectRaw('SUM(stock_quantity) as total_stock_units')
+            ->selectRaw('SUM(CASE WHEN stock_quantity <= 2 THEN 1 ELSE 0 END) as low_stock_count')
+            ->selectRaw('SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out_of_stock_count')
+            ->selectRaw('SUM(weight_gram * stock_quantity) as total_weight_gram')
+            ->selectRaw('SUM(sale_price * stock_quantity) as inventory_sale_value')
+            ->first();
+
+        $lowStockProducts = JewelryProduct::query()
+            ->with('category')
+            ->where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->where('stock_quantity', '>', 0)
+            ->where('stock_quantity', '<=', 2)
+            ->orderBy('stock_quantity')
+            ->orderBy('name')
+            ->limit(8)
+            ->get()
+            ->map(fn (JewelryProduct $product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'category_name' => $product->category?->name ?? 'Kategorisiz',
+                'stock_quantity' => (int) $product->stock_quantity,
+                'sale_price' => (string) $product->sale_price,
+            ])
+            ->values()
+            ->all();
+
+        $topProductsWeek = JewelrySaleItem::query()
+            ->select([
+                'jewelry_sale_items.product_name',
+                DB::raw('SUM(jewelry_sale_items.quantity) as quantity'),
+                DB::raw('SUM(jewelry_sale_items.line_total) as revenue'),
+            ])
+            ->join('jewelry_sales', 'jewelry_sales.id', '=', 'jewelry_sale_items.sale_id')
+            ->where('jewelry_sales.restaurant_id', $restaurantId)
+            ->where('jewelry_sales.sold_at', '>=', $weekStart)
+            ->groupBy('jewelry_sale_items.product_name')
+            ->orderByDesc('revenue')
+            ->limit(5)
+            ->get()
+            ->map(fn ($row) => [
+                'product_name' => $row->product_name,
+                'quantity' => (int) $row->quantity,
+                'revenue' => (float) $row->revenue,
+            ])
+            ->values()
+            ->all();
+
+        $paymentBreakdownWeek = JewelrySale::query()
+            ->select([
+                'payment_method',
+                DB::raw('SUM(total) as total'),
+                DB::raw('COUNT(*) as count'),
+            ])
+            ->where('restaurant_id', $restaurantId)
+            ->where('sold_at', '>=', $weekStart)
+            ->groupBy('payment_method')
+            ->get()
+            ->map(fn ($row) => [
+                'payment_method' => $row->payment_method,
+                'total' => (float) $row->total,
+                'count' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
+
+        $karatBreakdown = JewelryProduct::query()
+            ->select([
+                'karat',
+                DB::raw('COUNT(*) as product_count'),
+                DB::raw('SUM(stock_quantity) as stock_units'),
+            ])
+            ->where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->whereNotNull('karat')
+            ->groupBy('karat')
+            ->orderByDesc('stock_units')
+            ->limit(6)
+            ->get()
+            ->map(fn ($row) => [
+                'karat' => (int) $row->karat,
+                'product_count' => (int) $row->product_count,
+                'stock_units' => (int) $row->stock_units,
+            ])
+            ->values()
+            ->all();
+
+        $activeRepairs = JewelryRepair::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereIn('status', [
+                JewelryRepairStatus::Received,
+                JewelryRepairStatus::InProgress,
+            ])
+            ->count();
+
+        $totalCustomers = JewelryCustomer::query()
+            ->where('restaurant_id', $restaurantId)
+            ->count();
+
+        $monthSalesWithCustomer = JewelrySale::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('sold_at', '>=', $monthStart)
+            ->whereNotNull('customer_id')
+            ->count();
+
+        $profitSummary = $this->buildProfitSummary($restaurantId, $today, $weekStart, $monthStart);
+        $openSession = $this->cashSessionService->findOpen($restaurantId);
+        $activeStockCount = $this->stockCountService->findActive($restaurantId);
+
+        return [
+            'generated_at' => now()->toIso8601String(),
+            'summary' => [
+                'today_revenue' => (float) $todaySales->sum('total'),
+                'today_sales_count' => $todaySales->count(),
+                'week_revenue' => (float) $weekSales->sum('total'),
+                'week_sales_count' => $weekSales->count(),
+                'month_revenue' => (float) $monthSales->sum('total'),
+                'month_sales_count' => $monthSales->count(),
+                'average_sale' => $todaySales->count() > 0
+                    ? round((float) $todaySales->sum('total') / $todaySales->count(), 2)
+                    : 0,
+                'month_average_sale' => $monthSales->count() > 0
+                    ? round((float) $monthSales->sum('total') / $monthSales->count(), 2)
+                    : 0,
+                ...$profitSummary,
+            ],
+            'inventory' => [
+                'total_products' => (int) ($productStats->total_products ?? 0),
+                'total_stock_units' => (int) ($productStats->total_stock_units ?? 0),
+                'low_stock_count' => (int) ($productStats->low_stock_count ?? 0),
+                'out_of_stock_count' => (int) ($productStats->out_of_stock_count ?? 0),
+                'total_weight_gram' => round((float) ($productStats->total_weight_gram ?? 0), 3),
+                'inventory_sale_value' => round((float) ($productStats->inventory_sale_value ?? 0), 2),
+            ],
+            'repairs' => [
+                'active_count' => $activeRepairs,
+            ],
+            'customers' => [
+                'total_count' => $totalCustomers,
+                'month_sales_with_customer' => $monthSalesWithCustomer,
+            ],
+            'revenue_trend' => $this->buildRevenueTrend($restaurantId, 'week'),
+            'top_products_week' => $topProductsWeek,
+            'payment_breakdown_week' => $paymentBreakdownWeek,
+            'karat_breakdown' => $karatBreakdown,
+            'low_stock_products' => $lowStockProducts,
+            'cash_session' => [
+                'is_open' => $openSession !== null,
+                'opened_at' => $openSession?->opened_at?->toIso8601String(),
+                'opening_cash_balance' => $openSession ? (float) $openSession->opening_cash_balance : null,
+            ],
+            'stock_count_active' => $activeStockCount
+                ? $this->stockCountService->formatSummary($activeStockCount)
+                : null,
+        ];
+    }
+
     private function buildStockCountReport(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): array
     {
         $periodCounts = JewelryStockCount::query()

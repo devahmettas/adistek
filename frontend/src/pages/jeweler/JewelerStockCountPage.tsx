@@ -22,6 +22,7 @@ import {
   type JewelryStockCountSummary,
 } from '../../api/jeweler'
 import { formatPanelMoney } from '../../components/restaurant/ManagementPanelWidgets'
+import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 import {
   formatMoneyInputFromNumber,
   formatMoneyInputWhileTyping,
@@ -613,10 +614,12 @@ function ActiveStockCount({
   count,
   onCountChange,
   onCompleted,
+  barcodeEnabled,
 }: {
   count: JewelryStockCount
   onCountChange: (count: JewelryStockCount) => void
   onCompleted: () => void
+  barcodeEnabled: boolean
 }) {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -856,6 +859,7 @@ function ActiveStockCount({
         </Button>
       </div>
 
+      {barcodeEnabled && (
       <BarcodeCountSection
         barcodeInput={barcodeInput}
         onBarcodeInputChange={setBarcodeInput}
@@ -867,8 +871,10 @@ function ActiveStockCount({
         barcodeItems={barcodeItems}
         showItemList={false}
       />
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={`grid gap-4 ${barcodeEnabled ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        {barcodeEnabled && (
         <ClickableStatCard
           title="Barkodlu ürün"
           value={barcodeItems.length}
@@ -876,6 +882,7 @@ function ActiveStockCount({
           active={activePanel === 'barcode'}
           onClick={() => togglePanel('barcode')}
         />
+        )}
         <ClickableStatCard
           title="Elle giriş"
           value={manualItems.length}
@@ -893,7 +900,7 @@ function ActiveStockCount({
         />
       </div>
 
-      {activePanel === 'barcode' && (
+      {barcodeEnabled && activePanel === 'barcode' && (
         <Card title="Barkodlu ürünler" description="Aynı barkodu stok adedi kadar okutun. Örn. 3 adet varsa 3 kez okutun veya butona basın." className="space-y-4">
           {barcodeItems.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
@@ -976,6 +983,7 @@ function ActiveStockCount({
         )}
       </Card>
 
+      {barcodeEnabled && (
       <BarcodeCountSection
         barcodeInput={barcodeInput}
         onBarcodeInputChange={setBarcodeInput}
@@ -991,8 +999,9 @@ function ActiveStockCount({
         activatingItemId={activatingItemId}
         unscanningItemId={unscanningItemId}
       />
+      )}
 
-      {scannerOpen && (
+      {barcodeEnabled && scannerOpen && (
         <BarcodeScannerModal
           continuous
           onScan={handleScan}
@@ -1004,6 +1013,7 @@ function ActiveStockCount({
 }
 
 export default function JewelerStockCountPage() {
+  const { barcodeEnabled } = useJewelerFeatures()
   const [activeCount, setActiveCount] = useState<JewelryStockCount | null>(null)
   const activeCountRef = useRef<JewelryStockCount | null>(null)
   const [history, setHistory] = useState<JewelryStockCountSummary[]>([])
@@ -1106,13 +1116,18 @@ export default function JewelerStockCountPage() {
       {activeCount ? (
         <ActiveStockCount
           count={activeCount}
+          barcodeEnabled={barcodeEnabled}
           onCountChange={setActiveCount}
           onCompleted={() => void load()}
         />
       ) : (
         <Card
           title="Yeni stok sayımı"
-          description="Sayım başlatıldığında tüm aktif ürünler ve nakit bakiyesi kayıt altına alınır. Barkodlu ürünler okutularak, gram ve çeyrek altınlar elle girilerek sayılır."
+          description={
+            barcodeEnabled
+              ? 'Sayım başlatıldığında tüm aktif ürünler ve nakit bakiyesi kayıt altına alınır. Barkodlu ürünler okutularak, gram ve çeyrek altınlar elle girilerek sayılır.'
+              : 'Sayım başlatıldığında tüm aktif ürünler ve nakit bakiyesi kayıt altına alınır. Gram ve çeyrek altınlar elle girilerek sayılır.'
+          }
         >
           <Button type="button" onClick={() => void startCount()} disabled={starting}>
             {starting ? 'Başlatılıyor...' : 'Sayım başlat'}

@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
+import { getAdminPageLabel } from '../constants/adminNav'
 
 export default function AdminLayout() {
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pageLabel = getAdminPageLabel(location.pathname)
+  const isCreatePage = location.pathname === '/admin/restaurants/new'
 
   return (
     <div className="min-h-screen overflow-x-clip bg-slate-50">
@@ -15,7 +19,7 @@ export default function AdminLayout() {
       />
 
       <div
-        className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ${
+        className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
         }`}
       >
@@ -37,17 +41,19 @@ export default function AdminLayout() {
                 <span className="text-base leading-none">☰</span>
                 <span className="hidden sm:inline">Menü</span>
               </button>
-              <p className="hidden truncate text-sm text-slate-500 sm:block">Süper admin yönetim paneli</p>
+              <p className="hidden truncate text-sm text-slate-500 sm:block">{pageLabel}</p>
             </div>
 
-            <Link
-              to="/admin/restaurants/new"
-              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 sm:gap-2 sm:px-4"
-            >
-              <span aria-hidden>＋</span>
-              <span className="hidden min-[360px]:inline">Restoran Ekle</span>
-              <span className="min-[360px]:hidden">Ekle</span>
-            </Link>
+            {!isCreatePage && (
+              <Link
+                to="/admin/restaurants/new"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 sm:gap-2 sm:px-4"
+              >
+                <span aria-hidden>＋</span>
+                <span className="hidden min-[360px]:inline">İşletme Ekle</span>
+                <span className="min-[360px]:hidden">Ekle</span>
+              </Link>
+            )}
           </div>
         </header>
 

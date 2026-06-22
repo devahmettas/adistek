@@ -32,6 +32,8 @@ export interface CreateAdminRestaurantPayload {
   address: string
   email: string
   password: string
+  service_fee?: number
+  membership_days?: number
 }
 
 export const createAdminRestaurant = async (
@@ -58,6 +60,8 @@ export interface UpdateAdminRestaurantPayload {
   address: string
   email: string
   password?: string
+  service_fee?: number
+  membership_end_date?: string
 }
 
 export const updateAdminRestaurant = async (
@@ -72,9 +76,11 @@ export const updateAdminRestaurant = async (
 }
 
 export interface UpdateAdminRestaurantFeaturesPayload {
-  feature_order_tracking: boolean
-  feature_qr_menu: boolean
-  feature_reservations: boolean
+  feature_order_tracking?: boolean
+  feature_qr_menu?: boolean
+  feature_reservations?: boolean
+  feature_jeweler_barcode?: boolean
+  feature_jeweler_reports?: boolean
 }
 
 export const updateAdminRestaurantFeatures = async (
@@ -86,4 +92,19 @@ export const updateAdminRestaurantFeatures = async (
     payload,
   )
   return data.data
+}
+
+export const extendAdminRestaurantMembership = async (
+  id: number,
+  days: number,
+): Promise<RestaurantListItem> => {
+  const { data } = await adminApiClient.post<ApiResponse<RestaurantListItem>>(
+    `/admin/restaurants/${id}/extend-membership`,
+    { days },
+  )
+  return data.data
+}
+
+export const deleteAdminRestaurant = async (id: number): Promise<void> => {
+  await adminApiClient.delete(`/admin/restaurants/${id}`)
 }

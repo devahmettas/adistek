@@ -60,6 +60,7 @@ interface JewelerSaleFormSectionProps {
     categories: JewelryCategory[]
     saleItems: SaleFormItem[]
   }) => void
+  barcodeEnabled?: boolean
 }
 
 function mapSaleToFormItems(sale: JewelrySale): SaleFormItem[] {
@@ -97,6 +98,7 @@ export default function JewelerSaleFormSection({
   editSaleId = null,
   onEditSaleHandled,
   onCatalogLoaded,
+  barcodeEnabled = true,
 }: JewelerSaleFormSectionProps) {
   const { notifySaleCompleted } = useJewelrySaleCart()
 
@@ -340,13 +342,13 @@ export default function JewelerSaleFormSection({
   }, [products, openProductSaleModal, onBarcodeSearchQueryChange, setScannerOpen])
 
   useEffect(() => {
-    if (!externalBarcodeCode) {
+    if (!barcodeEnabled || !externalBarcodeCode) {
       return
     }
 
     void handleBarcodeScan(externalBarcodeCode)
     onExternalBarcodeHandled?.()
-  }, [externalBarcodeCode, handleBarcodeScan, onExternalBarcodeHandled])
+  }, [barcodeEnabled, externalBarcodeCode, handleBarcodeScan, onExternalBarcodeHandled])
 
   const openQuickGoldModal = (quickType: GoldPurchaseQuickType) => {
     const available = getQuickGoldAvailableStock(
@@ -511,7 +513,7 @@ export default function JewelerSaleFormSection({
             onClose={() => setSaleProduct(null)}
           />
         )}
-        {scannerOpen && (
+        {barcodeEnabled && scannerOpen && (
           <BarcodeScannerModal
             onScan={(code) => void handleBarcodeScan(code)}
             onClose={() => setScannerOpen(false)}
@@ -602,7 +604,8 @@ export default function JewelerSaleFormSection({
                 categories={categories}
                 saleItems={items}
                 extraStockByProductId={originalSaleStockBonus}
-                externalSearchQuery={barcodeSearchQuery}
+                externalSearchQuery={barcodeEnabled ? barcodeSearchQuery : ''}
+                searchByBarcode={barcodeEnabled}
                 onSelect={openProductSaleModal}
               />
             </div>
@@ -618,7 +621,7 @@ export default function JewelerSaleFormSection({
             <div className="min-h-0 flex-1 overflow-y-auto">
               {items.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500">
-                  Stoktan seçin, barkod okutun veya hızlı satış kullanın.
+                  Stoktan seçin{barcodeEnabled ? ', barkod okutun' : ''} veya hızlı satış kullanın.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -760,7 +763,7 @@ export default function JewelerSaleFormSection({
         />
       )}
 
-      {scannerOpen && (
+      {barcodeEnabled && scannerOpen && (
         <BarcodeScannerModal
           onScan={(code) => void handleBarcodeScan(code)}
           onClose={() => setScannerOpen(false)}

@@ -21,6 +21,8 @@ class UpdateAdminRestaurantRequest extends FormRequest
             'contact_person' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string', 'max:500'],
+            'service_fee' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
+            'membership_end_date' => ['nullable', 'date'],
             'email' => [
                 'required',
                 'email',

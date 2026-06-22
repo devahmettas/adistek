@@ -63,4 +63,10 @@ class RestaurantRepository
 
         return $restaurant->refresh();
     }
+
+    public function delete(Restaurant $restaurant): void
+    {
+        $restaurant->tokens()->delete();
+        $restaurant->delete();
+    }
 }
