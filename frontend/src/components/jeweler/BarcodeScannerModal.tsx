@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import Button from '../Button'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
@@ -13,10 +14,91 @@ interface BarcodeScannerModalProps {
 const SCAN_COOLDOWN_MS = 1500
 const SCAN_TOAST_MS = 2200
 
+const SCANNER_CONFIG = {
+  fps: 10,
+  disableFlip: false,
+  qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+    const width = Math.min(viewfinderWidth * 0.88, 340)
+    const height = Math.min(viewfinderHeight * 0.42, 140)
+    return { width, height }
+  },
+}
+
+async function waitForDom(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+}
+
+async function resolveCameraId(): Promise<string | { facingMode: string }> {
+  try {
+    const cameras = await Html5Qrcode.getCameras()
+    if (cameras.length === 0) {
+      return { facingMode: 'environment' }
+    }
+
+    const backCamera = cameras.find((camera) => /back|rear|environment|arka/i.test(camera.label))
+    if (backCamera) {
+      return backCamera.id
+    }
+
+    return cameras[cameras.length - 1].id
+  } catch {
+    return { facingMode: 'environment' }
+  }
+}
+
+async function startScannerCamera(
+  scanner: Html5Qrcode,
+  onDecode: (code: string) => void,
+): Promise<void> {
+  const cameraId = await resolveCameraId()
+
+  try {
+    await scanner.start(cameraId, SCANNER_CONFIG, onDecode, () => {})
+    return
+  } catch {
+    // Bazı cihazlarda arka kamera etiketi bulunamaz; ön kamera veya varsayılanı dene.
+  }
+
+  if (typeof cameraId === 'string') {
+    await scanner.start({ facingMode: 'user' }, SCANNER_CONFIG, onDecode, () => {})
+    return
+  }
+
+  const cameras = await Html5Qrcode.getCameras()
+  if (cameras.length === 0) {
+    throw new Error('Kamera bulunamadı')
+  }
+
+  await scanner.start(cameras[0].id, SCANNER_CONFIG, onDecode, () => {})
+}
+
+async function stopScanner(scanner: Html5Qrcode | null): Promise<void> {
+  if (!scanner) return
+
+  try {
+    if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+      await scanner.stop()
+    }
+  } catch {
+    // Scanner may already be stopped.
+  }
+
+  try {
+    scanner.clear()
+  } catch {
+    // Scanner may already be cleared.
+  }
+}
+
 export default function BarcodeScannerModal({ onScan, onClose, continuous = false }: BarcodeScannerModalProps) {
   useBodyScrollLock(true)
 
-  const readerId = useId().replace(/:/g, '')
+  const reactId = useId().replace(/:/g, '')
+  const readerId = `barcode-scanner-${reactId}`
   const onScanRef = useRef(onScan)
   const onCloseRef = useRef(onClose)
   const scannerRef = useRef<Html5Qrcode | null>(null)
@@ -36,121 +118,104 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
   }, [onClose])
 
   useEffect(() => {
-    let active = true
-    const scanner = new Html5Qrcode(readerId, {
-      verbose: false,
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.CODE_39,
-      ],
-    })
-    scannerRef.current = scanner
+    let cancelled = false
+    handledRef.current = false
+    lastScanRef.current = null
 
-    const startScanner = async () => {
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 12,
-            aspectRatio: 1.777778,
-            disableFlip: false,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const width = Math.min(viewfinderWidth * 0.88, 340)
-              const height = Math.min(viewfinderHeight * 0.42, 140)
-              return { width, height }
-            },
-          },
-          (decodedText) => {
-            if (!active) return
-            if (!continuous && handledRef.current) return
+    const init = async () => {
+      await waitForDom()
+      if (cancelled) return
 
-            const code = decodedText.trim()
-            if (!code) return
+      const scanner = new Html5Qrcode(readerId, {
+        verbose: false,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_39,
+        ],
+      })
+      scannerRef.current = scanner
 
-            const now = Date.now()
-            if (
-              lastScanRef.current?.code === code
-              && now - lastScanRef.current.at < SCAN_COOLDOWN_MS
-            ) {
-              return
-            }
-            lastScanRef.current = { code, at: now }
+      const onDecode = (decodedText: string) => {
+        if (cancelled) return
+        if (!continuous && handledRef.current) return
 
-            if (!continuous) {
-              handledRef.current = true
-            }
+        const code = decodedText.trim()
+        if (!code) return
 
-            if (navigator.vibrate) {
-              navigator.vibrate(80)
-            }
-
-            onScanRef.current(code)
-
-            if (continuous) {
-              setScanToast('Okundu')
-              if (scanToastTimerRef.current !== null) {
-                window.clearTimeout(scanToastTimerRef.current)
-              }
-              scanToastTimerRef.current = window.setTimeout(() => {
-                setScanToast(null)
-                scanToastTimerRef.current = null
-              }, SCAN_TOAST_MS)
-              return
-            }
-
-            const stop = async () => {
-              if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
-                await scanner.stop()
-              }
-            }
-
-            void stop().finally(() => onCloseRef.current())
-          },
-          () => {},
-        )
-
-        if (active) {
-          setStarting(false)
+        const now = Date.now()
+        if (
+          lastScanRef.current?.code === code
+          && now - lastScanRef.current.at < SCAN_COOLDOWN_MS
+        ) {
+          return
         }
-      } catch {
-        if (active) {
-          setCameraError('Kamera açılamadı. Tarayıcı izni verildiğinden emin olun.')
+        lastScanRef.current = { code, at: now }
+
+        if (!continuous) {
+          handledRef.current = true
+        }
+
+        if (navigator.vibrate) {
+          navigator.vibrate(80)
+        }
+
+        onScanRef.current(code)
+
+        if (continuous) {
+          setScanToast('Okundu')
+          if (scanToastTimerRef.current !== null) {
+            window.clearTimeout(scanToastTimerRef.current)
+          }
+          scanToastTimerRef.current = window.setTimeout(() => {
+            setScanToast(null)
+            scanToastTimerRef.current = null
+          }, SCAN_TOAST_MS)
+          return
+        }
+
+        void stopScanner(scanner).finally(() => onCloseRef.current())
+      }
+
+      try {
+        await startScannerCamera(scanner, onDecode)
+        if (!cancelled) {
+          setStarting(false)
+          setCameraError(null)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : ''
+          setCameraError(
+            message.includes('Permission') || message.includes('NotAllowed')
+              ? 'Kamera izni reddedildi. Tarayıcı ayarlarından izin verin.'
+              : 'Kamera açılamadı. HTTPS kullanın ve tarayıcıya kamera izni verin.',
+          )
           setStarting(false)
         }
       }
     }
 
-    void startScanner()
+    void init()
 
     return () => {
-      active = false
-      const current = scannerRef.current
-      scannerRef.current = null
+      cancelled = true
 
       if (scanToastTimerRef.current !== null) {
         window.clearTimeout(scanToastTimerRef.current)
         scanToastTimerRef.current = null
       }
 
-      if (!current) return
-
-      if (current.getState() === Html5QrcodeScannerState.SCANNING) {
-        void current.stop().catch(() => {})
-      }
-
-      try {
-        current.clear()
-      } catch {
-        // Scanner may already be cleared.
-      }
+      const current = scannerRef.current
+      scannerRef.current = null
+      void stopScanner(current)
     }
   }, [continuous, readerId])
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-[70] flex flex-col overflow-x-hidden overscroll-behavior-contain bg-slate-950 relative"
+      className="fixed inset-0 z-[200] flex flex-col overflow-x-hidden overscroll-behavior-contain bg-slate-950"
       role="dialog"
       aria-modal="true"
       aria-labelledby="barcode-scanner-title"
@@ -178,12 +243,15 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center p-4">
         <div
           id={readerId}
-          className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl [&_video]:rounded-2xl"
+          className="min-h-[220px] w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl [&_video]:min-h-[220px] [&_video]:w-full [&_video]:rounded-2xl [&_video]:object-cover"
         />
 
-        <div className="pointer-events-none absolute inset-x-4 top-1/2 mx-auto max-w-lg -translate-y-1/2 rounded-xl border-2 border-amber-300/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.35)]" style={{ aspectRatio: '2.4 / 1' }} />
+        <div
+          className="pointer-events-none absolute inset-x-4 top-1/2 mx-auto max-w-lg -translate-y-1/2 rounded-xl border-2 border-amber-300/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.35)]"
+          style={{ aspectRatio: '2.4 / 1' }}
+        />
 
-        {starting && (
+        {starting && !cameraError && (
           <p className="mt-4 text-sm text-slate-300">Kamera başlatılıyor...</p>
         )}
 
@@ -214,4 +282,6 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
       `}</style>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

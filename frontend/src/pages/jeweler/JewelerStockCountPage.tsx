@@ -244,6 +244,79 @@ function BarcodeItemRow({ item }: { item: JewelryStockCountItem }) {
   )
 }
 
+function BarcodeCountSection({
+  barcodeInput,
+  onBarcodeInputChange,
+  onBarcodeSubmit,
+  onOpenScanner,
+  scannerOpen,
+  scanning,
+  scanMessage,
+  barcodeItems,
+  showItemList = true,
+}: {
+  barcodeInput: string
+  onBarcodeInputChange: (value: string) => void
+  onBarcodeSubmit: (event: FormEvent) => void
+  onOpenScanner: () => void
+  scannerOpen: boolean
+  scanning: boolean
+  scanMessage: string | null
+  barcodeItems: JewelryStockCountItem[]
+  showItemList?: boolean
+}) {
+  return (
+    <Card
+      title="Barkod ile sayım"
+      description={
+        showItemList
+          ? 'Ürünleri okutarak stok sayımı yapın.'
+          : 'Hızlı okutma — ürün listesi sayfanın altında.'
+      }
+      className="space-y-4"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={onBarcodeSubmit} className="flex min-w-0 flex-1 gap-2">
+          <Input
+            label="Barkod"
+            value={barcodeInput}
+            onChange={(event) => onBarcodeInputChange(event.target.value)}
+            placeholder="Barkod numarası"
+            className="flex-1"
+          />
+          <Button type="submit" disabled={scanning || !barcodeInput.trim()} className="self-end">
+            {scanning ? '...' : 'Ekle'}
+          </Button>
+        </form>
+        <Button
+          type="button"
+          variant="secondary"
+          className="self-end"
+          onClick={onOpenScanner}
+        >
+          {scannerOpen ? 'Kamera açık' : 'Kamera ile okut'}
+        </Button>
+      </div>
+
+      {scanMessage && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{scanMessage}</p>
+      )}
+
+      {showItemList && (
+        barcodeItems.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {barcodeItems.map((item) => (
+              <BarcodeItemRow key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Barkodlu ürün bulunmuyor.</p>
+        )
+      )}
+    </Card>
+  )
+}
+
 function ActiveStockCount({
   count,
   onCountChange,
@@ -380,6 +453,18 @@ function ActiveStockCount({
         </Button>
       </div>
 
+      <BarcodeCountSection
+        barcodeInput={barcodeInput}
+        onBarcodeInputChange={setBarcodeInput}
+        onBarcodeSubmit={handleBarcodeSubmit}
+        onOpenScanner={() => setScannerOpen(true)}
+        scannerOpen={scannerOpen}
+        scanning={scanning}
+        scanMessage={scanMessage}
+        barcodeItems={barcodeItems}
+        showItemList={false}
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="panel-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Barkodlu ürün</p>
@@ -403,45 +488,6 @@ function ActiveStockCount({
       {error && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
       )}
-
-      <Card title="Barkod ile sayım" description="Ürünleri okutarak stok sayımı yapın." className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <form onSubmit={handleBarcodeSubmit} className="flex min-w-0 flex-1 gap-2">
-            <Input
-              label="Barkod"
-              value={barcodeInput}
-              onChange={(event) => setBarcodeInput(event.target.value)}
-              placeholder="Barkod numarası"
-              className="flex-1"
-            />
-            <Button type="submit" disabled={scanning || !barcodeInput.trim()} className="self-end">
-              {scanning ? '...' : 'Ekle'}
-            </Button>
-          </form>
-          <Button
-            type="button"
-            variant="secondary"
-            className="self-end"
-            onClick={() => setScannerOpen(true)}
-          >
-            {scannerOpen ? 'Kamera açık' : 'Kamera ile okut'}
-          </Button>
-        </div>
-
-        {scanMessage && (
-          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{scanMessage}</p>
-        )}
-
-        {barcodeItems.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {barcodeItems.map((item) => (
-              <BarcodeItemRow key={item.id} item={item} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">Barkodlu ürün bulunmuyor.</p>
-        )}
-      </Card>
 
       {manualItems.length > 0 && (
         <Card
@@ -492,6 +538,18 @@ function ActiveStockCount({
       </Card>
 
       <DiscrepancyTable items={count.discrepancies} />
+
+      <BarcodeCountSection
+        barcodeInput={barcodeInput}
+        onBarcodeInputChange={setBarcodeInput}
+        onBarcodeSubmit={handleBarcodeSubmit}
+        onOpenScanner={() => setScannerOpen(true)}
+        scannerOpen={scannerOpen}
+        scanning={scanning}
+        scanMessage={scanMessage}
+        barcodeItems={barcodeItems}
+        showItemList
+      />
 
       {scannerOpen && (
         <BarcodeScannerModal
