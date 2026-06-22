@@ -11,16 +11,29 @@ interface BarcodeScannerModalProps {
 }
 
 const SCAN_COOLDOWN_MS = 1500
+const SCAN_TOAST_MS = 2200
 
 export default function BarcodeScannerModal({ onScan, onClose, continuous = false }: BarcodeScannerModalProps) {
   useBodyScrollLock(true)
 
   const readerId = useId().replace(/:/g, '')
+  const onScanRef = useRef(onScan)
+  const onCloseRef = useRef(onClose)
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const handledRef = useRef(false)
   const lastScanRef = useRef<{ code: string; at: number } | null>(null)
+  const scanToastTimerRef = useRef<number | null>(null)
   const [starting, setStarting] = useState(true)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [scanToast, setScanToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    onScanRef.current = onScan
+  }, [onScan])
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     let active = true
@@ -73,9 +86,19 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
               navigator.vibrate(80)
             }
 
-            onScan(code)
+            onScanRef.current(code)
 
-            if (continuous) return
+            if (continuous) {
+              setScanToast('Okundu')
+              if (scanToastTimerRef.current !== null) {
+                window.clearTimeout(scanToastTimerRef.current)
+              }
+              scanToastTimerRef.current = window.setTimeout(() => {
+                setScanToast(null)
+                scanToastTimerRef.current = null
+              }, SCAN_TOAST_MS)
+              return
+            }
 
             const stop = async () => {
               if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
@@ -83,7 +106,7 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
               }
             }
 
-            void stop().finally(onClose)
+            void stop().finally(() => onCloseRef.current())
           },
           () => {},
         )
@@ -106,6 +129,11 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
       const current = scannerRef.current
       scannerRef.current = null
 
+      if (scanToastTimerRef.current !== null) {
+        window.clearTimeout(scanToastTimerRef.current)
+        scanToastTimerRef.current = null
+      }
+
       if (!current) return
 
       if (current.getState() === Html5QrcodeScannerState.SCANNING) {
@@ -118,11 +146,11 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
         // Scanner may already be cleared.
       }
     }
-  }, [continuous, onClose, onScan, readerId])
+  }, [continuous, readerId])
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col overflow-x-hidden overscroll-behavior-contain bg-slate-950"
+      className="fixed inset-0 z-[70] flex flex-col overflow-x-hidden overscroll-behavior-contain bg-slate-950 relative"
       role="dialog"
       aria-modal="true"
       aria-labelledby="barcode-scanner-title"
@@ -136,10 +164,16 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
             {continuous ? 'Ürünleri arka arkaya okutabilirsiniz' : 'Barkodu kameranın önüne getirin'}
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => onCloseRef.current()}>
           Kapat
         </Button>
       </div>
+
+      {scanToast && (
+        <div className="pointer-events-none absolute right-4 top-[4.25rem] z-10 animate-[staffToastIn_0.25s_ease-out] rounded-xl border border-emerald-400/50 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow-lg ring-1 ring-emerald-200">
+          {scanToast}
+        </div>
+      )}
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center p-4">
         <div
@@ -165,6 +199,19 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
           ? 'Kamera açık kaldığı sürece her barkod otomatik sayılır. Bitince Kapat\'a basın.'
           : 'Telefonu barkoda yaklaştırın. Okuma otomatik yapılır.'}
       </div>
+
+      <style>{`
+        @keyframes staffToastIn {
+          from {
+            opacity: 0;
+            transform: translateX(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   )
 }

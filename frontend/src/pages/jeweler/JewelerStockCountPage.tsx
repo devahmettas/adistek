@@ -371,6 +371,15 @@ function ActiveStockCount({
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap gap-3">
+        <Button type="button" onClick={() => void handleComplete()} disabled={completing}>
+          {completing ? 'Tamamlanıyor...' : 'Sayımı tamamla'}
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => void handleCancel()} disabled={cancelling}>
+          {cancelling ? 'İptal...' : 'Sayımı iptal et'}
+        </Button>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="panel-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Barkodlu ürün</p>
@@ -484,15 +493,6 @@ function ActiveStockCount({
 
       <DiscrepancyTable items={count.discrepancies} />
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="button" onClick={() => void handleComplete()} disabled={completing}>
-          {completing ? 'Tamamlanıyor...' : 'Sayımı tamamla'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => void handleCancel()} disabled={cancelling}>
-          {cancelling ? 'İptal...' : 'Sayımı iptal et'}
-        </Button>
-      </div>
-
       {scannerOpen && (
         <BarcodeScannerModal
           continuous
@@ -580,6 +580,28 @@ export default function JewelerStockCountPage() {
 
       {error && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      )}
+
+      {activeCount && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+          role="status"
+        >
+          <p className="text-sm font-semibold text-amber-900">
+            {hasStockCountEntries(activeCount) ? 'Sayım yarıda kaldı' : 'Devam eden sayım'}
+          </p>
+          <p className="mt-1 text-sm text-amber-800">
+            {activeCount.started_at && (
+              <>
+                Başlangıç: {new Date(activeCount.started_at).toLocaleString('tr-TR')}
+                {' · '}
+              </>
+            )}
+            {hasStockCountEntries(activeCount)
+              ? 'Kaldığınız yerden sayıma devam edebilirsiniz.'
+              : 'Sayım başlatıldı, henüz giriş yapılmadı.'}
+          </p>
+        </div>
       )}
 
       {activeCount ? (
