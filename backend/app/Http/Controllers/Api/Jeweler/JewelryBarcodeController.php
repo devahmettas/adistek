@@ -20,7 +20,7 @@ class JewelryBarcodeController extends Controller
     {
         $product = $this->productService->findByBarcode(
             $this->restaurantId($request),
-            $barcode,
+            trim($barcode),
         );
 
         if (! $product) {
@@ -30,5 +30,29 @@ class JewelryBarcodeController extends Controller
         }
 
         return response()->json(['data' => $product]);
+    }
+
+    public function check(Request $request, string $barcode): JsonResponse
+    {
+        $normalized = trim($barcode);
+
+        if ($normalized === '') {
+            return response()->json([
+                'message' => 'Barkod boş olamaz.',
+            ], 422);
+        }
+
+        $product = $this->productService->findByBarcode(
+            $this->restaurantId($request),
+            $normalized,
+        );
+
+        return response()->json([
+            'data' => [
+                'barcode' => $normalized,
+                'available' => $product === null,
+                'product' => $product,
+            ],
+        ]);
     }
 }

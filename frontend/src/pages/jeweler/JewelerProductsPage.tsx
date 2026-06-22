@@ -8,6 +8,7 @@ import MoneyInput from '../../components/MoneyInput'
 import JewelryProductDetailModal from '../../components/jeweler/JewelryProductDetailModal'
 import JewelryProductSaleModal from '../../components/jeweler/JewelryProductSaleModal'
 import ProductBarcode from '../../components/jeweler/ProductBarcode'
+import BarcodeProductAddFlow, { BarcodeProductBanner } from '../../components/jeweler/BarcodeProductAddFlow'
 import { printJewelryBarcodeLabel, toJewelryBarcodeLabel } from '../../utils/jewelryBarcodePrint'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
@@ -37,6 +38,7 @@ import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyIn
 
 type ProductsTab = 'list' | 'add' | 'edit'
 type CategoryFilter = 'all' | 'uncategorized' | number
+type AddMode = 'choose' | 'standard' | 'barcode-scan' | 'barcode-form'
 
 const EMPTY_FORM = {
   name: '',
@@ -104,6 +106,8 @@ interface ProductFormProps {
   onSubmit: (event: FormEvent) => void
   onCancel?: () => void
   priceBreakdown: JewelryPriceBreakdown | null
+  pendingBarcode?: string | null
+  onChangeBarcode?: () => void
 }
 
 function ProductForm({
@@ -142,10 +146,16 @@ function ProductForm({
   onSubmit,
   onCancel,
   priceBreakdown,
+  pendingBarcode,
+  onChangeBarcode,
 }: ProductFormProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <Card title={editingId ? 'Ürün Bilgileri' : 'Yeni Ürün'}>
+      <div className="space-y-4">
+        {pendingBarcode && onChangeBarcode && (
+          <BarcodeProductBanner barcode={pendingBarcode} onChangeBarcode={onChangeBarcode} />
+        )}
+      <Card title={editingId ? 'Ürün Bilgileri' : pendingBarcode ? 'Ürün Bilgilerini Girin' : 'Yeni Ürün'}>
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Ürün Adı"
@@ -284,7 +294,13 @@ function ProductForm({
 
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Kaydediliyor...' : editingId ? 'Değişiklikleri Kaydet' : 'Ürün Ekle'}
+              {submitting
+                ? 'Kaydediliyor...'
+                : editingId
+                  ? 'Değişiklikleri Kaydet'
+                  : pendingBarcode
+                    ? 'Barkodlu Ürünü Kaydet'
+                    : 'Ürün Ekle'}
             </Button>
             {onCancel && (
               <Button type="button" variant="secondary" onClick={onCancel}>
@@ -294,6 +310,7 @@ function ProductForm({
           </div>
         </form>
       </Card>
+      </div>
 
       <Card title="Fiyat Hesaplama">
         {isManualPrice ? (
@@ -352,6 +369,8 @@ export default function JewelerProductsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<ProductsTab>('list')
+  const [addMode, setAddMode] = useState<AddMode>('choose')
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -461,6 +480,8 @@ export default function JewelerProductsPage() {
     setImageUrl(null)
     setEditingId(null)
     setFormError(null)
+    setPendingBarcode(null)
+    setAddMode('choose')
   }
 
   const applyProductToForm = (product: JewelryProduct) => {
@@ -544,6 +565,7 @@ export default function JewelerProductsPage() {
       sale_price: isManualPrice ? String(parseMoneyInput(manualPrice)) : String(priceBreakdown?.salePrice ?? 0),
       metal_type: 'gold' as const,
       stock_quantity: Number(stockQuantity) || 0,
+      ...(pendingBarcode && !editingId ? { barcode: pendingBarcode } : {}),
     }
 
     try {
@@ -626,6 +648,12 @@ export default function JewelerProductsPage() {
     submitting,
     onSubmit: handleSubmit,
     priceBreakdown,
+    pendingBarcode: addMode === 'barcode-form' ? pendingBarcode : null,
+    onChangeBarcode: () => {
+      setPendingBarcode(null)
+      setAddMode('barcode-scan')
+      setFormError(null)
+    },
   }
 
   const filterChips: Array<{ id: CategoryFilter; label: string }> = [
@@ -659,10 +687,10 @@ export default function JewelerProductsPage() {
           if (tab === 'add') {
             resetForm()
           }
+          setActiveTab(tab)
           if (tab === 'list') {
             resetForm()
           }
-          setActiveTab(tab)
         }}
       />
 
@@ -797,10 +825,85 @@ export default function JewelerProductsPage() {
         </Card>
       )}
 
-      {!loading && activeTab === 'add' && (
-        <ProductForm {...formProps} />
+      {!loading && activeTab === 'add' && addMode === 'choose' && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setAddMode('standard')}
+            className="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-brand-200 hover:shadow-md"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 transition group-hover:bg-brand-100">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Standart Ürün Ekle</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Ürün bilgilerini girin. Sistem barkodu otomatik oluşturur.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAddMode('barcode-scan')}
+            className="group rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-brand-50/50 p-6 text-left shadow-sm transition hover:border-amber-300 hover:shadow-md"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 transition group-hover:bg-amber-200">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 12h10" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Barkod ile Ürün Ekle</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Üretimden gelen barkodu okutun, ürün bilgilerini girin ve aynı barkodla kaydedin.
+            </p>
+          </button>
+        </div>
       )}
 
+      {!loading && activeTab === 'add' && addMode === 'barcode-scan' && (
+        <BarcodeProductAddFlow
+          onBarcodeConfirmed={(barcode) => {
+            setPendingBarcode(barcode)
+            setAddMode('barcode-form')
+            setFormError(null)
+          }}
+          onEditExisting={(product) => startEdit(product)}
+          onCancel={() => setAddMode('choose')}
+        />
+      )}
+
+      {!loading && activeTab === 'add' && addMode === 'standard' && (
+        <div className="space-y-4">
+          <div className="flex justify-start">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setAddMode('choose')}>
+              ← Ekleme yöntemine dön
+            </Button>
+          </div>
+          <ProductForm {...formProps} />
+        </div>
+      )}
+
+      {!loading && activeTab === 'add' && addMode === 'barcode-form' && pendingBarcode && (
+        <div className="space-y-4">
+          <div className="flex justify-start">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setPendingBarcode(null)
+                setAddMode('barcode-scan')
+                setFormError(null)
+              }}
+            >
+              ← Barkod adımına dön
+            </Button>
+          </div>
+          <ProductForm {...formProps} />
+        </div>
+      )}
       {!loading && activeTab === 'edit' && (
         editingProduct ? (
           <div className="space-y-4">

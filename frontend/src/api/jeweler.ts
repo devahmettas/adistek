@@ -414,7 +414,20 @@ export async function deleteJewelryProduct(id: number): Promise<void> {
 }
 
 export async function lookupBarcode(barcode: string): Promise<JewelryProduct> {
-  const { data } = await apiClient.get<ApiResponse<JewelryProduct>>(`/jeweler/barcode/${barcode}`)
+  const { data } = await apiClient.get<ApiResponse<JewelryProduct>>(`/jeweler/barcode/${encodeURIComponent(barcode)}`)
+  return data.data
+}
+
+export interface BarcodeAvailability {
+  barcode: string
+  available: boolean
+  product: JewelryProduct | null
+}
+
+export async function checkBarcodeAvailability(barcode: string): Promise<BarcodeAvailability> {
+  const { data } = await apiClient.get<ApiResponse<BarcodeAvailability>>(
+    `/jeweler/barcode/${encodeURIComponent(barcode)}/check`,
+  )
   return data.data
 }
 

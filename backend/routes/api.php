@@ -209,6 +209,7 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::put('/customers/{customer}', [JewelryCustomerController::class, 'update']);
     Route::delete('/customers/{customer}', [JewelryCustomerController::class, 'destroy']);
 
+    Route::get('/barcode/{barcode}/check', [JewelryBarcodeController::class, 'check']);
     Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
 
     Route::get('/gold-prices/live', [MarketGoldPriceController::class, 'live']);

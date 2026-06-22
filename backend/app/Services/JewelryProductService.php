@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class JewelryProductService
 {
@@ -62,6 +63,16 @@ class JewelryProductService
     public function create(int $restaurantId, array $data): JewelryProduct
     {
         return DB::transaction(function () use ($restaurantId, $data) {
+            if (! empty($data['barcode'])) {
+                $data['barcode'] = trim((string) $data['barcode']);
+
+                if ($data['barcode'] === '') {
+                    unset($data['barcode']);
+                } elseif ($this->findByBarcode($restaurantId, $data['barcode'])) {
+                    throw new UnprocessableEntityHttpException('Bu barkod zaten sisteme kayıtlı.');
+                }
+            }
+
             if (empty($data['barcode'])) {
                 $data['barcode'] = $this->generateBarcode($restaurantId);
             }
