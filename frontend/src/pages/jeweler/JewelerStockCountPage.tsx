@@ -25,6 +25,7 @@ import {
   formatMoneyInputWhileTyping,
   parseMoneyInput,
 } from '../../utils/moneyInput'
+import { playBarcodeScanTick } from '../../utils/barcodeScanSound'
 
 function formatDifference(value: number, unit: string): string {
   const prefix = value > 0 ? '+' : ''
@@ -339,7 +340,7 @@ function ActiveStockCount({
   const [completing, setCompleting] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const scanQueueRef = useRef<string[]>([])
+  const scanQueueRef = useRef<Array<{ code: string; resolve: (message: string | null) => void }>>([])
   const processingScanRef = useRef(false)
 
   const manualItems = useMemo(
@@ -365,8 +366,14 @@ function ActiveStockCount({
     setError(null)
 
     while (scanQueueRef.current.length > 0) {
-      const trimmed = scanQueueRef.current.shift()?.trim() ?? ''
-      if (!trimmed) continue
+      const job = scanQueueRef.current.shift()
+      if (!job) continue
+
+      const trimmed = job.code.trim()
+      if (!trimmed) {
+        job.resolve(null)
+        continue
+      }
 
       setScanMessage(null)
 
@@ -374,10 +381,14 @@ function ActiveStockCount({
         const updated = await scanJewelryStockCount(count.id, trimmed)
         onCountChange(updated)
         const item = updated.items.find((row) => row.barcode === trimmed)
-        setScanMessage(item ? `${item.name} sayıldı (${item.counted_quantity})` : 'Ürün sayıldı.')
+        const message = item ? `${item.name} okundu` : 'Okundu'
+        setScanMessage(item ? `${item.name} okundu (${item.counted_quantity})` : 'Ürün okundu')
         setBarcodeInput('')
+        void playBarcodeScanTick()
+        job.resolve(message)
       } catch {
         setError('Barkod okunamadı veya ürün listede yok.')
+        job.resolve(null)
       }
     }
 
@@ -385,12 +396,14 @@ function ActiveStockCount({
     setScanning(false)
   }, [count.id, onCountChange])
 
-  const handleScan = useCallback((code: string) => {
+  const handleScan = useCallback((code: string): Promise<string | null> => {
     const trimmed = code.trim()
-    if (!trimmed) return
+    if (!trimmed) return Promise.resolve(null)
 
-    scanQueueRef.current.push(trimmed)
-    void processScanQueue()
+    return new Promise((resolve) => {
+      scanQueueRef.current.push({ code: trimmed, resolve })
+      void processScanQueue()
+    })
   }, [processScanQueue])
 
   const handleBarcodeSubmit = (event: FormEvent) => {

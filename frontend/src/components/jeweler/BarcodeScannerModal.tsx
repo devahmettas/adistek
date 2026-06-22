@@ -1,18 +1,34 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type MutableRefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import Button from '../Button'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { unlockBarcodeScanSound } from '../../utils/barcodeScanSound'
 
 interface BarcodeScannerModalProps {
-  onScan: (barcode: string) => void
+  onScan: (barcode: string) => void | Promise<string | null | void>
   onClose: () => void
   /** Tek okumada kapanmak yerine ardışık okumaya izin verir. */
   continuous?: boolean
 }
 
 const SCAN_COOLDOWN_MS = 1500
-const SCAN_TOAST_MS = 2200
+const SCAN_TOAST_MS = 2800
+
+function showScanToast(
+  message: string,
+  setScanToast: (value: string | null) => void,
+  scanToastTimerRef: MutableRefObject<number | null>,
+) {
+  setScanToast(message)
+  if (scanToastTimerRef.current !== null) {
+    window.clearTimeout(scanToastTimerRef.current)
+  }
+  scanToastTimerRef.current = window.setTimeout(() => {
+    setScanToast(null)
+    scanToastTimerRef.current = null
+  }, SCAN_TOAST_MS)
+}
 
 const SCANNER_CONFIG = {
   fps: 10,
@@ -110,6 +126,10 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
   const [scanToast, setScanToast] = useState<string | null>(null)
 
   useEffect(() => {
+    void unlockBarcodeScanSound()
+  }, [])
+
+  useEffect(() => {
     onScanRef.current = onScan
   }, [onScan])
 
@@ -161,21 +181,21 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
           navigator.vibrate(80)
         }
 
-        onScanRef.current(code)
+        void (async () => {
+          const result = await Promise.resolve(onScanRef.current(code))
+          const message = typeof result === 'string' && result.trim() ? result.trim() : null
 
-        if (continuous) {
-          setScanToast('Okundu')
-          if (scanToastTimerRef.current !== null) {
-            window.clearTimeout(scanToastTimerRef.current)
+          if (message) {
+            if (continuous) {
+              showScanToast(message, setScanToast, scanToastTimerRef)
+              return
+            }
           }
-          scanToastTimerRef.current = window.setTimeout(() => {
-            setScanToast(null)
-            scanToastTimerRef.current = null
-          }, SCAN_TOAST_MS)
-          return
-        }
 
-        void stopScanner(scanner).finally(() => onCloseRef.current())
+          if (!continuous) {
+            void stopScanner(scanner).finally(() => onCloseRef.current())
+          }
+        })()
       }
 
       try {
