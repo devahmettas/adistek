@@ -6,9 +6,9 @@ use App\Enums\BusinessType;
 use App\Models\JewelrySetting;
 use App\Models\Restaurant;
 use App\Repositories\RestaurantRepository;
+use App\Support\RestaurantMembershipSchema;
 use App\Support\RestaurantSlugGenerator;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AdminRestaurantService
@@ -35,6 +35,8 @@ class AdminRestaurantService
 
     public function create(array $data): Restaurant
     {
+        RestaurantMembershipSchema::ensure();
+
         $businessType = BusinessType::tryFrom($data['business_type'] ?? '') ?? BusinessType::Restaurant;
         $membershipDays = (int) ($data['membership_days'] ?? 30);
         unset($data['business_type'], $data['membership_days']);
@@ -93,9 +95,7 @@ class AdminRestaurantService
 
     public function extendMembership(int $id, int $days): Restaurant
     {
-        if (! Schema::hasColumn('restaurants', 'membership_end_date')) {
-            throw new \RuntimeException('Üyelik alanları veritabanında tanımlı değil. Migration çalıştırılmalı.');
-        }
+        RestaurantMembershipSchema::ensure();
 
         $restaurant = $this->getById($id);
         $restaurant->adjustMembership($days);

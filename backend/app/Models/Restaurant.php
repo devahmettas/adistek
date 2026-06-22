@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
 
 class Restaurant extends Authenticatable
@@ -175,10 +174,6 @@ class Restaurant extends Authenticatable
     {
         if ($days === 0) {
             return;
-        }
-
-        if (! Schema::hasColumn($this->getTable(), 'membership_end_date')) {
-            throw new \RuntimeException('Üyelik alanları veritabanında tanımlı değil.');
         }
 
         $today = now()->startOfDay();
