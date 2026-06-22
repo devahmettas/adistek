@@ -25,7 +25,11 @@ import {
   formatMoneyInputWhileTyping,
   parseMoneyInput,
 } from '../../utils/moneyInput'
-import { playBarcodeScanTick } from '../../utils/barcodeScanSound'
+import { playBarcodeScanFeedback } from '../../utils/barcodeScanSound'
+import {
+  BARCODE_SCAN_MESSAGE_STYLES,
+  type BarcodeScanFeedback,
+} from '../../utils/barcodeScanFeedback'
 
 function formatDifference(value: number, unit: string): string {
   const prefix = value > 0 ? '+' : ''
@@ -252,7 +256,7 @@ function BarcodeCountSection({
   onOpenScanner,
   scannerOpen,
   scanning,
-  scanMessage,
+  scanFeedback,
   barcodeItems,
   showItemList = true,
 }: {
@@ -262,7 +266,7 @@ function BarcodeCountSection({
   onOpenScanner: () => void
   scannerOpen: boolean
   scanning: boolean
-  scanMessage: string | null
+  scanFeedback: BarcodeScanFeedback | null
   barcodeItems: JewelryStockCountItem[]
   showItemList?: boolean
 }) {
@@ -299,8 +303,8 @@ function BarcodeCountSection({
         </Button>
       </div>
 
-      {scanMessage && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{scanMessage}</p>
+      {scanFeedback && (
+        <p className={BARCODE_SCAN_MESSAGE_STYLES[scanFeedback.tone]}>{scanFeedback.message}</p>
       )}
 
       {showItemList && (
@@ -330,7 +334,7 @@ function ActiveStockCount({
   const [scannerOpen, setScannerOpen] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
   const [scanning, setScanning] = useState(false)
-  const [scanMessage, setScanMessage] = useState<string | null>(null)
+  const [scanFeedback, setScanFeedback] = useState<BarcodeScanFeedback | null>(null)
   const [cashInput, setCashInput] = useState(
     count.counted_cash_balance !== null
       ? formatMoneyInputFromNumber(count.counted_cash_balance)
@@ -340,8 +344,19 @@ function ActiveStockCount({
   const [completing, setCompleting] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const scanQueueRef = useRef<Array<{ code: string; resolve: (message: string | null) => void }>>([])
+  const scanQueueRef = useRef<Array<{ code: string; resolve: (feedback: BarcodeScanFeedback | null) => void }>>([])
   const processingScanRef = useRef(false)
+  const scannedBarcodesRef = useRef<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    const seeded = new Map<string, string>()
+    for (const item of count.items) {
+      if (item.count_mode === 'barcode' && item.barcode && item.counted_quantity > 0) {
+        seeded.set(item.barcode, item.name)
+      }
+    }
+    scannedBarcodesRef.current = seeded
+  }, [count.id])
 
   const manualItems = useMemo(
     () => count.items.filter((item) => item.count_mode === 'manual'),
@@ -375,20 +390,46 @@ function ActiveStockCount({
         continue
       }
 
-      setScanMessage(null)
+      setScanFeedback(null)
+
+      const knownName = scannedBarcodesRef.current.get(trimmed)
+      if (knownName) {
+        const feedback: BarcodeScanFeedback = {
+          message: `${knownName} daha önce okundu`,
+          tone: 'warning',
+        }
+        setScanFeedback(feedback)
+        void playBarcodeScanFeedback('warning')
+        job.resolve(feedback)
+        continue
+      }
 
       try {
         const updated = await scanJewelryStockCount(count.id, trimmed)
         onCountChange(updated)
         const item = updated.items.find((row) => row.barcode === trimmed)
-        const message = item ? `${item.name} okundu` : 'Okundu'
-        setScanMessage(item ? `${item.name} okundu (${item.counted_quantity})` : 'Ürün okundu')
+        const productName = item?.name ?? 'Ürün'
+        scannedBarcodesRef.current.set(trimmed, productName)
+        const feedback: BarcodeScanFeedback = {
+          message: `${productName} okundu`,
+          tone: 'success',
+        }
+        setScanFeedback(
+          item
+            ? { message: `${productName} okundu (${item.counted_quantity})`, tone: 'success' }
+            : feedback,
+        )
         setBarcodeInput('')
-        void playBarcodeScanTick()
-        job.resolve(message)
+        void playBarcodeScanFeedback('success')
+        job.resolve(feedback)
       } catch {
-        setError('Barkod okunamadı veya ürün listede yok.')
-        job.resolve(null)
+        const feedback: BarcodeScanFeedback = {
+          message: 'Stokta yok',
+          tone: 'error',
+        }
+        setScanFeedback(feedback)
+        void playBarcodeScanFeedback('error')
+        job.resolve(feedback)
       }
     }
 
@@ -396,7 +437,7 @@ function ActiveStockCount({
     setScanning(false)
   }, [count.id, onCountChange])
 
-  const handleScan = useCallback((code: string): Promise<string | null> => {
+  const handleScan = useCallback((code: string): Promise<BarcodeScanFeedback | null> => {
     const trimmed = code.trim()
     if (!trimmed) return Promise.resolve(null)
 
@@ -473,7 +514,7 @@ function ActiveStockCount({
         onOpenScanner={() => setScannerOpen(true)}
         scannerOpen={scannerOpen}
         scanning={scanning}
-        scanMessage={scanMessage}
+        scanFeedback={scanFeedback}
         barcodeItems={barcodeItems}
         showItemList={false}
       />
@@ -559,7 +600,7 @@ function ActiveStockCount({
         onOpenScanner={() => setScannerOpen(true)}
         scannerOpen={scannerOpen}
         scanning={scanning}
-        scanMessage={scanMessage}
+        scanFeedback={scanFeedback}
         barcodeItems={barcodeItems}
         showItemList
       />

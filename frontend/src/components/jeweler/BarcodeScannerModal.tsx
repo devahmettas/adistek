@@ -4,9 +4,14 @@ import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } fro
 import Button from '../Button'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { unlockBarcodeScanSound } from '../../utils/barcodeScanSound'
+import {
+  BARCODE_SCAN_TOAST_STYLES,
+  normalizeBarcodeScanFeedback,
+  type BarcodeScanFeedback,
+} from '../../utils/barcodeScanFeedback'
 
 interface BarcodeScannerModalProps {
-  onScan: (barcode: string) => void | Promise<string | null | void>
+  onScan: (barcode: string) => void | Promise<BarcodeScanFeedback | string | null | void>
   onClose: () => void
   /** Tek okumada kapanmak yerine ardışık okumaya izin verir. */
   continuous?: boolean
@@ -16,11 +21,11 @@ const SCAN_COOLDOWN_MS = 1500
 const SCAN_TOAST_MS = 2800
 
 function showScanToast(
-  message: string,
-  setScanToast: (value: string | null) => void,
+  feedback: BarcodeScanFeedback,
+  setScanToast: (value: BarcodeScanFeedback | null) => void,
   scanToastTimerRef: MutableRefObject<number | null>,
 ) {
-  setScanToast(message)
+  setScanToast(feedback)
   if (scanToastTimerRef.current !== null) {
     window.clearTimeout(scanToastTimerRef.current)
   }
@@ -123,7 +128,7 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
   const scanToastTimerRef = useRef<number | null>(null)
   const [starting, setStarting] = useState(true)
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const [scanToast, setScanToast] = useState<string | null>(null)
+  const [scanToast, setScanToast] = useState<BarcodeScanFeedback | null>(null)
 
   useEffect(() => {
     void unlockBarcodeScanSound()
@@ -183,13 +188,11 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
 
         void (async () => {
           const result = await Promise.resolve(onScanRef.current(code))
-          const message = typeof result === 'string' && result.trim() ? result.trim() : null
+          const feedback = normalizeBarcodeScanFeedback(result)
 
-          if (message) {
-            if (continuous) {
-              showScanToast(message, setScanToast, scanToastTimerRef)
-              return
-            }
+          if (feedback && continuous) {
+            showScanToast(feedback, setScanToast, scanToastTimerRef)
+            return
           }
 
           if (!continuous) {
@@ -255,8 +258,10 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
       </div>
 
       {scanToast && (
-        <div className="pointer-events-none absolute right-4 top-[4.25rem] z-10 animate-[staffToastIn_0.25s_ease-out] rounded-xl border border-emerald-400/50 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow-lg ring-1 ring-emerald-200">
-          {scanToast}
+        <div
+          className={`pointer-events-none absolute right-4 top-[4.25rem] z-10 max-w-[min(20rem,calc(100vw-2rem))] animate-[staffToastIn_0.25s_ease-out] rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-lg ring-1 ${BARCODE_SCAN_TOAST_STYLES[scanToast.tone]}`}
+        >
+          {scanToast.message}
         </div>
       )}
 
