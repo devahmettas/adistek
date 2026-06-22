@@ -323,6 +323,34 @@ export interface JewelerStats {
     unit_cost: number
     stock_value: number
   }>
+  stock_counts: {
+    summary: {
+      completed_count: number
+      cancelled_count: number
+      draft_count: number
+      counts_with_discrepancy: number
+      total_discrepancy_items: number
+      cash_discrepancy_total: number
+      accuracy_rate: number
+    }
+    active_count: JewelryStockCountSummary | null
+    recent: JewelryStockCountSummary[]
+  }
+  cash_sessions: {
+    is_open: boolean
+    active_session: JewelryCashSession | null
+    summary: {
+      closed_count: number
+      total_cash_in: number
+      total_cash_out: number
+      total_cash_sales: number
+      total_cash_difference: number
+      balanced_count: number
+      shortage_count: number
+      surplus_count: number
+    }
+    recent: JewelryCashSessionSummary[]
+  }
 }
 
 export interface JewelryProductSaleCost {
@@ -626,7 +654,67 @@ export interface JewelryVaultOverview {
   categories: JewelryVaultCategory[]
   cash: JewelryVaultCashSummary
   cash_transactions: JewelryVaultCashTransaction[]
+  cash_session: JewelryCashSessionStatusPayload
   synced_at: string | null
+}
+
+export interface JewelryCashSession {
+  id: number
+  status: 'open' | 'closed'
+  status_label: string
+  business_date: string | null
+  opened_at: string | null
+  opening_balance: number
+  opening_notes: string | null
+  closed_at: string | null
+  expected_balance: number | null
+  counted_balance: number | null
+  cash_difference: number | null
+  session_cash_in: number
+  session_cash_out: number
+  transaction_count: number
+  cash_sale_count: number
+  cash_sale_total: number
+  cash_purchase_count: number
+  cash_purchase_total: number
+  closing_notes: string | null
+  live_summary?: JewelryCashSessionLiveSummary
+}
+
+export interface JewelryCashSessionLiveSummary {
+  session_cash_in: number
+  session_cash_out: number
+  transaction_count: number
+  cash_sale_count: number
+  cash_sale_total: number
+  cash_purchase_count: number
+  cash_purchase_total: number
+  expected_balance: number
+}
+
+export interface JewelryCashSessionSummary {
+  id: number
+  status: 'open' | 'closed'
+  status_label: string
+  business_date: string | null
+  opened_at: string | null
+  closed_at: string | null
+  opening_balance: number
+  expected_balance: number | null
+  counted_balance: number | null
+  cash_difference: number | null
+  session_cash_in: number
+  session_cash_out: number
+  transaction_count: number
+  cash_sale_total: number
+  cash_purchase_total: number
+}
+
+export interface JewelryCashSessionStatusPayload {
+  is_open: boolean
+  suggested_opening_balance: number
+  current_cash_balance: number
+  active_session: JewelryCashSession | null
 }
 
 export async function getJewelryVaultOverview(): Promise<JewelryVaultOverview> {
@@ -658,6 +746,38 @@ export async function updateJewelryCashTransaction(
     transaction: JewelryVaultCashTransaction
     overview: JewelryVaultOverview
   }>>(`/jeweler/vault/cash-transactions/${id}`, payload)
+  return data.data
+}
+
+export async function getJewelryCashSessionStatus(): Promise<JewelryCashSessionStatusPayload> {
+  const { data } = await apiClient.get<ApiResponse<JewelryCashSessionStatusPayload>>('/jeweler/cash-sessions/status')
+  return data.data
+}
+
+export async function getJewelryCashSessions(): Promise<JewelryCashSessionSummary[]> {
+  const { data } = await apiClient.get<ApiResponse<JewelryCashSessionSummary[]>>('/jeweler/cash-sessions')
+  return data.data
+}
+
+export async function openJewelryCashSession(payload: {
+  opening_balance: number
+  notes?: string
+}): Promise<{ session: JewelryCashSession; status: JewelryCashSessionStatusPayload }> {
+  const { data } = await apiClient.post<ApiResponse<{
+    session: JewelryCashSession
+    status: JewelryCashSessionStatusPayload
+  }>>('/jeweler/cash-sessions/open', payload)
+  return data.data
+}
+
+export async function closeJewelryCashSession(payload: {
+  counted_balance: number
+  notes?: string
+}): Promise<{ session: JewelryCashSession; status: JewelryCashSessionStatusPayload }> {
+  const { data } = await apiClient.post<ApiResponse<{
+    session: JewelryCashSession
+    status: JewelryCashSessionStatusPayload
+  }>>('/jeweler/cash-sessions/close', payload)
   return data.data
 }
 

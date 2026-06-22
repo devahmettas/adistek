@@ -13,6 +13,7 @@ class JewelryCashTransaction extends Model
 
     protected $fillable = [
         'restaurant_id',
+        'cash_session_id',
         'type',
         'source',
         'amount',
@@ -32,6 +33,11 @@ class JewelryCashTransaction extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function cashSession(): BelongsTo
+    {
+        return $this->belongsTo(JewelryCashSession::class, 'cash_session_id');
     }
 
     public function sale(): BelongsTo

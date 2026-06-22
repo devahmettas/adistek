@@ -13,6 +13,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class JewelryCashService
 {
+    public function __construct(
+        private readonly JewelryCashSessionService $sessionService,
+    ) {}
     public function getSummary(int $restaurantId): array
     {
         $totalIn = (float) JewelryCashTransaction::query()
@@ -54,8 +57,11 @@ class JewelryCashService
         float $amount,
         ?string $notes = null,
     ): JewelryCashTransaction {
+        $session = $this->sessionService->requireOpen($restaurantId);
+
         return JewelryCashTransaction::create([
             'restaurant_id' => $restaurantId,
+            'cash_session_id' => $session->id,
             'type' => $type,
             'source' => JewelryCashTransactionSource::Manual,
             'amount' => round($amount, 2),
@@ -70,8 +76,11 @@ class JewelryCashService
             return null;
         }
 
+        $session = $this->sessionService->requireOpen($restaurantId);
+
         return JewelryCashTransaction::create([
             'restaurant_id' => $restaurantId,
+            'cash_session_id' => $session->id,
             'type' => JewelryCashTransactionType::In,
             'source' => JewelryCashTransactionSource::Sale,
             'amount' => round((float) $sale->total, 2),
@@ -87,8 +96,11 @@ class JewelryCashService
             return null;
         }
 
+        $session = $this->sessionService->requireOpen($restaurantId);
+
         return JewelryCashTransaction::create([
             'restaurant_id' => $restaurantId,
+            'cash_session_id' => $session->id,
             'type' => JewelryCashTransactionType::Out,
             'source' => JewelryCashTransactionSource::Purchase,
             'amount' => round((float) $purchase->total, 2),
@@ -106,8 +118,15 @@ class JewelryCashService
             ->first();
 
         if ($purchase->payment_method === 'cash' && (float) $purchase->total > 0) {
+            $session = $this->sessionService->findOpen($restaurantId);
+
+            if (! $session) {
+                throw new BadRequestHttpException('Kasa kapalı. Nakit alım işlemi yapılamaz.');
+            }
+
             if ($existing) {
                 $existing->update([
+                    'cash_session_id' => $session->id,
                     'amount' => round((float) $purchase->total, 2),
                     'notes' => "Alım #{$purchase->purchase_number}",
                     'created_at' => $purchase->purchased_at ?? $existing->created_at,
@@ -132,8 +151,15 @@ class JewelryCashService
             ->first();
 
         if ($sale->payment_method === 'cash' && (float) $sale->total > 0) {
+            $session = $this->sessionService->findOpen($restaurantId);
+
+            if (! $session) {
+                throw new BadRequestHttpException('Kasa kapalı. Nakit satış işlemi yapılamaz.');
+            }
+
             if ($existing) {
                 $existing->update([
+                    'cash_session_id' => $session->id,
                     'amount' => round((float) $sale->total, 2),
                     'notes' => "Satış #{$sale->sale_number}",
                     'created_at' => $sale->sold_at ?? $existing->created_at,

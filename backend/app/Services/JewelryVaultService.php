@@ -10,6 +10,7 @@ class JewelryVaultService
 {
     public function __construct(
         private readonly JewelryCashService $cashService,
+        private readonly JewelryCashSessionService $sessionService,
     ) {}
 
     public function getOverview(int $restaurantId): array
@@ -61,6 +62,7 @@ class JewelryVaultService
             'categories' => array_values($categoryRows),
             'cash' => $cashSummary,
             'cash_transactions' => $cashTransactions,
+            'cash_session' => $this->sessionService->getStatusPayload($restaurantId),
             'synced_at' => now()->toIso8601String(),
         ];
     }

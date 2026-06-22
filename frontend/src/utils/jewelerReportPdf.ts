@@ -41,6 +41,17 @@ function formatGeneratedAt(): string {
   }).format(new Date())
 }
 
+function formatDateTimeForPdf(value: string | null): string {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 function statCard(label: string, value: string, hint?: string): string {
   return `
     <div class="stat-card">
@@ -140,6 +151,37 @@ function buildReportHtml(stats: JewelerStats, options: JewelerReportPdfOptions):
     stats.all_products.length > 25
       ? `<p class="table-note">+ ${stats.all_products.length - 25} ürün daha (tam liste sistemde)</p>`
       : ''
+
+  const stockCounts = stats.stock_counts
+  const cashSessions = stats.cash_sessions
+
+  const stockCountRows = (stockCounts?.recent ?? [])
+    .slice(0, 8)
+    .map(
+      (count) => `
+      <tr>
+        <td>${escapeHtml(formatDateTimeForPdf(count.completed_at))}</td>
+        <td class="num">${count.item_count}</td>
+        <td class="num">${count.discrepancy_count}</td>
+        <td class="num">${count.cash_difference !== null ? formatMoney(count.cash_difference) : '—'}</td>
+      </tr>
+    `,
+    )
+    .join('')
+
+  const cashSessionRows = (cashSessions?.recent ?? [])
+    .map(
+      (session) => `
+      <tr>
+        <td>${escapeHtml(formatDateTimeForPdf(session.closed_at))}</td>
+        <td class="num">${formatMoney(session.opening_balance)}</td>
+        <td class="num">${session.expected_balance !== null ? formatMoney(session.expected_balance) : '—'}</td>
+        <td class="num">${session.counted_balance !== null ? formatMoney(session.counted_balance) : '—'}</td>
+        <td class="num">${session.cash_difference !== null ? formatMoney(session.cash_difference) : '—'}</td>
+      </tr>
+    `,
+    )
+    .join('')
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -357,6 +399,52 @@ function buildReportHtml(stats: JewelerStats, options: JewelerReportPdfOptions):
           <div class="repair-item"><p class="repair-label">Tamam</p><p class="repair-value">${stats.repairs.completed_count}</p></div>
           <div class="repair-item"><p class="repair-label">Teslim</p><p class="repair-value">${stats.repairs.delivered_count}</p></div>
         </div>
+      </div>
+    </section>
+
+    <section class="section two-col">
+      <div class="panel">
+        <h3 class="panel-title">Stok Takip İstatistikleri</h3>
+        <div class="stats-grid stats-grid-3" style="margin-bottom:10px">
+          ${statCard('Tamamlanan', String(stockCounts?.summary.completed_count ?? 0))}
+          ${statCard('Uyum Oranı', `%${stockCounts?.summary.accuracy_rate ?? 100}`)}
+          ${statCard('Nakit Fark', formatMoney(stockCounts?.summary.cash_discrepancy_total ?? 0))}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th class="num">Kalem</th>
+              <th class="num">Fark</th>
+              <th class="num">Nakit Fark</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stockCountRows || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:12px">Kayıt yok</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Gün Sonu Kasa Raporu</h3>
+        <div class="stats-grid stats-grid-3" style="margin-bottom:10px">
+          ${statCard('Kapanış', String(cashSessions?.summary.closed_count ?? 0), cashSessions?.is_open ? 'Kasa açık' : 'Kasa kapalı')}
+          ${statCard('Nakit Satış', formatMoney(cashSessions?.summary.total_cash_sales ?? 0))}
+          ${statCard('Toplam Fark', formatMoney(cashSessions?.summary.total_cash_difference ?? 0))}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Kapanış</th>
+              <th class="num">Açılış</th>
+              <th class="num">Beklenen</th>
+              <th class="num">Sayılan</th>
+              <th class="num">Fark</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cashSessionRows || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px">Kayıt yok</td></tr>'}
+          </tbody>
+        </table>
       </div>
     </section>
 

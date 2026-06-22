@@ -6,8 +6,12 @@ import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import StatsBarChart from '../../components/jeweler/StatsBarChart'
 import JewelryCashTransactionModal from '../../components/jeweler/JewelryCashTransactionModal'
+import JewelryCashSessionOpenModal from '../../components/jeweler/JewelryCashSessionOpenModal'
+import JewelryCashSessionCloseModal from '../../components/jeweler/JewelryCashSessionCloseModal'
 import {
+  getJewelryCashSessions,
   getJewelryVaultOverview,
+  type JewelryCashSessionSummary,
   type JewelryVaultCategory,
   type JewelryVaultCashTransaction,
   type JewelryVaultOverview,
@@ -27,6 +31,9 @@ export default function JewelerVaultPage() {
   const [transactionPeriod, setTransactionPeriod] = useState<SalesPeriodFilter>(DEFAULT_HISTORY_PERIOD)
   const [transactionSearch, setTransactionSearch] = useState('')
   const [cashModalType, setCashModalType] = useState<'in' | 'out' | null>(null)
+  const [showOpenModal, setShowOpenModal] = useState(false)
+  const [showCloseModal, setShowCloseModal] = useState(false)
+  const [sessionHistory, setSessionHistory] = useState<JewelryCashSessionSummary[]>([])
   const [editingTransaction, setEditingTransaction] = useState<JewelryVaultCashTransaction | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,8 +42,12 @@ export default function JewelerVaultPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await getJewelryVaultOverview()
+      const [data, sessions] = await Promise.all([
+        getJewelryVaultOverview(),
+        getJewelryCashSessions(),
+      ])
       setOverview(data)
+      setSessionHistory(sessions)
       setExpandedCategoryId((current) => (
         current !== null && data.categories.some((category) => category.category_id === current)
           ? current
@@ -136,12 +147,26 @@ export default function JewelerVaultPage() {
     setExpandedCategoryId((current) => (current === categoryId ? null : categoryId))
   }
 
+  const cashSession = overview?.cash_session
+  const isCashOpen = cashSession?.is_open ?? false
+  const activeSession = cashSession?.active_session ?? null
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Kasa Yönetimi"
-        description="Ürün kategorilerine göre stok takibi ve nakit işlemleri. Stok değerleri ürün yönetiminden, nakit hareketleri buradan yönetilir."
+        description="Gün sonu ve kasa açılışı ile nakit hareketlerini güvenle yönetin."
       />
+
+      {overview && cashSession && (
+        <CashSessionBanner
+          isOpen={isCashOpen}
+          session={activeSession}
+          currentBalance={cashSession.current_cash_balance}
+          onOpen={() => setShowOpenModal(true)}
+          onClose={() => setShowCloseModal(true)}
+        />
+      )}
 
       <section className="grid gap-3 sm:grid-cols-2">
         <Button
@@ -149,6 +174,7 @@ export default function JewelerVaultPage() {
           size="lg"
           className="w-full py-4 text-base"
           onClick={() => setCashModalType('in')}
+          disabled={!isCashOpen}
         >
           Nakit Girişi
         </Button>
@@ -158,10 +184,17 @@ export default function JewelerVaultPage() {
           size="lg"
           className="w-full py-4 text-base"
           onClick={() => setCashModalType('out')}
+          disabled={!isCashOpen}
         >
           Nakit Çıkışı
         </Button>
       </section>
+
+      {!isCashOpen && overview && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Kasa kapalı. Nakit işlem, nakit satış ve nakit alım yapabilmek için önce kasa açılışı yapın.
+        </p>
+      )}
 
       {loading && <LoadingState />}
       {error && <p className="alert-error">{error}</p>}
@@ -385,9 +418,52 @@ export default function JewelerVaultPage() {
               </Link>
             </Card>
           )}
+
+          {sessionHistory.length > 0 && (
+            <Card
+              title="Gün sonu geçmişi"
+              description="Son kasa açılış ve kapanış kayıtları"
+            >
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="px-3 py-2">Tarih</th>
+                      <th className="px-3 py-2">Durum</th>
+                      <th className="px-3 py-2 text-right">Açılış</th>
+                      <th className="px-3 py-2 text-right">Beklenen</th>
+                      <th className="px-3 py-2 text-right">Sayılan</th>
+                      <th className="px-3 py-2 text-right">Fark</th>
+                      <th className="px-3 py-2 text-right">Satış</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sessionHistory.map((session) => (
+                      <SessionHistoryRow key={session.id} session={session} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </>
       )}
 
+      {showOpenModal && cashSession && (
+        <JewelryCashSessionOpenModal
+          status={cashSession}
+          onClose={() => setShowOpenModal(false)}
+          onSuccess={() => void load()}
+        />
+      )}
+
+      {showCloseModal && activeSession && (
+        <JewelryCashSessionCloseModal
+          session={activeSession}
+          onClose={() => setShowCloseModal(false)}
+          onSuccess={() => void load()}
+        />
+      )}
       {cashModalType && (
         <JewelryCashTransactionModal
           type={cashModalType}
@@ -404,6 +480,114 @@ export default function JewelerVaultPage() {
         />
       )}
     </div>
+  )
+}
+
+function CashSessionBanner({
+  isOpen,
+  session,
+  currentBalance,
+  onOpen,
+  onClose,
+}: {
+  isOpen: boolean
+  session: JewelryVaultOverview['cash_session']['active_session']
+  currentBalance: number
+  onOpen: () => void
+  onClose: () => void
+}) {
+  if (isOpen && session) {
+    const openedLabel = session.opened_at
+      ? new Date(session.opened_at).toLocaleString('tr-TR')
+      : '—'
+
+    return (
+      <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-600 via-emerald-700 to-slate-900 px-6 py-6 text-white shadow-panel">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                Kasa Açık
+              </span>
+              <span className="text-sm text-emerald-100">Açılış: {openedLabel}</span>
+            </div>
+            <p className="mt-3 text-3xl font-extrabold tracking-tight">
+              {formatPanelMoney(session.expected_balance ?? session.opening_balance)}
+            </p>
+            <p className="mt-2 text-sm text-emerald-100">
+              Açılış {formatPanelMoney(session.opening_balance)} · Giriş {formatPanelMoney(session.session_cash_in)} · Çıkış {formatPanelMoney(session.session_cash_out)}
+            </p>
+            <p className="mt-1 text-sm text-emerald-100">
+              Nakit satış: {session.cash_sale_count} · Sistem bakiyesi: {formatPanelMoney(currentBalance)}
+            </p>
+          </div>
+          <Button type="button" variant="danger" size="lg" onClick={onClose}>
+            Gün Sonu Al
+          </Button>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 px-6 py-6 text-white shadow-panel">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
+            Kasa Kapalı
+          </span>
+          <p className="mt-3 text-2xl font-bold tracking-tight">Güne başlamak için kasa açılışı yapın</p>
+          <p className="mt-2 text-sm text-slate-300">
+            Önerilen açılış bakiyesi sistemde {formatPanelMoney(currentBalance)} olarak görünüyor.
+          </p>
+        </div>
+        <Button type="button" size="lg" onClick={onOpen}>
+          Kasa Açılışı Yap
+        </Button>
+      </div>
+    </section>
+  )
+}
+
+function SessionHistoryRow({ session }: { session: JewelryCashSessionSummary }) {
+  const dateLabel = session.closed_at
+    ? new Date(session.closed_at).toLocaleString('tr-TR')
+    : session.opened_at
+      ? new Date(session.opened_at).toLocaleString('tr-TR')
+      : '—'
+
+  const difference = session.cash_difference
+  const differenceClass = difference === null
+    ? 'text-slate-500'
+    : Math.abs(difference) < 0.01
+      ? 'text-emerald-700'
+      : difference < 0
+        ? 'text-red-700'
+        : 'text-amber-700'
+
+  return (
+    <tr>
+      <td className="px-3 py-3 text-slate-700">{dateLabel}</td>
+      <td className="px-3 py-3">
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+          session.status === 'open' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
+        }`}
+        >
+          {session.status_label}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-right text-slate-700">{formatPanelMoney(session.opening_balance)}</td>
+      <td className="px-3 py-3 text-right text-slate-700">
+        {session.expected_balance !== null ? formatPanelMoney(session.expected_balance) : '—'}
+      </td>
+      <td className="px-3 py-3 text-right text-slate-700">
+        {session.counted_balance !== null ? formatPanelMoney(session.counted_balance) : '—'}
+      </td>
+      <td className={`px-3 py-3 text-right font-semibold ${differenceClass}`}>
+        {difference !== null ? formatPanelMoney(difference) : '—'}
+      </td>
+      <td className="px-3 py-3 text-right text-slate-700">{formatPanelMoney(session.cash_sale_total)}</td>
+    </tr>
   )
 }
 

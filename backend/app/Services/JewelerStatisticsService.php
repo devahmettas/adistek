@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\JewelryCashSessionStatus;
 use App\Enums\JewelryRepairStatus;
+use App\Enums\JewelryStockCountStatus;
+use App\Models\JewelryCashSession;
 use App\Models\JewelryCustomer;
 use App\Models\JewelryProduct;
 use App\Models\JewelryRepair;
 use App\Models\JewelrySale;
 use App\Models\JewelrySaleItem;
+use App\Models\JewelryStockCount;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +20,8 @@ class JewelerStatisticsService
     public function __construct(
         private readonly JewelryProductPriceService $priceService,
         private readonly JewelryInventoryCostService $inventoryCostService,
+        private readonly JewelryStockCountService $stockCountService,
+        private readonly JewelryCashSessionService $cashSessionService,
     ) {}
 
     public function getDashboardStats(int $restaurantId, string $period = 'month'): array
@@ -153,6 +159,9 @@ class JewelerStatisticsService
             ->whereBetween('sold_at', [$periodStart, $periodEnd])
             ->get();
 
+        $stockCountReport = $this->buildStockCountReport($restaurantId, $periodStart, $periodEnd);
+        $cashSessionReport = $this->buildCashSessionReport($restaurantId, $periodStart, $periodEnd);
+
         return [
             'period' => $period,
             'period_label' => $periodLabel,
@@ -270,6 +279,127 @@ class JewelerStatisticsService
                     'stock_value' => round((float) $product->sale_price * (int) $product->stock_quantity, 2),
                 ];
             })->values()->all(),
+            'stock_counts' => $stockCountReport,
+            'cash_sessions' => $cashSessionReport,
+        ];
+    }
+
+    private function buildStockCountReport(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): array
+    {
+        $periodCounts = JewelryStockCount::query()
+            ->withCount('items')
+            ->where('restaurant_id', $restaurantId)
+            ->where(function ($query) use ($periodStart, $periodEnd) {
+                $query->whereBetween('started_at', [$periodStart, $periodEnd])
+                    ->orWhereBetween('completed_at', [$periodStart, $periodEnd]);
+            })
+            ->orderByDesc('started_at')
+            ->get();
+
+        $completedCounts = $periodCounts->where('status', JewelryStockCountStatus::Completed);
+        $cancelledCounts = $periodCounts->where('status', JewelryStockCountStatus::Cancelled);
+        $draftCount = $periodCounts->where('status', JewelryStockCountStatus::Draft)->count();
+
+        $totalDiscrepancies = 0;
+        $countsWithDiscrepancy = 0;
+        $cashDiscrepancyTotal = 0.0;
+        $recent = [];
+
+        foreach ($completedCounts as $count) {
+            $formatted = $this->stockCountService->formatSummary($count);
+            $discrepancyCount = (int) $formatted['discrepancy_count'];
+            $totalDiscrepancies += $discrepancyCount;
+
+            if ($discrepancyCount > 0) {
+                $countsWithDiscrepancy++;
+            }
+
+            if ($formatted['cash_difference'] !== null) {
+                $cashDiscrepancyTotal += (float) $formatted['cash_difference'];
+            }
+
+            $recent[] = $formatted;
+        }
+
+        $completedTotal = $completedCounts->count();
+        $accuracyRate = $completedTotal > 0
+            ? round((($completedTotal - $countsWithDiscrepancy) / $completedTotal) * 100, 1)
+            : 100.0;
+
+        $activeCount = $this->stockCountService->findActive($restaurantId);
+
+        return [
+            'summary' => [
+                'completed_count' => $completedTotal,
+                'cancelled_count' => $cancelledCounts->count(),
+                'draft_count' => $draftCount,
+                'counts_with_discrepancy' => $countsWithDiscrepancy,
+                'total_discrepancy_items' => $totalDiscrepancies,
+                'cash_discrepancy_total' => round($cashDiscrepancyTotal, 2),
+                'accuracy_rate' => $accuracyRate,
+            ],
+            'active_count' => $activeCount
+                ? $this->stockCountService->formatSummary($activeCount)
+                : null,
+            'recent' => array_slice($recent, 0, 12),
+        ];
+    }
+
+    private function buildCashSessionReport(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): array
+    {
+        $openSession = $this->cashSessionService->findOpen($restaurantId);
+
+        $closedSessions = JewelryCashSession::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('status', JewelryCashSessionStatus::Closed)
+            ->whereBetween('closed_at', [$periodStart, $periodEnd])
+            ->orderByDesc('closed_at')
+            ->get();
+
+        $totalCashIn = 0.0;
+        $totalCashOut = 0.0;
+        $totalCashSales = 0.0;
+        $totalCashDifference = 0.0;
+        $shortageCount = 0;
+        $surplusCount = 0;
+        $balancedCount = 0;
+        $recent = [];
+
+        foreach ($closedSessions as $session) {
+            $totalCashIn += (float) $session->session_cash_in;
+            $totalCashOut += (float) $session->session_cash_out;
+            $totalCashSales += (float) $session->cash_sale_total;
+
+            $difference = $session->cash_difference !== null ? (float) $session->cash_difference : 0.0;
+            $totalCashDifference += $difference;
+
+            if (abs($difference) < 0.01) {
+                $balancedCount++;
+            } elseif ($difference < 0) {
+                $shortageCount++;
+            } else {
+                $surplusCount++;
+            }
+
+            $recent[] = $this->cashSessionService->formatSummary($session);
+        }
+
+        return [
+            'is_open' => $openSession !== null,
+            'active_session' => $openSession
+                ? $this->cashSessionService->formatSession($openSession, true)
+                : null,
+            'summary' => [
+                'closed_count' => $closedSessions->count(),
+                'total_cash_in' => round($totalCashIn, 2),
+                'total_cash_out' => round($totalCashOut, 2),
+                'total_cash_sales' => round($totalCashSales, 2),
+                'total_cash_difference' => round($totalCashDifference, 2),
+                'balanced_count' => $balancedCount,
+                'shortage_count' => $shortageCount,
+                'surplus_count' => $surplusCount,
+            ],
+            'recent' => $recent,
         ];
     }
 

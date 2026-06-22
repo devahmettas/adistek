@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockCountController;
+use App\Http\Controllers\Api\Jeweler\JewelryCashSessionController;
 use App\Http\Controllers\Api\Jeweler\JewelryVaultController;
 use Illuminate\Support\Facades\Route;
 
@@ -188,6 +189,12 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::get('/vault', [JewelryVaultController::class, 'show']);
     Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
     Route::put('/vault/cash-transactions/{transaction}', [JewelryVaultController::class, 'updateCashTransaction']);
+
+    Route::get('/cash-sessions/status', [JewelryCashSessionController::class, 'status']);
+    Route::get('/cash-sessions', [JewelryCashSessionController::class, 'index']);
+    Route::get('/cash-sessions/{cashSession}', [JewelryCashSessionController::class, 'show']);
+    Route::post('/cash-sessions/open', [JewelryCashSessionController::class, 'open']);
+    Route::post('/cash-sessions/close', [JewelryCashSessionController::class, 'close']);
 
     Route::get('/sales', [JewelrySaleController::class, 'index']);
     Route::post('/sales', [JewelrySaleController::class, 'store']);
