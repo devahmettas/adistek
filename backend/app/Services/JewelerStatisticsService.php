@@ -14,9 +14,12 @@ use App\Models\JewelrySaleItem;
 use App\Models\JewelryStockCount;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class JewelerStatisticsService
 {
+    private ?bool $lineCostColumnExists = null;
+
     public function __construct(
         private readonly JewelryProductPriceService $priceService,
         private readonly JewelryInventoryCostService $inventoryCostService,
@@ -46,20 +49,9 @@ class JewelerStatisticsService
             ->where('sold_at', '>=', $monthStart)
             ->get();
 
-        $activeRepairs = JewelryRepair::query()
-            ->where('restaurant_id', $restaurantId)
-            ->whereIn('status', [
-                JewelryRepairStatus::Received,
-                JewelryRepairStatus::InProgress,
-            ])
-            ->count();
+        $activeRepairs = $this->countActiveRepairs($restaurantId);
 
-        $repairStatusCounts = JewelryRepair::query()
-            ->where('restaurant_id', $restaurantId)
-            ->select(['status', DB::raw('COUNT(*) as count')])
-            ->groupBy('status')
-            ->get()
-            ->mapWithKeys(fn ($row) => [$row->status->value ?? (string) $row->status => (int) $row->count]);
+        $repairStatusCounts = $this->repairStatusCounts($restaurantId);
 
         $productStats = JewelryProduct::query()
             ->where('restaurant_id', $restaurantId)
@@ -252,16 +244,26 @@ class JewelerStatisticsService
                     'count' => (int) $row->count,
                 ])->values()->all(),
             'all_products' => $allProducts->map(function (JewelryProduct $product) {
-                $averagePurchaseCost = $this->inventoryCostService->getWeightedAverageUnitCost($product);
-                $fifoPreview = $this->inventoryCostService->previewSaleCost($product, 1);
-                $metrics = $this->priceService->resolveProductMetrics(
-                    (float) $product->weight_gram,
-                    (int) ($product->karat ?? 22),
-                    (float) $product->labor_cost,
-                    (float) $averagePurchaseCost,
-                    $product->name,
-                    $product->category?->name,
-                );
+                try {
+                    $averagePurchaseCost = $this->inventoryCostService->getWeightedAverageUnitCost($product);
+                    $fifoPreview = $this->inventoryCostService->previewSaleCost($product, 1);
+                    $metrics = $this->priceService->resolveProductMetrics(
+                        (float) $product->weight_gram,
+                        (int) ($product->karat ?? 22),
+                        (float) $product->labor_cost,
+                        (float) $averagePurchaseCost,
+                        $product->name,
+                        $product->category?->name,
+                    );
+                } catch (\Throwable) {
+                    $averagePurchaseCost = (float) ($product->purchase_price ?? 0);
+                    $fifoPreview = [
+                        'unit_cost_with_labor' => round($averagePurchaseCost + (float) $product->labor_cost, 2),
+                    ];
+                    $metrics = [
+                        'metal_value' => 0.0,
+                    ];
+                }
 
                 return [
                     'id' => $product->id,
@@ -316,94 +318,6 @@ class JewelerStatisticsService
             ->selectRaw('SUM(sale_price * stock_quantity) as inventory_sale_value')
             ->first();
 
-        $lowStockProducts = JewelryProduct::query()
-            ->with('category')
-            ->where('restaurant_id', $restaurantId)
-            ->where('is_active', true)
-            ->where('stock_quantity', '>', 0)
-            ->where('stock_quantity', '<=', 2)
-            ->orderBy('stock_quantity')
-            ->orderBy('name')
-            ->limit(8)
-            ->get()
-            ->map(fn (JewelryProduct $product) => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'category_name' => $product->category?->name ?? 'Kategorisiz',
-                'stock_quantity' => (int) $product->stock_quantity,
-                'sale_price' => (string) $product->sale_price,
-            ])
-            ->values()
-            ->all();
-
-        $topProductsWeek = JewelrySaleItem::query()
-            ->select([
-                'jewelry_sale_items.product_name',
-                DB::raw('SUM(jewelry_sale_items.quantity) as quantity'),
-                DB::raw('SUM(jewelry_sale_items.line_total) as revenue'),
-            ])
-            ->join('jewelry_sales', 'jewelry_sales.id', '=', 'jewelry_sale_items.sale_id')
-            ->where('jewelry_sales.restaurant_id', $restaurantId)
-            ->where('jewelry_sales.sold_at', '>=', $weekStart)
-            ->groupBy('jewelry_sale_items.product_name')
-            ->orderByDesc('revenue')
-            ->limit(5)
-            ->get()
-            ->map(fn ($row) => [
-                'product_name' => $row->product_name,
-                'quantity' => (int) $row->quantity,
-                'revenue' => (float) $row->revenue,
-            ])
-            ->values()
-            ->all();
-
-        $paymentBreakdownWeek = JewelrySale::query()
-            ->select([
-                'payment_method',
-                DB::raw('SUM(total) as total'),
-                DB::raw('COUNT(*) as count'),
-            ])
-            ->where('restaurant_id', $restaurantId)
-            ->where('sold_at', '>=', $weekStart)
-            ->groupBy('payment_method')
-            ->get()
-            ->map(fn ($row) => [
-                'payment_method' => $row->payment_method,
-                'total' => (float) $row->total,
-                'count' => (int) $row->count,
-            ])
-            ->values()
-            ->all();
-
-        $karatBreakdown = JewelryProduct::query()
-            ->select([
-                'karat',
-                DB::raw('COUNT(*) as product_count'),
-                DB::raw('SUM(stock_quantity) as stock_units'),
-            ])
-            ->where('restaurant_id', $restaurantId)
-            ->where('is_active', true)
-            ->whereNotNull('karat')
-            ->groupBy('karat')
-            ->orderByDesc('stock_units')
-            ->limit(6)
-            ->get()
-            ->map(fn ($row) => [
-                'karat' => (int) $row->karat,
-                'product_count' => (int) $row->product_count,
-                'stock_units' => (int) $row->stock_units,
-            ])
-            ->values()
-            ->all();
-
-        $activeRepairs = JewelryRepair::query()
-            ->where('restaurant_id', $restaurantId)
-            ->whereIn('status', [
-                JewelryRepairStatus::Received,
-                JewelryRepairStatus::InProgress,
-            ])
-            ->count();
-
         $totalCustomers = JewelryCustomer::query()
             ->where('restaurant_id', $restaurantId)
             ->count();
@@ -415,8 +329,6 @@ class JewelerStatisticsService
             ->count();
 
         $profitSummary = $this->buildProfitSummary($restaurantId, $today, $weekStart, $monthStart);
-        $openSession = $this->cashSessionService->findOpen($restaurantId);
-        $activeStockCount = $this->stockCountService->findActive($restaurantId);
 
         return [
             'generated_at' => now()->toIso8601String(),
@@ -444,30 +356,118 @@ class JewelerStatisticsService
                 'inventory_sale_value' => round((float) ($productStats->inventory_sale_value ?? 0), 2),
             ],
             'repairs' => [
-                'active_count' => $activeRepairs,
+                'active_count' => $this->countActiveRepairs($restaurantId),
             ],
             'customers' => [
                 'total_count' => $totalCustomers,
                 'month_sales_with_customer' => $monthSalesWithCustomer,
             ],
             'revenue_trend' => $this->buildRevenueTrend($restaurantId, 'week'),
-            'top_products_week' => $topProductsWeek,
-            'payment_breakdown_week' => $paymentBreakdownWeek,
-            'karat_breakdown' => $karatBreakdown,
-            'low_stock_products' => $lowStockProducts,
-            'cash_session' => [
+            'cash_session' => $this->resolveOpenCashSessionSummary($restaurantId),
+            'stock_count_active' => $this->resolveActiveStockCountSummary($restaurantId),
+        ];
+    }
+
+    private function resolveOpenCashSessionSummary(int $restaurantId): array
+    {
+        if (! Schema::hasTable('jewelry_cash_sessions')) {
+            return [
+                'is_open' => false,
+                'opened_at' => null,
+                'opening_cash_balance' => null,
+            ];
+        }
+
+        try {
+            $openSession = $this->cashSessionService->findOpen($restaurantId);
+
+            return [
                 'is_open' => $openSession !== null,
                 'opened_at' => $openSession?->opened_at?->toIso8601String(),
                 'opening_cash_balance' => $openSession ? (float) $openSession->opening_cash_balance : null,
-            ],
-            'stock_count_active' => $activeStockCount
+            ];
+        } catch (\Throwable) {
+            return [
+                'is_open' => false,
+                'opened_at' => null,
+                'opening_cash_balance' => null,
+            ];
+        }
+    }
+
+    private function resolveActiveStockCountSummary(int $restaurantId): ?array
+    {
+        if (! Schema::hasTable('jewelry_stock_counts')) {
+            return null;
+        }
+
+        try {
+            $activeStockCount = $this->stockCountService->findActive($restaurantId);
+
+            return $activeStockCount
                 ? $this->stockCountService->formatSummary($activeStockCount)
-                : null,
-        ];
+                : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function countActiveRepairs(int $restaurantId): int
+    {
+        if (! Schema::hasTable('jewelry_repairs')) {
+            return 0;
+        }
+
+        return (int) DB::table('jewelry_repairs')
+            ->where('restaurant_id', $restaurantId)
+            ->whereIn('status', [
+                JewelryRepairStatus::Received->value,
+                JewelryRepairStatus::InProgress->value,
+            ])
+            ->count();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function repairStatusCounts(int $restaurantId): array
+    {
+        if (! Schema::hasTable('jewelry_repairs')) {
+            return [];
+        }
+
+        return DB::table('jewelry_repairs')
+            ->where('restaurant_id', $restaurantId)
+            ->select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+    }
+
+    private function hasLineCostColumn(): bool
+    {
+        return $this->lineCostColumnExists ??= Schema::hasColumn('jewelry_sale_items', 'line_cost');
     }
 
     private function buildStockCountReport(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): array
     {
+        if (! Schema::hasTable('jewelry_stock_counts')) {
+            return [
+                'summary' => [
+                    'completed_count' => 0,
+                    'cancelled_count' => 0,
+                    'draft_count' => 0,
+                    'counts_with_discrepancy' => 0,
+                    'total_discrepancy_items' => 0,
+                    'cash_discrepancy_total' => 0.0,
+                    'accuracy_rate' => 100.0,
+                ],
+                'active_count' => null,
+                'recent' => [],
+            ];
+        }
+
         $periodCounts = JewelryStockCount::query()
             ->withCount('items')
             ->where('restaurant_id', $restaurantId)
@@ -529,6 +529,24 @@ class JewelerStatisticsService
 
     private function buildCashSessionReport(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): array
     {
+        if (! Schema::hasTable('jewelry_cash_sessions')) {
+            return [
+                'is_open' => false,
+                'active_session' => null,
+                'summary' => [
+                    'closed_count' => 0,
+                    'total_cash_in' => 0.0,
+                    'total_cash_out' => 0.0,
+                    'total_cash_sales' => 0.0,
+                    'total_cash_difference' => 0.0,
+                    'balanced_count' => 0,
+                    'shortage_count' => 0,
+                    'surplus_count' => 0,
+                ],
+                'recent' => [],
+            ];
+        }
+
         $openSession = $this->cashSessionService->findOpen($restaurantId);
 
         $closedSessions = JewelryCashSession::query()
@@ -630,7 +648,7 @@ class JewelerStatisticsService
 
             return [
                 'date' => $date->toDateString(),
-                'label' => $date->locale('tr')->isoFormat('D MMM'),
+                'label' => $date->format('d.m'),
                 'short_label' => $date->format('j'),
                 'revenue' => (float) $daySales->sum('total'),
                 'sales_count' => $daySales->count(),
@@ -665,12 +683,20 @@ class JewelerStatisticsService
         $sales = JewelrySale::query()
             ->where('restaurant_id', $restaurantId)
             ->whereBetween('sold_at', [$start, $end])
-            ->with('items')
+            ->with(['items' => function ($query) {
+                $columns = ['id', 'sale_id', 'quantity', 'unit_cost', 'line_total'];
+                if ($this->hasLineCostColumn()) {
+                    $columns[] = 'line_cost';
+                }
+                $query->select($columns);
+            }])
             ->get();
 
         $revenue = (float) $sales->sum('total');
         $cost = $sales->sum(
-            fn (JewelrySale $sale) => (float) ($sale->items?->sum('line_cost') ?? 0),
+            fn (JewelrySale $sale) => (float) $sale->items->sum(
+                fn (JewelrySaleItem $item) => $this->saleItemLineCost($item),
+            ),
         );
         $profit = round($revenue - $cost, 2);
         $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
@@ -681,5 +707,14 @@ class JewelerStatisticsService
             'profit' => $profit,
             'margin' => $margin,
         ];
+    }
+
+    private function saleItemLineCost(JewelrySaleItem $item): float
+    {
+        if ($this->hasLineCostColumn() && $item->line_cost !== null) {
+            return (float) $item->line_cost;
+        }
+
+        return (float) ($item->unit_cost ?? 0) * max(1, (int) ($item->quantity ?? 1));
     }
 }

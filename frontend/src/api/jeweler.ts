@@ -385,28 +385,6 @@ export interface JewelerDashboardOverview {
     revenue: number
     sales_count: number
   }>
-  top_products_week: Array<{
-    product_name: string
-    quantity: number
-    revenue: number
-  }>
-  payment_breakdown_week: Array<{
-    payment_method: string
-    total: number
-    count: number
-  }>
-  karat_breakdown: Array<{
-    karat: number
-    product_count: number
-    stock_units: number
-  }>
-  low_stock_products: Array<{
-    id: number
-    name: string
-    category_name: string
-    stock_quantity: number
-    sale_price: string
-  }>
   cash_session: {
     is_open: boolean
     opened_at: string | null

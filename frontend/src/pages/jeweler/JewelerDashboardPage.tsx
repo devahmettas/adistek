@@ -60,9 +60,16 @@ export default function JewelerDashboardPage() {
 
         {loading && <LoadingState label="Özet yükleniyor..." />}
         {error && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            İstatistik özeti yüklenemedi.
-          </p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p>İstatistik özeti yüklenemedi.</p>
+            <button
+              type="button"
+              onClick={() => void loadOverview()}
+              className="mt-2 font-semibold text-amber-800 underline hover:text-amber-900"
+            >
+              Tekrar dene
+            </button>
+          </div>
         )}
 
         {!loading && overview && (
