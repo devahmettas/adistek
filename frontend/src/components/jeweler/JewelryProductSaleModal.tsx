@@ -219,7 +219,7 @@ export default function JewelryProductSaleModal({
       role="presentation"
     >
       <div
-        className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl lg:h-[min(88vh,600px)] lg:max-h-[88vh] lg:max-w-5xl lg:flex-row lg:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl lg:h-[min(88vh,600px)] lg:max-h-[88vh] lg:max-w-5xl lg:flex-row lg:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -236,9 +236,9 @@ export default function JewelryProductSaleModal({
           </svg>
         </button>
 
-        <div className="min-h-0 flex-1 overflow-y-auto lg:flex lg:flex-row lg:overflow-hidden">
-          <div className="flex shrink-0 flex-col lg:h-full lg:w-[38%] lg:min-h-0 lg:border-r lg:border-slate-100">
-            <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4 sm:p-5 lg:aspect-auto lg:min-h-0 lg:flex-1 lg:p-5">
+        <div className="min-h-0 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:flex lg:flex-row lg:overflow-hidden">
+          <div className="flex w-full min-w-0 shrink-0 flex-col lg:h-full lg:w-[38%] lg:min-h-0 lg:border-r lg:border-slate-100">
+            <div className="flex aspect-[4/3] w-full min-w-0 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4 sm:p-5 lg:aspect-auto lg:min-h-0 lg:flex-1 lg:p-5">
               {previewUrl ? (
                 <img
                   src={previewUrl}
@@ -252,10 +252,10 @@ export default function JewelryProductSaleModal({
               )}
             </div>
 
-            <div className="border-t border-slate-100 bg-slate-50/60 p-4 lg:shrink-0 lg:p-4">
+            <div className="w-full min-w-0 border-t border-slate-100 bg-slate-50/60 p-4 lg:shrink-0 lg:p-4">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-semibold text-slate-900">{product.name}</p>
                 </div>
                 <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
                   {product.karat} ayar
@@ -290,8 +290,8 @@ export default function JewelryProductSaleModal({
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
-            <div className="shrink-0 p-4 sm:p-5 lg:px-5 lg:pb-2 lg:pt-5">
+          <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
+            <div className="w-full min-w-0 shrink-0 p-4 sm:p-5 lg:px-5 lg:pb-2 lg:pt-5">
               <h2 id="product-sale-title" className="pr-9 text-xl font-bold text-slate-900 lg:text-lg">
                 Ürün Satışı
               </h2>
@@ -300,10 +300,10 @@ export default function JewelryProductSaleModal({
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-5 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden lg:px-5 lg:pb-0">
-                <div className="space-y-1 lg:shrink-0">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
+            <form onSubmit={handleSubmit} className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
+              <div className="min-h-0 w-full min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-4 pb-4 sm:px-5 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden lg:px-5 lg:pb-0">
+                <div className="w-full min-w-0 space-y-1 lg:shrink-0">
+                  <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3 [&>*]:min-w-0">
                     <MoneyInput
                       label="Satış Fiyatı (₺)"
                       value={salePrice}
@@ -349,8 +349,8 @@ export default function JewelryProductSaleModal({
                 </div>
 
                 {hasSalePrice ? (
-                  <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-3 lg:overflow-hidden">
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm lg:flex lg:min-h-0 lg:flex-col lg:p-3 lg:text-xs">
+                  <div className="grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-3 lg:overflow-hidden">
+                    <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm lg:flex lg:min-h-0 lg:flex-col lg:p-3 lg:text-xs">
                       <p className="shrink-0 font-semibold text-slate-900">Satış özeti</p>
                       <div className="mt-2 flex flex-1 flex-col justify-center space-y-1.5 lg:mt-1.5">
                         <div className="flex justify-between gap-3">
@@ -372,9 +372,9 @@ export default function JewelryProductSaleModal({
                       </div>
                     </div>
 
-                    <div className={`rounded-2xl border p-4 text-sm lg:flex lg:min-h-0 lg:flex-col lg:p-3 lg:text-xs ${profitPositive ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'}`}>
+                    <div className={`min-w-0 rounded-2xl border p-4 text-sm lg:flex lg:min-h-0 lg:flex-col lg:p-3 lg:text-xs ${profitPositive ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'}`}>
                       <p className="shrink-0 font-semibold text-slate-900">Karlılık analizi</p>
-                      <dl className="mt-2 grid flex-1 grid-cols-2 gap-x-3 gap-y-1 lg:mt-1.5 lg:content-center">
+                      <dl className="mt-2 grid min-w-0 flex-1 grid-cols-2 gap-x-2 gap-y-1 lg:mt-1.5 lg:gap-x-3 lg:content-center [&_dd]:break-words">
                         <div>
                           <dt className="text-slate-500">Altın değeri</dt>
                           <dd className="font-medium text-slate-900">{formatJewelryMoney(profitSummary.metalValue)}</dd>
@@ -424,7 +424,7 @@ export default function JewelryProductSaleModal({
                 {error && <p className="shrink-0 text-sm text-red-600 lg:text-xs">{error}</p>}
               </div>
 
-              <div className="flex shrink-0 flex-wrap gap-2 border-t border-slate-100 p-4 lg:px-5 lg:py-3">
+              <div className="flex w-full min-w-0 shrink-0 flex-wrap gap-2 border-t border-slate-100 p-4 lg:px-5 lg:py-3">
                 {variant === 'form' ? (
                   <Button
                     type="button"
