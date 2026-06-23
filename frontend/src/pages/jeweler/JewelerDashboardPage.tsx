@@ -5,11 +5,13 @@ import JewelerDashboardOverviewPanel from '../../components/jeweler/JewelerDashb
 import LoadingState from '../../components/LoadingState'
 import { PanelActionCard } from '../../components/restaurant/ManagementPanelWidgets'
 import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
+import { useJewelerPermissions } from '../../hooks/useJewelerPermissions'
 import { useAuth } from '../../store/AuthStore'
 
 export default function JewelerDashboardPage() {
-  const { restaurant } = useAuth()
+  const { restaurant, isOwner } = useAuth()
   const { barcodeEnabled, reportsEnabled } = useJewelerFeatures()
+  const { can, canViewProfits, canViewVault } = useJewelerPermissions()
   const [overview, setOverview] = useState<JewelerDashboardOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -48,7 +50,7 @@ export default function JewelerDashboardPage() {
               Günlük, haftalık ve aylık ciro · kar · stok ve satış analizi
             </p>
           </div>
-          {reportsEnabled && (
+          {reportsEnabled && can('view_reports') && (
             <Link
               to="/dashboard/jeweler/reports"
               className="text-sm font-semibold text-amber-700 hover:text-amber-800"
@@ -73,7 +75,12 @@ export default function JewelerDashboardPage() {
         )}
 
         {!loading && overview && (
-          <JewelerDashboardOverviewPanel overview={overview} reportsEnabled={reportsEnabled} />
+          <JewelerDashboardOverviewPanel
+            overview={overview}
+            reportsEnabled={reportsEnabled}
+            canViewProfits={canViewProfits}
+            canViewVault={canViewVault}
+          />
         )}
       </section>
 
@@ -83,28 +90,46 @@ export default function JewelerDashboardPage() {
           <p className="text-sm text-slate-600">Kuyumcu yönetim ekranlarına hızlı erişim</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <PanelActionCard to="/dashboard/jeweler/products" title="Ürün Yönetimi" description="Altın, gümüş ve mücevher ürünlerini tanımlayın." icon="◆" />
-          <PanelActionCard to="/dashboard/jeweler/purchases" title="Ürün Alış Satış" description="Müşteriden alım ve müşteriye satış işlemlerini tek ekrandan yönetin." icon="⇅" />
-          <PanelActionCard to="/dashboard/jeweler/history" title="İşlem Geçmişi" description="Geçmiş satış ve alım kayıtlarını inceleyin." icon="☰" />
-          <PanelActionCard to="/dashboard/jeweler/vault" title="Kasa Yönetimi" description="Stok değeri, nakit bakiye ve kategori bazlı kasa takibi." icon="▤" />
-          <PanelActionCard to="/dashboard/jeweler/stock-count" title="Stok Takip" description="Elle sayım ile stok ve nakit açıklarını tespit edin." icon="▧" />
-          <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />
-          <PanelActionCard
-            to="/dashboard/jeweler/barcode"
-            title="Barkod Sistemi"
-            description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın."
-            icon="▥"
-            locked={!barcodeEnabled}
-          />
+          {can('manage_products') && (
+            <PanelActionCard to="/dashboard/jeweler/products" title="Ürün Yönetimi" description="Altın, gümüş ve mücevher ürünlerini tanımlayın." icon="◆" />
+          )}
+          {can('manage_purchases') && (
+            <PanelActionCard to="/dashboard/jeweler/purchases" title="Ürün Alış Satış" description="Müşteriden alım ve müşteriye satış işlemlerini tek ekrandan yönetin." icon="⇅" />
+          )}
+          {can('manage_sales') && (
+            <PanelActionCard to="/dashboard/jeweler/history" title="İşlem Geçmişi" description="Geçmiş satış ve alım kayıtlarını inceleyin." icon="☰" />
+          )}
+          {canViewVault && (
+            <PanelActionCard to="/dashboard/jeweler/vault" title="Kasa Yönetimi" description="Stok değeri, nakit bakiye ve kategori bazlı kasa takibi." icon="▤" />
+          )}
+          {can('manage_stock_count') && (
+            <PanelActionCard to="/dashboard/jeweler/stock-count" title="Stok Takip" description="Elle sayım ile stok ve nakit açıklarını tespit edin." icon="▧" />
+          )}
+          {can('manage_customers') && (
+            <PanelActionCard to="/dashboard/jeweler/customers" title="Müşteri Yönetimi" description="Müşteri kartlarını yönetin." icon="◉" />
+          )}
+          {can('manage_products') && (
+            <PanelActionCard
+              to="/dashboard/jeweler/barcode"
+              title="Barkod Sistemi"
+              description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın."
+              icon="▥"
+              locked={!barcodeEnabled}
+            />
+          )}
           <PanelActionCard to="/dashboard/jeweler/gold-prices" title="Altın Fiyatları" description="Güncel altın alış/satış fiyatlarını kaydedin." icon="★" />
-          <PanelActionCard
-            to="/dashboard/jeweler/reports"
-            title="Raporlama"
-            description="Satış ve performans raporları."
-            icon="▦"
-            locked={!reportsEnabled}
-          />
-          <PanelActionCard to="/dashboard/jeweler/settings" title="Ayarlar" description="Kuyumcu panel ayarlarını yapılandırın." icon="⚙" />
+          {can('view_reports') && (
+            <PanelActionCard
+              to="/dashboard/jeweler/reports"
+              title="Raporlama"
+              description="Satış ve performans raporları."
+              icon="▦"
+              locked={!reportsEnabled}
+            />
+          )}
+          {isOwner && (
+            <PanelActionCard to="/dashboard/jeweler/profile" title="Profil" description="Plan, ayarlar ve personel yönetimi." icon="⚙" />
+          )}
         </div>
       </section>
     </div>

@@ -1,4 +1,5 @@
 import type { BusinessType } from '../constants/businessType'
+import type { JewelerPermissionMap } from '../constants/jewelerPermissions'
 
 export interface Restaurant {
   id: number
@@ -97,6 +98,24 @@ export interface ApiResponse<T> {
 export interface AuthResponse {
   token: string
   restaurant: Restaurant
+}
+
+export interface JewelerStaffUser {
+  id: number
+  restaurant_id: number
+  name: string
+  email: string
+  is_active: boolean
+  permissions: JewelerPermissionMap
+  created_at: string
+}
+
+export interface JewelerStaffAuthResponse {
+  token: string
+  staff: JewelerStaffUser
+  restaurant: Restaurant
+  permissions: JewelerPermissionMap
+  is_owner: false
 }
 
 export interface Admin {

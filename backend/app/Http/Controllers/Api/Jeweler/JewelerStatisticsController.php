@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Jeweler;
 
+use App\Http\Controllers\Concerns\ResolvesJewelerActor;
 use App\Http\Controllers\Concerns\ResolvesRestaurantId;
 use App\Http\Controllers\Controller;
 use App\Services\JewelerStatisticsService;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 
 class JewelerStatisticsController extends Controller
 {
+    use ResolvesJewelerActor;
     use ResolvesRestaurantId;
 
     public function __construct(
@@ -30,8 +32,14 @@ class JewelerStatisticsController extends Controller
 
     public function dashboardOverview(Request $request): JsonResponse
     {
+        $data = $this->service->getDashboardOverview($this->restaurantId($request));
+
+        if (! $this->jewelerCanViewProfits($request)) {
+            $data = $this->stripJewelerProfitFields($data);
+        }
+
         return response()->json([
-            'data' => $this->service->getDashboardOverview($this->restaurantId($request)),
+            'data' => $data,
         ]);
     }
 }

@@ -2,12 +2,16 @@ import { NavLink } from 'react-router-dom'
 import BrandLogo from './BrandLogo'
 import Button from './Button'
 import { isJewelerBusiness } from '../constants/businessType'
-import { JEWELER_NAV_ITEMS } from '../constants/jewelerNav'
+import {
+  JEWELER_NAV_ITEMS,
+  canAccessJewelerNavItem,
+} from '../constants/jewelerNav'
 import { isJewelerFeatureEnabled, type JewelerFeatureKey } from '../constants/jewelerFeatures'
 import {
   RESTAURANT_NAV_ITEMS,
   canAccessRestaurantNavItem,
 } from '../constants/restaurantFeatures'
+import { useJewelerPermissions } from '../hooks/useJewelerPermissions'
 import { useAuth } from '../store/AuthStore'
 
 interface RestaurantSidebarProps {
@@ -31,10 +35,16 @@ function disabledNavLinkClass({ isActive }: { isActive: boolean }) {
 }
 
 export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: RestaurantSidebarProps) {
-  const { restaurant, logout } = useAuth()
+  const { restaurant, staff, logout, isOwner } = useAuth()
+  const { permissions: permissionMap } = useJewelerPermissions()
   const isJeweler = isJewelerBusiness(restaurant?.business_type)
   const visibleNavItems = isJeweler
-    ? JEWELER_NAV_ITEMS
+    ? JEWELER_NAV_ITEMS.filter((item) => canAccessJewelerNavItem(
+      item,
+      restaurant,
+      permissionMap,
+      isOwner,
+    ))
     : RESTAURANT_NAV_ITEMS.filter((item) => canAccessRestaurantNavItem(restaurant, item))
 
   const handleLogout = async () => {
@@ -45,7 +55,7 @@ export default function RestaurantSidebar({ open, mobileOpen, onCloseMobile }: R
     <div className="flex h-full flex-col">
       <div className="border-b border-slate-200 px-4 py-5">
         <NavLink to={visibleNavItems[0]?.to ?? '/dashboard'} onClick={onCloseMobile} className="block">
-          <BrandLogo subtitle={restaurant?.name} />
+          <BrandLogo subtitle={staff?.name ?? restaurant?.name} />
         </NavLink>
       </div>
 

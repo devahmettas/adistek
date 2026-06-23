@@ -6,9 +6,12 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
 import LoadingState from '../components/LoadingState'
+import { isJewelerBusiness } from '../constants/businessType'
+import { getFirstJewelerAccessiblePath } from '../constants/jewelerNav'
 import { useAuth } from '../store/AuthStore'
 
 type Mode = 'login' | 'register'
+type LoginType = 'owner' | 'staff'
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!axios.isAxiosError(error)) {
@@ -39,8 +42,9 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function LoginPage() {
-  const { login, register, isAuthenticated, loading } = useAuth()
+  const { login, register, isAuthenticated, loading, restaurant, isOwner, permissions } = useAuth()
   const [mode, setMode] = useState<Mode>('login')
+  const [loginType, setLoginType] = useState<LoginType>('owner')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,7 +57,11 @@ export default function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    const target = isJewelerBusiness(restaurant?.business_type)
+      ? getFirstJewelerAccessiblePath(restaurant, permissions, isOwner)
+      : '/dashboard'
+
+    return <Navigate to={target} replace />
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -63,7 +71,7 @@ export default function LoginPage() {
 
     try {
       if (mode === 'login') {
-        await login(email, password)
+        await login(email, password, loginType === 'staff')
       } else {
         if (password !== passwordConfirmation) {
           setError('Şifreler eşleşmiyor.')
@@ -125,7 +133,10 @@ export default function LoginPage() {
         </button>
         <button
           type="button"
-          onClick={() => setMode('register')}
+          onClick={() => {
+            setMode('register')
+            setLoginType('owner')
+          }}
           className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition min-h-11 ${
             mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
           }`}
@@ -134,7 +145,30 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <Card title={mode === 'login' ? 'Giriş Yap' : 'Restoran Kaydı'}>
+      {mode === 'login' && (
+        <div className="flex rounded-xl bg-amber-50 p-1 ring-1 ring-amber-100">
+          <button
+            type="button"
+            onClick={() => setLoginType('owner')}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition min-h-10 ${
+              loginType === 'owner' ? 'bg-white text-amber-900 shadow-sm' : 'text-amber-800/80'
+            }`}
+          >
+            İşletme Sahibi
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoginType('staff')}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition min-h-10 ${
+              loginType === 'staff' ? 'bg-white text-amber-900 shadow-sm' : 'text-amber-800/80'
+            }`}
+          >
+            Çalışan Girişi
+          </button>
+        </div>
+      )}
+
+      <Card title={mode === 'login' ? (loginType === 'staff' ? 'Çalışan Girişi' : 'Giriş Yap') : 'Restoran Kaydı'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <Input

@@ -88,6 +88,11 @@ class Restaurant extends Authenticatable
         return $this->hasMany(KitchenStaff::class);
     }
 
+    public function jewelerStaff(): HasMany
+    {
+        return $this->hasMany(JewelerStaff::class);
+    }
+
     public function menuSlides(): HasMany
     {
         return $this->hasMany(MenuSlide::class);

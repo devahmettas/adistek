@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\JewelerStaff;
 use App\Models\KitchenStaff;
 use App\Models\Restaurant;
 use App\Models\Waiter;
@@ -37,7 +38,7 @@ class EnsureRestaurantFeature
             return $user;
         }
 
-        if ($user instanceof Waiter || $user instanceof KitchenStaff) {
+        if ($user instanceof Waiter || $user instanceof KitchenStaff || $user instanceof JewelerStaff) {
             return $user->restaurant;
         }
 

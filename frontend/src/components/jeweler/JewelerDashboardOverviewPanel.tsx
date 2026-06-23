@@ -23,11 +23,15 @@ function formatGeneratedAt(iso: string): string {
 interface JewelerDashboardOverviewPanelProps {
   overview: JewelerDashboardOverview
   reportsEnabled: boolean
+  canViewProfits?: boolean
+  canViewVault?: boolean
 }
 
 export default function JewelerDashboardOverviewPanel({
   overview,
   reportsEnabled,
+  canViewProfits = true,
+  canViewVault = true,
 }: JewelerDashboardOverviewPanelProps) {
   const { summary, inventory, repairs, customers } = overview
 
@@ -69,48 +73,67 @@ export default function JewelerDashboardOverviewPanel({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <MiniMetricCard
-          label="Günlük kar"
-          value={formatPanelMoney(summary.today_profit)}
-          hint={`Marj ${formatMargin(summary.today_profit_margin)}`}
-          tone="emerald"
-        />
-        <MiniMetricCard
-          label="Haftalık kar"
-          value={formatPanelMoney(summary.week_profit)}
-          hint={`Marj ${formatMargin(summary.week_profit_margin)}`}
-          tone="emerald"
-        />
-        <MiniMetricCard
-          label="Aylık kar"
-          value={formatPanelMoney(summary.month_profit)}
-          hint={`Marj ${formatMargin(summary.month_profit_margin)}`}
-          tone="emerald"
-        />
-        <MiniMetricCard
-          label="Envanter değeri"
-          value={formatPanelMoney(inventory.inventory_sale_value)}
-          hint={`${inventory.total_products} aktif ürün`}
-          tone="brand"
-        />
-        <MiniMetricCard
-          label="Stok adedi"
-          value={inventory.total_stock_units.toLocaleString('tr-TR')}
-          hint={formatWeight(inventory.total_weight_gram)}
-          tone="slate"
-        />
-        <MiniMetricCard
-          label="Aktif tamir"
-          value={String(repairs.active_count)}
-          hint={`${customers.total_count} kayıtlı müşteri`}
-          tone="amber"
-        />
-      </div>
+      {canViewProfits && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <MiniMetricCard
+            label="Günlük kar"
+            value={formatPanelMoney(summary.today_profit)}
+            hint={`Marj ${formatMargin(summary.today_profit_margin)}`}
+            tone="emerald"
+          />
+          <MiniMetricCard
+            label="Haftalık kar"
+            value={formatPanelMoney(summary.week_profit)}
+            hint={`Marj ${formatMargin(summary.week_profit_margin)}`}
+            tone="emerald"
+          />
+          <MiniMetricCard
+            label="Aylık kar"
+            value={formatPanelMoney(summary.month_profit)}
+            hint={`Marj ${formatMargin(summary.month_profit_margin)}`}
+            tone="emerald"
+          />
+          <MiniMetricCard
+            label="Envanter değeri"
+            value={formatPanelMoney(inventory.inventory_sale_value)}
+            hint={`${inventory.total_products} aktif ürün`}
+            tone="brand"
+          />
+          <MiniMetricCard
+            label="Stok adedi"
+            value={inventory.total_stock_units.toLocaleString('tr-TR')}
+            hint={formatWeight(inventory.total_weight_gram)}
+            tone="slate"
+          />
+          <MiniMetricCard
+            label="Aktif tamir"
+            value={String(repairs.active_count)}
+            hint={`${customers.total_count} kayıtlı müşteri`}
+            tone="amber"
+          />
+        </div>
+      )}
 
-      {(overview.cash_session.is_open || overview.stock_count_active) && (
+      {!canViewProfits && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MiniMetricCard
+            label="Stok adedi"
+            value={inventory.total_stock_units.toLocaleString('tr-TR')}
+            hint={formatWeight(inventory.total_weight_gram)}
+            tone="slate"
+          />
+          <MiniMetricCard
+            label="Aktif tamir"
+            value={String(repairs.active_count)}
+            hint={`${customers.total_count} kayıtlı müşteri`}
+            tone="amber"
+          />
+        </div>
+      )}
+
+      {((canViewVault && overview.cash_session.is_open) || overview.stock_count_active) && (
         <div className="grid gap-3 md:grid-cols-2">
-          {overview.cash_session.is_open && (
+          {canViewVault && overview.cash_session.is_open && (
             <StatusBanner
               to="/dashboard/jeweler/vault"
               title="Kasa açık"
@@ -139,32 +162,34 @@ export default function JewelerDashboardOverviewPanel({
         valueFormatter={formatPanelMoney}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniMetricCard
-          label="Bu ay müşterili satış"
-          value={String(customers.month_sales_with_customer)}
-          hint={`Toplam ${customers.total_count} müşteri`}
-          tone="brand"
-        />
-        <MiniMetricCard
-          label="Günlük maliyet"
-          value={formatPanelMoney(summary.today_cost)}
-          hint="Satılan ürün maliyeti"
-          tone="slate"
-        />
-        <MiniMetricCard
-          label="Haftalık maliyet"
-          value={formatPanelMoney(summary.week_cost)}
-          hint="Dönem maliyet toplamı"
-          tone="slate"
-        />
-        <MiniMetricCard
-          label="Aylık maliyet"
-          value={formatPanelMoney(summary.month_cost)}
-          hint="Dönem maliyet toplamı"
-          tone="slate"
-        />
-      </div>
+      {canViewProfits && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MiniMetricCard
+            label="Bu ay müşterili satış"
+            value={String(customers.month_sales_with_customer)}
+            hint={`Toplam ${customers.total_count} müşteri`}
+            tone="brand"
+          />
+          <MiniMetricCard
+            label="Günlük maliyet"
+            value={formatPanelMoney(summary.today_cost)}
+            hint="Satılan ürün maliyeti"
+            tone="slate"
+          />
+          <MiniMetricCard
+            label="Haftalık maliyet"
+            value={formatPanelMoney(summary.week_cost)}
+            hint="Dönem maliyet toplamı"
+            tone="slate"
+          />
+          <MiniMetricCard
+            label="Aylık maliyet"
+            value={formatPanelMoney(summary.month_cost)}
+            hint="Dönem maliyet toplamı"
+            tone="slate"
+          />
+        </div>
+      )}
     </div>
   )
 }

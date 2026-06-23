@@ -92,7 +92,7 @@ export function getDefaultJewelerAccessiblePath(restaurant: Restaurant | null | 
     { to: '/dashboard/jeweler/barcode', feature: 'barcode' as const },
     { to: '/dashboard/jeweler/gold-prices' },
     { to: '/dashboard/jeweler/reports', feature: 'reports' as const },
-    { to: '/dashboard/jeweler/settings' },
+    { to: '/dashboard/jeweler/profile' },
   ]
 
   const match = items.find((item) => {

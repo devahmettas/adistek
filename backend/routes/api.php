@@ -34,6 +34,9 @@ use App\Http\Controllers\Api\Jeweler\JewelryUploadController;
 use App\Http\Controllers\Api\Jeweler\JewelrySettingController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockController;
 use App\Http\Controllers\Api\Jeweler\JewelryStockCountController;
+use App\Http\Controllers\Api\Jeweler\JewelerProfileController;
+use App\Http\Controllers\Api\Jeweler\JewelerStaffAuthController;
+use App\Http\Controllers\Api\Jeweler\JewelerStaffController;
 use App\Http\Controllers\Api\Jeweler\JewelryCashSessionController;
 use App\Http\Controllers\Api\Jeweler\JewelryVaultController;
 use Illuminate\Support\Facades\Route;
@@ -154,78 +157,113 @@ Route::middleware(['auth:sanctum', 'kitchen'])->prefix('kitchen')->group(functio
     });
 });
 
-Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')->group(function () {
-    Route::get('/dashboard-overview', [JewelerStatisticsController::class, 'dashboardOverview']);
+Route::post('/jeweler-staff/auth/login', [JewelerStaffAuthController::class, 'login']);
 
-    Route::middleware('restaurant.feature:feature_jeweler_reports')->group(function () {
+Route::middleware(['auth:sanctum', 'jeweler_access'])->prefix('jeweler-staff')->group(function () {
+    Route::get('/auth/me', [JewelerStaffAuthController::class, 'me']);
+    Route::post('/auth/logout', [JewelerStaffAuthController::class, 'logout']);
+    Route::get('/permissions', [JewelerStaffAuthController::class, 'permissionsCatalog']);
+});
+
+Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')->group(function () {
+    Route::get('/profile', [JewelerProfileController::class, 'show']);
+    Route::patch('/profile', [JewelerProfileController::class, 'update']);
+    Route::get('/staff', [JewelerStaffController::class, 'index']);
+    Route::get('/staff/permissions', [JewelerStaffAuthController::class, 'permissionsCatalog']);
+    Route::post('/staff', [JewelerStaffController::class, 'store']);
+    Route::put('/staff/{jewelerStaff}', [JewelerStaffController::class, 'update']);
+    Route::delete('/staff/{jewelerStaff}', [JewelerStaffController::class, 'destroy']);
+});
+
+Route::middleware(['auth:sanctum', 'jeweler_access'])->prefix('jeweler')->group(function () {
+    Route::middleware('jeweler.permission:view_dashboard')->group(function () {
+        Route::get('/dashboard-overview', [JewelerStatisticsController::class, 'dashboardOverview']);
+    });
+
+    Route::middleware(['restaurant.feature:feature_jeweler_reports', 'jeweler.permission:view_reports'])->group(function () {
         Route::get('/stats', [JewelerStatisticsController::class, 'index']);
     });
 
-    Route::get('/categories', [JewelryCategoryController::class, 'index']);
-    Route::post('/categories', [JewelryCategoryController::class, 'store']);
-    Route::put('/categories/{category}', [JewelryCategoryController::class, 'update']);
-    Route::delete('/categories/{category}', [JewelryCategoryController::class, 'destroy']);
+    Route::middleware('jeweler.permission:manage_products')->group(function () {
+        Route::get('/categories', [JewelryCategoryController::class, 'index']);
+        Route::post('/categories', [JewelryCategoryController::class, 'store']);
+        Route::put('/categories/{category}', [JewelryCategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [JewelryCategoryController::class, 'destroy']);
 
-    Route::get('/products', [JewelryProductController::class, 'index']);
-    Route::post('/products/calculate-price', [JewelryProductController::class, 'calculatePrice']);
-    Route::post('/products', [JewelryProductController::class, 'store']);
-    Route::get('/products/{product}', [JewelryProductController::class, 'show']);
-    Route::get('/products/{product}/sale-cost', [JewelryProductController::class, 'saleCost']);
-    Route::post('/products/{productId}/update', [JewelryProductController::class, 'updateById'])
-        ->whereNumber('productId');
-    Route::match(['put', 'patch', 'post'], '/products/{product}', [JewelryProductController::class, 'update']);
-    Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
-    Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
+        Route::get('/products', [JewelryProductController::class, 'index']);
+        Route::post('/products/calculate-price', [JewelryProductController::class, 'calculatePrice']);
+        Route::post('/products', [JewelryProductController::class, 'store']);
+        Route::get('/products/{product}', [JewelryProductController::class, 'show']);
+        Route::get('/products/{product}/sale-cost', [JewelryProductController::class, 'saleCost']);
+        Route::post('/products/{productId}/update', [JewelryProductController::class, 'updateById'])
+            ->whereNumber('productId');
+        Route::match(['put', 'patch', 'post'], '/products/{product}', [JewelryProductController::class, 'update']);
+        Route::delete('/products/{product}', [JewelryProductController::class, 'destroy']);
+        Route::post('/products/{product}/stock', [JewelryProductController::class, 'adjustStock']);
+        Route::get('/stock-movements', [JewelryStockController::class, 'index']);
+        Route::post('/uploads', [JewelryUploadController::class, 'store']);
 
-    Route::get('/stock-movements', [JewelryStockController::class, 'index']);
-
-    Route::get('/stock-counts', [JewelryStockCountController::class, 'index']);
-    Route::get('/stock-counts/active', [JewelryStockCountController::class, 'active']);
-    Route::post('/stock-counts', [JewelryStockCountController::class, 'store']);
-    Route::get('/stock-counts/{stockCount}', [JewelryStockCountController::class, 'show']);
-    Route::match(['patch', 'post'], '/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem']);
-    Route::match(['patch', 'post'], '/stock-counts/{stockCount}/cash', [JewelryStockCountController::class, 'updateCash']);
-    Route::post('/stock-counts/{stockCount}/complete', [JewelryStockCountController::class, 'complete']);
-    Route::post('/stock-counts/{stockCount}/cancel', [JewelryStockCountController::class, 'cancel']);
-
-    Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
-        Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
-        Route::post('/stock-counts/{stockCount}/items/{item}/unscan', [JewelryStockCountController::class, 'unscanItem']);
+        Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
+            Route::get('/barcode/{barcode}/check', [JewelryBarcodeController::class, 'check']);
+            Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
+        });
     });
 
-    Route::get('/vault', [JewelryVaultController::class, 'show']);
-    Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
-    Route::put('/vault/cash-transactions/{transaction}', [JewelryVaultController::class, 'updateCashTransaction']);
+    Route::middleware('jeweler.permission:manage_stock_count')->group(function () {
+        Route::get('/stock-counts', [JewelryStockCountController::class, 'index']);
+        Route::get('/stock-counts/active', [JewelryStockCountController::class, 'active']);
+        Route::post('/stock-counts', [JewelryStockCountController::class, 'store']);
+        Route::get('/stock-counts/{stockCount}', [JewelryStockCountController::class, 'show']);
+        Route::match(['patch', 'post'], '/stock-counts/{stockCount}/items/{item}', [JewelryStockCountController::class, 'updateItem']);
+        Route::post('/stock-counts/{stockCount}/complete', [JewelryStockCountController::class, 'complete']);
+        Route::post('/stock-counts/{stockCount}/cancel', [JewelryStockCountController::class, 'cancel']);
 
-    Route::get('/cash-sessions/status', [JewelryCashSessionController::class, 'status']);
-    Route::get('/cash-sessions', [JewelryCashSessionController::class, 'index']);
-    Route::get('/cash-sessions/{cashSession}', [JewelryCashSessionController::class, 'show']);
-    Route::post('/cash-sessions/open', [JewelryCashSessionController::class, 'open']);
-    Route::post('/cash-sessions/close', [JewelryCashSessionController::class, 'close']);
+        Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
+            Route::post('/stock-counts/{stockCount}/scan', [JewelryStockCountController::class, 'scan']);
+            Route::post('/stock-counts/{stockCount}/items/{item}/unscan', [JewelryStockCountController::class, 'unscanItem']);
+        });
 
-    Route::get('/sales', [JewelrySaleController::class, 'index']);
-    Route::post('/sales', [JewelrySaleController::class, 'store']);
-    Route::get('/sales/{sale}', [JewelrySaleController::class, 'show']);
-    Route::put('/sales/{sale}', [JewelrySaleController::class, 'update']);
+        Route::middleware('jeweler.permission:view_vault')->group(function () {
+            Route::match(['patch', 'post'], '/stock-counts/{stockCount}/cash', [JewelryStockCountController::class, 'updateCash']);
+        });
+    });
 
-    Route::get('/purchases', [JewelryPurchaseController::class, 'index']);
-    Route::post('/purchases', [JewelryPurchaseController::class, 'store']);
-    Route::get('/purchases/{purchase}', [JewelryPurchaseController::class, 'show']);
-    Route::put('/purchases/{purchase}', [JewelryPurchaseController::class, 'update']);
+    Route::middleware('jeweler.permission:view_vault')->group(function () {
+        Route::get('/vault', [JewelryVaultController::class, 'show']);
+        Route::post('/vault/cash-transactions', [JewelryVaultController::class, 'storeCashTransaction']);
+        Route::put('/vault/cash-transactions/{transaction}', [JewelryVaultController::class, 'updateCashTransaction']);
 
-    Route::get('/repairs', [JewelryRepairController::class, 'index']);
-    Route::post('/repairs', [JewelryRepairController::class, 'store']);
-    Route::put('/repairs/{repair}', [JewelryRepairController::class, 'update']);
-    Route::delete('/repairs/{repair}', [JewelryRepairController::class, 'destroy']);
+        Route::get('/cash-sessions/status', [JewelryCashSessionController::class, 'status']);
+        Route::get('/cash-sessions', [JewelryCashSessionController::class, 'index']);
+        Route::get('/cash-sessions/{cashSession}', [JewelryCashSessionController::class, 'show']);
+        Route::post('/cash-sessions/open', [JewelryCashSessionController::class, 'open']);
+        Route::post('/cash-sessions/close', [JewelryCashSessionController::class, 'close']);
+    });
 
-    Route::get('/customers', [JewelryCustomerController::class, 'index']);
-    Route::post('/customers', [JewelryCustomerController::class, 'store']);
-    Route::put('/customers/{customer}', [JewelryCustomerController::class, 'update']);
-    Route::delete('/customers/{customer}', [JewelryCustomerController::class, 'destroy']);
+    Route::middleware('jeweler.permission:manage_sales')->group(function () {
+        Route::get('/sales', [JewelrySaleController::class, 'index']);
+        Route::post('/sales', [JewelrySaleController::class, 'store']);
+        Route::get('/sales/{sale}', [JewelrySaleController::class, 'show']);
+        Route::put('/sales/{sale}', [JewelrySaleController::class, 'update']);
 
-    Route::middleware('restaurant.feature:feature_jeweler_barcode')->group(function () {
-        Route::get('/barcode/{barcode}/check', [JewelryBarcodeController::class, 'check']);
-        Route::get('/barcode/{barcode}', [JewelryBarcodeController::class, 'lookup']);
+        Route::get('/repairs', [JewelryRepairController::class, 'index']);
+        Route::post('/repairs', [JewelryRepairController::class, 'store']);
+        Route::put('/repairs/{repair}', [JewelryRepairController::class, 'update']);
+        Route::delete('/repairs/{repair}', [JewelryRepairController::class, 'destroy']);
+    });
+
+    Route::middleware('jeweler.permission:manage_purchases')->group(function () {
+        Route::get('/purchases', [JewelryPurchaseController::class, 'index']);
+        Route::post('/purchases', [JewelryPurchaseController::class, 'store']);
+        Route::get('/purchases/{purchase}', [JewelryPurchaseController::class, 'show']);
+        Route::put('/purchases/{purchase}', [JewelryPurchaseController::class, 'update']);
+    });
+
+    Route::middleware('jeweler.permission:manage_customers')->group(function () {
+        Route::get('/customers', [JewelryCustomerController::class, 'index']);
+        Route::post('/customers', [JewelryCustomerController::class, 'store']);
+        Route::put('/customers/{customer}', [JewelryCustomerController::class, 'update']);
+        Route::delete('/customers/{customer}', [JewelryCustomerController::class, 'destroy']);
     });
 
     Route::get('/gold-prices/live', [MarketGoldPriceController::class, 'live']);
@@ -234,10 +272,10 @@ Route::middleware(['auth:sanctum', 'restaurant', 'jeweler'])->prefix('jeweler')-
     Route::get('/gold-prices/history', [MarketGoldPriceController::class, 'history']);
     Route::post('/gold-prices/sync', [MarketGoldPriceController::class, 'sync']);
 
-    Route::get('/settings', [JewelrySettingController::class, 'show']);
-    Route::patch('/settings', [JewelrySettingController::class, 'update']);
-
-    Route::post('/uploads', [JewelryUploadController::class, 'store']);
+    Route::middleware('jeweler.permission:manage_settings')->group(function () {
+        Route::get('/settings', [JewelrySettingController::class, 'show']);
+        Route::patch('/settings', [JewelrySettingController::class, 'update']);
+    });
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

@@ -58,6 +58,10 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        if (! $request->user() instanceof Restaurant) {
+            abort(403, 'Bu oturum restoran sahibi hesabına ait değil.');
+        }
+
         /** @var Restaurant $restaurant */
         $restaurant = $request->user();
 

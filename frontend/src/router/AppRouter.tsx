@@ -21,7 +21,7 @@ import JewelerTransactionHistoryPage from '../pages/jeweler/JewelerTransactionHi
 import JewelerProductsPage from '../pages/jeweler/JewelerProductsPage'
 import JewelerReportsPage from '../pages/jeweler/JewelerReportsPage'
 import JewelerStockCountPage from '../pages/jeweler/JewelerStockCountPage'
-import JewelerSettingsPage from '../pages/jeweler/JewelerSettingsPage'
+import JewelerProfilePage from '../pages/jeweler/JewelerProfilePage'
 import JewelerVaultPage from '../pages/jeweler/JewelerVaultPage'
 import ProductsPage from '../pages/restaurant/ProductsPage'
 import StaffPage from '../pages/restaurant/StaffPage'
@@ -40,6 +40,7 @@ import KitchenProtectedRoute from './KitchenProtectedRoute'
 import ProtectedRoute from './ProtectedRoute'
 import { JewelerOnlyRoute, RestaurantOnlyRoute } from './BusinessTypeRoute'
 import JewelerFeatureRoute from './JewelerFeatureRoute'
+import JewelerPermissionRoute from './JewelerPermissionRoute'
 import RestaurantFeatureRoute from './RestaurantFeatureRoute'
 import WaiterProtectedRoute from './WaiterProtectedRoute'
 
@@ -60,21 +61,24 @@ export default function AppRouter() {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route element={<JewelerOnlyRoute />}>
-            <Route path="/dashboard/jeweler/products" element={<JewelerProductsPage />} />
-            <Route path="/dashboard/jeweler/purchases" element={<JewelerPurchasesPage />} />
-            <Route path="/dashboard/jeweler/history" element={<JewelerTransactionHistoryPage />} />
-            <Route path="/dashboard/jeweler/vault" element={<JewelerVaultPage />} />
-            <Route path="/dashboard/jeweler/stock" element={<Navigate to="/dashboard/jeweler/stock-count" replace />} />
-            <Route path="/dashboard/jeweler/stock-count" element={<JewelerStockCountPage />} />
-            <Route path="/dashboard/jeweler/sales" element={<Navigate to="/dashboard/jeweler/history" replace />} />
-            <Route path="/dashboard/jeweler/repairs" element={<Navigate to="/dashboard/jeweler/stock-count" replace />} />
-            <Route path="/dashboard/jeweler/customers" element={<JewelerCustomersPage />} />
-            <Route element={<JewelerFeatureRoute />}>
-              <Route path="/dashboard/jeweler/barcode" element={<JewelerBarcodePage />} />
-              <Route path="/dashboard/jeweler/reports" element={<JewelerReportsPage />} />
+            <Route element={<JewelerPermissionRoute />}>
+              <Route path="/dashboard/jeweler/products" element={<JewelerProductsPage />} />
+              <Route path="/dashboard/jeweler/purchases" element={<JewelerPurchasesPage />} />
+              <Route path="/dashboard/jeweler/history" element={<JewelerTransactionHistoryPage />} />
+              <Route path="/dashboard/jeweler/vault" element={<JewelerVaultPage />} />
+              <Route path="/dashboard/jeweler/stock" element={<Navigate to="/dashboard/jeweler/stock-count" replace />} />
+              <Route path="/dashboard/jeweler/stock-count" element={<JewelerStockCountPage />} />
+              <Route path="/dashboard/jeweler/sales" element={<Navigate to="/dashboard/jeweler/history" replace />} />
+              <Route path="/dashboard/jeweler/repairs" element={<Navigate to="/dashboard/jeweler/stock-count" replace />} />
+              <Route path="/dashboard/jeweler/customers" element={<JewelerCustomersPage />} />
+              <Route element={<JewelerFeatureRoute />}>
+                <Route path="/dashboard/jeweler/barcode" element={<JewelerBarcodePage />} />
+                <Route path="/dashboard/jeweler/reports" element={<JewelerReportsPage />} />
+              </Route>
+              <Route path="/dashboard/jeweler/gold-prices" element={<JewelerGoldPricesPage />} />
             </Route>
-            <Route path="/dashboard/jeweler/gold-prices" element={<JewelerGoldPricesPage />} />
-            <Route path="/dashboard/jeweler/settings" element={<JewelerSettingsPage />} />
+            <Route path="/dashboard/jeweler/profile" element={<JewelerProfilePage />} />
+            <Route path="/dashboard/jeweler/settings" element={<Navigate to="/dashboard/jeweler/profile" replace />} />
           </Route>
           <Route element={<RestaurantOnlyRoute />}>
             <Route element={<RestaurantFeatureRoute />}>

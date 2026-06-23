@@ -31,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
             'restaurant.feature' => \App\Http\Middleware\EnsureRestaurantFeature::class,
             'jeweler' => \App\Http\Middleware\EnsureJeweler::class,
+            'jeweler_access' => \App\Http\Middleware\EnsureJewelerAccess::class,
+            'jeweler_owner' => \App\Http\Middleware\EnsureJewelerOwner::class,
+            'jeweler.permission' => \App\Http\Middleware\EnsureJewelerPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

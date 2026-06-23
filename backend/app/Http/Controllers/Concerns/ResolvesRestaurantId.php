@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Models\JewelerStaff;
 use App\Models\KitchenStaff;
 use App\Models\Restaurant;
 use App\Models\Waiter;
@@ -22,6 +23,10 @@ trait ResolvesRestaurantId
         }
 
         if ($user instanceof KitchenStaff) {
+            return $user->restaurant_id;
+        }
+
+        if ($user instanceof JewelerStaff) {
             return $user->restaurant_id;
         }
 
