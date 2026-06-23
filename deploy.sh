@@ -12,6 +12,8 @@ fi
 php composer.phar install --no-dev --optimize-autoloader 2>/dev/null || composer install --no-dev --optimize-autoloader
 php artisan key:generate --force
 php artisan migrate --force
+php artisan jeweler:ensure-cash-session-schema
+php artisan restaurant:ensure-membership-schema
 php artisan optimize:clear
 php artisan storage:link || true
 chmod -R 775 storage bootstrap/cache || true

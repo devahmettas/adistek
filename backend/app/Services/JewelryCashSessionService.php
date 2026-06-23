@@ -7,6 +7,7 @@ use App\Enums\JewelryCashTransactionSource;
 use App\Enums\JewelryCashTransactionType;
 use App\Models\JewelryCashSession;
 use App\Models\JewelryCashTransaction;
+use App\Support\JewelryCashSessionSchema;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -14,9 +15,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class JewelryCashSessionService
 {
+    private bool $schemaEnsured = false;
 
     public function findOpen(int $restaurantId): ?JewelryCashSession
     {
+        $this->ensureSchema();
+
+        if (! JewelryCashSessionSchema::isReady()) {
+            return null;
+        }
         return JewelryCashSession::query()
             ->where('restaurant_id', $restaurantId)
             ->where('status', JewelryCashSessionStatus::Open)
@@ -26,6 +33,8 @@ class JewelryCashSessionService
 
     public function findForRestaurant(int $restaurantId, int $id): JewelryCashSession
     {
+        $this->ensureSchema();
+
         $session = JewelryCashSession::query()
             ->where('restaurant_id', $restaurantId)
             ->find($id);
@@ -39,6 +48,12 @@ class JewelryCashSessionService
 
     public function listByRestaurant(int $restaurantId, int $limit = 30): Collection
     {
+        $this->ensureSchema();
+
+        if (! JewelryCashSessionSchema::isReady()) {
+            return new Collection();
+        }
+
         return JewelryCashSession::query()
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('opened_at')
@@ -78,9 +93,21 @@ class JewelryCashSessionService
 
     public function getStatusPayload(int $restaurantId): array
     {
+        $this->ensureSchema();
+
+        $currentCashBalance = $this->calculateCashBalance($restaurantId);
+
+        if (! JewelryCashSessionSchema::isReady()) {
+            return [
+                'is_open' => false,
+                'suggested_opening_balance' => round($currentCashBalance, 2),
+                'current_cash_balance' => $currentCashBalance,
+                'active_session' => null,
+            ];
+        }
+
         $openSession = $this->findOpen($restaurantId);
         $suggestedOpeningBalance = $this->getSuggestedOpeningBalance($restaurantId);
-        $currentCashBalance = $this->calculateCashBalance($restaurantId);
 
         return [
             'is_open' => $openSession !== null,
@@ -92,6 +119,14 @@ class JewelryCashSessionService
 
     public function open(int $restaurantId, float $openingBalance, ?string $notes = null): JewelryCashSession
     {
+        $this->ensureSchema();
+
+        if (! JewelryCashSessionSchema::isReady()) {
+            throw new BadRequestHttpException(
+                'Kasa oturumu tabloları hazır değil. Sunucuda php artisan migrate --force çalıştırın.',
+            );
+        }
+
         if ($this->findOpen($restaurantId)) {
             throw new BadRequestHttpException('Kasa zaten açık. Gün sonu almadan yeni açılış yapılamaz.');
         }
@@ -108,6 +143,14 @@ class JewelryCashSessionService
 
     public function close(int $restaurantId, float $countedBalance, ?string $notes = null): JewelryCashSession
     {
+        $this->ensureSchema();
+
+        if (! JewelryCashSessionSchema::isReady()) {
+            throw new BadRequestHttpException(
+                'Kasa oturumu tabloları hazır değil. Sunucuda php artisan migrate --force çalıştırın.',
+            );
+        }
+
         $session = $this->findOpen($restaurantId);
 
         if (! $session) {
@@ -273,5 +316,15 @@ class JewelryCashSessionService
             'cash_sale_total' => (float) $session->cash_sale_total,
             'cash_purchase_total' => (float) $session->cash_purchase_total,
         ];
+    }
+
+    private function ensureSchema(): void
+    {
+        if ($this->schemaEnsured) {
+            return;
+        }
+
+        JewelryCashSessionSchema::ensure();
+        $this->schemaEnsured = true;
     }
 }
