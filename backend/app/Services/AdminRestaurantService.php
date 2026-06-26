@@ -6,7 +6,7 @@ use App\Enums\BusinessType;
 use App\Models\JewelrySetting;
 use App\Models\Restaurant;
 use App\Repositories\RestaurantRepository;
-use App\Support\RestaurantMembershipSchema;
+use App\Support\RestaurantAdminSchema;
 use App\Support\RestaurantSlugGenerator;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -19,15 +19,19 @@ class AdminRestaurantService
 
     public function listAll(): Collection
     {
+        RestaurantAdminSchema::ensure();
+
         return $this->repository->allWithStats();
     }
 
     public function getById(int $id): Restaurant
     {
+        RestaurantAdminSchema::ensure();
+
         $restaurant = $this->repository->findWithStats($id);
 
         if (! $restaurant) {
-            throw new NotFoundHttpException('Restoran bulunamadı.');
+            throw new NotFoundHttpException('İşletme bulunamadı.');
         }
 
         return $restaurant;
@@ -35,39 +39,44 @@ class AdminRestaurantService
 
     public function create(array $data): Restaurant
     {
-        RestaurantMembershipSchema::ensure();
+        RestaurantAdminSchema::ensure();
 
-        $businessType = BusinessType::tryFrom($data['business_type'] ?? '') ?? BusinessType::Restaurant;
         $membershipDays = (int) ($data['membership_days'] ?? 30);
-        unset($data['business_type'], $data['membership_days']);
+        $featureBarcode = (bool) ($data['feature_jeweler_barcode'] ?? true);
+        $featureReports = (bool) ($data['feature_jeweler_reports'] ?? true);
 
-        $isJeweler = $businessType === BusinessType::Jeweler;
+        unset(
+            $data['business_type'],
+            $data['membership_days'],
+            $data['feature_jeweler_barcode'],
+            $data['feature_jeweler_reports'],
+        );
 
         $restaurant = $this->repository->create([
             ...$data,
-            'business_type' => $businessType,
+            'business_type' => BusinessType::Jeweler,
             'slug' => RestaurantSlugGenerator::generate($data['name']),
-            'feature_order_tracking' => ! $isJeweler,
-            'feature_qr_menu' => ! $isJeweler,
-            'feature_reservations' => ! $isJeweler,
-            'feature_jeweler_barcode' => $isJeweler,
-            'feature_jeweler_reports' => $isJeweler,
+            'feature_order_tracking' => false,
+            'feature_qr_menu' => false,
+            'feature_reservations' => false,
+            'feature_jeweler_barcode' => $featureBarcode,
+            'feature_jeweler_reports' => $featureReports,
             'service_fee' => $data['service_fee'] ?? 0,
             'membership_end_date' => now()->addDays(max(1, $membershipDays))->toDateString(),
         ]);
 
-        if ($isJeweler) {
-            JewelrySetting::create([
-                'restaurant_id' => $restaurant->id,
-                'default_karat' => 22,
-            ]);
-        }
+        JewelrySetting::create([
+            'restaurant_id' => $restaurant->id,
+            'default_karat' => 22,
+        ]);
 
         return $restaurant;
     }
 
     public function updateFeatures(int $id, array $data): Restaurant
     {
+        RestaurantAdminSchema::ensure();
+
         $restaurant = $this->getById($id);
 
         $this->repository->update($restaurant, $data);
@@ -95,7 +104,7 @@ class AdminRestaurantService
 
     public function extendMembership(int $id, int $days): Restaurant
     {
-        RestaurantMembershipSchema::ensure();
+        RestaurantAdminSchema::ensure();
 
         $restaurant = $this->getById($id);
         $restaurant->adjustMembership($days);

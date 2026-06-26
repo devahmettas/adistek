@@ -34,6 +34,8 @@ export interface CreateAdminRestaurantPayload {
   password: string
   service_fee?: number
   membership_days?: number
+  feature_jeweler_barcode?: boolean
+  feature_jeweler_reports?: boolean
 }
 
 export const createAdminRestaurant = async (

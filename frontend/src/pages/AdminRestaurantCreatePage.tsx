@@ -1,12 +1,11 @@
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import AdminJewelerModuleFields from '../components/admin/AdminJewelerModuleFields'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
 import PageHeader from '../components/PageHeader'
 import Textarea from '../components/Textarea'
-import type { BusinessType } from '../constants/businessType'
-import { BUSINESS_TYPE_LABELS } from '../constants/businessType'
 import useAdminRestaurants from '../hooks/useAdminRestaurants'
 import { getApiErrorMessage } from '../utils/adminDashboard'
 
@@ -15,7 +14,6 @@ export default function AdminRestaurantCreatePage() {
   const { addRestaurant } = useAdminRestaurants()
 
   const [name, setName] = useState('')
-  const [businessType, setBusinessType] = useState<BusinessType>('restaurant')
   const [contactPerson, setContactPerson] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -23,6 +21,10 @@ export default function AdminRestaurantCreatePage() {
   const [password, setPassword] = useState('')
   const [serviceFee, setServiceFee] = useState('0')
   const [membershipDays, setMembershipDays] = useState('30')
+  const [modules, setModules] = useState({
+    feature_jeweler_barcode: true,
+    feature_jeweler_reports: true,
+  })
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -34,7 +36,7 @@ export default function AdminRestaurantCreatePage() {
     try {
       await addRestaurant({
         name: name.trim(),
-        business_type: businessType,
+        business_type: 'jeweler',
         contact_person: contactPerson.trim(),
         phone: phone.trim(),
         address: address.trim(),
@@ -42,11 +44,13 @@ export default function AdminRestaurantCreatePage() {
         password,
         service_fee: Number.parseFloat(serviceFee.replace(',', '.')) || 0,
         membership_days: Number.parseInt(membershipDays, 10) || 30,
+        feature_jeweler_barcode: modules.feature_jeweler_barcode,
+        feature_jeweler_reports: modules.feature_jeweler_reports,
       })
 
       navigate('/admin/restaurants/list')
     } catch (submitError) {
-      setFormError(getApiErrorMessage(submitError, 'Restoran eklenemedi.'))
+      setFormError(getApiErrorMessage(submitError, 'Kuyumcu işletmesi eklenemedi.'))
     } finally {
       setSubmitting(false)
     }
@@ -55,8 +59,8 @@ export default function AdminRestaurantCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="İşletme Ekle"
-        description="Yeni restoran veya kuyumcu işletmesini sisteme kaydedin. İşletme sahibi verdiğiniz e-posta ve şifre ile panele giriş yapabilir."
+        title="Kuyumcu Ekle"
+        description="Yeni kuyumcu işletmesini sisteme kaydedin. İşletme sahibi verdiğiniz e-posta ve şifre ile panele giriş yapabilir."
         actions={
           <Link
             to="/admin/restaurants/list"
@@ -70,26 +74,12 @@ export default function AdminRestaurantCreatePage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="İşletme Bilgileri">
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">İşletme Türü</label>
-              <select
-                value={businessType}
-                onChange={(event) => setBusinessType(event.target.value as BusinessType)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              >
-                {(Object.entries(BUSINESS_TYPE_LABELS) as Array<[BusinessType, string]>).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <Input
               label="İşletme Adı"
-              name="restaurantName"
+              name="businessName"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder={businessType === 'jeweler' ? 'Örn: Altın Dünyası Kuyumculuk' : 'Örn: Adistek Cafe'}
+              placeholder="Örn: Altın Dünyası Kuyumculuk"
               required
             />
             <Input
@@ -115,7 +105,7 @@ export default function AdminRestaurantCreatePage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="restoran@ornek.com"
+              placeholder="kuyumcu@ornek.com"
               required
             />
             <div className="md:col-span-2">
@@ -161,11 +151,15 @@ export default function AdminRestaurantCreatePage() {
               required
             />
 
+            <div className="md:col-span-2">
+              <AdminJewelerModuleFields value={modules} onChange={setModules} />
+            </div>
+
             {formError && <p className="alert-error md:col-span-2">{formError}</p>}
 
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Kaydediliyor...' : 'İşletmeyi Kaydet'}
+                {submitting ? 'Kaydediliyor...' : 'Kuyumcuyu Kaydet'}
               </Button>
               <Link
                 to="/admin/restaurants/list"
@@ -184,18 +178,14 @@ export default function AdminRestaurantCreatePage() {
               <li>İşletme hemen listeye eklenir.</li>
               <li>İşletme sahibi giriş e-postası ve şifre ile panele girebilir.</li>
               <li>Üyelik süresi dolunca işletme giriş yapamaz; süper admin gün ekleyerek yeniler.</li>
-              <li>
-                {businessType === 'jeweler'
-                  ? 'Kuyumcu panelinde ürün, stok, satış ve tamir modülleri açılır.'
-                  : 'Kategori, ürün ve masa tanımlarını restoran kendisi yapar.'}
-              </li>
+              <li>Seçtiğiniz modüller işletme panelinde aktif olur.</li>
             </ul>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-slate-900">Zorunlu alanlar</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Yetkili kişi, telefon ve adres bilgileri admin panelinde görünür; restoran yönetimi
+              Yetkili kişi, telefon ve adres bilgileri admin panelinde görünür; işletme yönetimi
               için iletişim kaydı olarak saklanır.
             </p>
           </div>

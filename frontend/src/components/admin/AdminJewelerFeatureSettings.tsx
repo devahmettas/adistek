@@ -1,4 +1,5 @@
 import type { RestaurantListItem } from '../../api/types'
+import { useState } from 'react'
 
 interface AdminJewelerFeatureSettingsProps {
   restaurant: RestaurantListItem
@@ -12,19 +13,27 @@ export default function AdminJewelerFeatureSettings({
   restaurant,
   onUpdate,
 }: AdminJewelerFeatureSettingsProps) {
+  const [updatingKey, setUpdatingKey] = useState<string | null>(null)
+
   const toggle = async (
     key: keyof Pick<RestaurantListItem, 'feature_jeweler_barcode' | 'feature_jeweler_reports'>,
   ) => {
-    await onUpdate({
-      feature_jeweler_barcode:
-        key === 'feature_jeweler_barcode'
-          ? !(restaurant.feature_jeweler_barcode ?? true)
-          : (restaurant.feature_jeweler_barcode ?? true),
-      feature_jeweler_reports:
-        key === 'feature_jeweler_reports'
-          ? !(restaurant.feature_jeweler_reports ?? true)
-          : (restaurant.feature_jeweler_reports ?? true),
-    })
+    setUpdatingKey(key)
+
+    try {
+      await onUpdate({
+        feature_jeweler_barcode:
+          key === 'feature_jeweler_barcode'
+            ? !(restaurant.feature_jeweler_barcode ?? true)
+            : (restaurant.feature_jeweler_barcode ?? true),
+        feature_jeweler_reports:
+          key === 'feature_jeweler_reports'
+            ? !(restaurant.feature_jeweler_reports ?? true)
+            : (restaurant.feature_jeweler_reports ?? true),
+      })
+    } finally {
+      setUpdatingKey(null)
+    }
   }
 
   const items = [
@@ -64,6 +73,7 @@ export default function AdminJewelerFeatureSettings({
               role="switch"
               aria-checked={item.enabled}
               onClick={() => void toggle(item.key)}
+              disabled={updatingKey !== null}
               className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
                 item.enabled ? 'bg-brand-600' : 'bg-slate-300'
               }`}

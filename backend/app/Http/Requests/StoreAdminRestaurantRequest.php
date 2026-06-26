@@ -23,6 +23,8 @@ class StoreAdminRestaurantRequest extends FormRequest
             'address' => ['required', 'string', 'max:500'],
             'service_fee' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
             'membership_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
+            'feature_jeweler_barcode' => ['sometimes', 'boolean'],
+            'feature_jeweler_reports' => ['sometimes', 'boolean'],
             'email' => ['required', 'email', 'max:255', 'unique:restaurants,email'],
             'password' => ['required', 'string', 'min:6'],
         ];
@@ -31,7 +33,7 @@ class StoreAdminRestaurantRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Restoran adı zorunludur.',
+            'name.required' => 'İşletme adı zorunludur.',
             'contact_person.required' => 'Yetkili kişi zorunludur.',
             'phone.required' => 'Telefon numarası zorunludur.',
             'address.required' => 'Adres zorunludur.',

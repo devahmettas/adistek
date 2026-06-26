@@ -23,7 +23,7 @@ export default function useAdminRestaurants() {
       const data = await getAdminRestaurants()
       setRestaurants(data)
     } catch {
-      setError('Restoranlar yüklenemedi.')
+      setError('İşletmeler yüklenemedi.')
     } finally {
       setLoading(false)
     }

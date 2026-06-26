@@ -9,7 +9,6 @@ import {
 } from '../api/adminAuth'
 import type { RestaurantListItem } from '../api/types'
 import AdminJewelerFeatureSettings from '../components/admin/AdminJewelerFeatureSettings'
-import AdminRestaurantFeatureSettings from '../components/admin/AdminRestaurantFeatureSettings'
 import AdminRestaurantMembershipSettings from '../components/admin/AdminRestaurantMembershipSettings'
 import GoogleMapsDirectionsButton from '../components/admin/GoogleMapsDirectionsButton'
 import Button from '../components/Button'
@@ -130,10 +129,11 @@ export default function AdminRestaurantDetailPage() {
   const [saving, setSaving] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [featureError, setFeatureError] = useState<string | null>(null)
 
   const loadRestaurant = useCallback(async () => {
     if (Number.isNaN(restaurantId)) {
-      setError('Geçersiz restoran.')
+      setError('Geçersiz işletme.')
       setLoading(false)
       return
     }
@@ -144,7 +144,7 @@ export default function AdminRestaurantDetailPage() {
     try {
       setRestaurant(await getAdminRestaurant(restaurantId))
     } catch {
-      setError('Restoran bulunamadı.')
+      setError('İşletme bulunamadı.')
     } finally {
       setLoading(false)
     }
@@ -205,13 +205,13 @@ export default function AdminRestaurantDetailPage() {
   }
 
   if (loading) {
-    return <LoadingState label="Restoran yükleniyor..." />
+    return <LoadingState label="İşletme yükleniyor..." />
   }
 
   if (error || !restaurant) {
     return (
       <div className="space-y-4">
-        <p className="alert-error">{error ?? 'Restoran bulunamadı.'}</p>
+        <p className="alert-error">{error ?? 'İşletme bulunamadı.'}</p>
         <Link
           to="/admin/restaurants/list"
           className="text-sm font-medium text-slate-500 transition hover:text-brand-700"
@@ -229,7 +229,7 @@ export default function AdminRestaurantDetailPage() {
       : undefined
 
   const isJeweler = isJewelerBusiness(restaurant.business_type)
-  const typeLabel = BUSINESS_TYPE_LABELS[restaurant.business_type ?? 'restaurant']
+  const typeLabel = isJeweler ? 'Kuyumcu' : BUSINESS_TYPE_LABELS[restaurant.business_type ?? 'restaurant']
 
   const rowProps = (field: EditableField) => ({
     isEditing: editingField === field,
@@ -301,11 +301,11 @@ export default function AdminRestaurantDetailPage() {
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-          <h2 className="text-sm font-semibold text-slate-800">Restoran Bilgileri</h2>
+          <h2 className="text-sm font-semibold text-slate-800">İşletme Bilgileri</h2>
         </div>
         <dl>
           <DetailListRow
-            label="Restoran Adı"
+            label="İşletme Adı"
             value={restaurant.name}
             {...rowProps('name')}
             editContent={
@@ -421,25 +421,21 @@ export default function AdminRestaurantDetailPage() {
         }}
       />
 
-      {!isJeweler && (
-        <AdminRestaurantFeatureSettings
-          restaurant={restaurant}
-          onUpdate={async (payload) => {
+      <AdminJewelerFeatureSettings
+        restaurant={restaurant}
+        onUpdate={async (payload) => {
+          setFeatureError(null)
+          try {
             const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
             setRestaurant(updated)
-          }}
-        />
-      )}
+          } catch (submitError) {
+            setFeatureError(getApiErrorMessage(submitError, 'Modül ayarları kaydedilemedi.'))
+            throw submitError
+          }
+        }}
+      />
 
-      {isJeweler && (
-        <AdminJewelerFeatureSettings
-          restaurant={restaurant}
-          onUpdate={async (payload) => {
-            const updated = await updateAdminRestaurantFeatures(restaurant.id, payload)
-            setRestaurant(updated)
-          }}
-        />
-      )}
+      {featureError && <p className="alert-error">{featureError}</p>}
 
       <div className="flex justify-end">
         <Button type="button" variant="danger" disabled={deleting} onClick={() => void handleDelete()}>

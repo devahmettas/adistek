@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-brand-800 shadow-sm transition hover:bg-brand-50"
             >
               <span aria-hidden>＋</span>
-              İşletme Ekle
+              Kuyumcu Ekle
             </Link>
           </div>
         </div>
