@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../Button'
 import Card from '../Card'
 import BarcodeScannerModal from './BarcodeScannerModal'
@@ -128,6 +128,8 @@ export default function JewelerSaleFormSection({
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null)
   const [editingSaleNumber, setEditingSaleNumber] = useState<string | null>(null)
   const [originalSaleStockBonus, setOriginalSaleStockBonus] = useState<Map<number, number>>(new Map())
+  const editRequestRef = useRef(0)
+  const allowUrlEditRef = useRef(true)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -170,7 +172,7 @@ export default function JewelerSaleFormSection({
     [products],
   )
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingSaleId(null)
     setEditingSaleNumber(null)
     setOriginalSaleStockBonus(new Map())
@@ -178,7 +180,14 @@ export default function JewelerSaleFormSection({
     setPaymentMethod('cash')
     setNotes('')
     setItems([])
-  }
+  }, [])
+
+  const exitEditMode = useCallback(() => {
+    allowUrlEditRef.current = false
+    editRequestRef.current += 1
+    resetForm()
+    onEditSaleHandled?.()
+  }, [resetForm, onEditSaleHandled])
 
   const startEditSale = useCallback((sale: JewelrySale) => {
     const formItems = mapSaleToFormItems(sale)
@@ -192,19 +201,39 @@ export default function JewelerSaleFormSection({
   }, [])
 
   useEffect(() => {
-    if (!editSaleId || loading) {
+    if (!editSaleId) {
+      allowUrlEditRef.current = true
       return
     }
 
+    if (!allowUrlEditRef.current || loading || Number.isNaN(editSaleId)) {
+      return
+    }
+
+    const requestId = editRequestRef.current + 1
+    editRequestRef.current = requestId
+
     void getJewelrySale(editSaleId)
       .then((sale) => {
+        if (requestId !== editRequestRef.current) {
+          return
+        }
+
         startEditSale(sale)
         onEditSaleHandled?.()
       })
       .catch(() => {
+        if (requestId !== editRequestRef.current) {
+          return
+        }
+
         setError('Düzenlenecek satış kaydı yüklenemedi.')
         onEditSaleHandled?.()
       })
+
+    return () => {
+      editRequestRef.current += 1
+    }
   }, [editSaleId, loading, startEditSale, onEditSaleHandled])
 
   const findCategoryId = (categoryName: string) => (
@@ -430,6 +459,7 @@ export default function JewelerSaleFormSection({
     }
 
     setSubmitting(true)
+    const wasEditing = editingSaleId
 
     const payload = {
       customer_id: customerId ? Number(customerId) : null,
@@ -451,17 +481,17 @@ export default function JewelerSaleFormSection({
     }
 
     try {
-      if (editingSaleId) {
-        await updateJewelrySale(editingSaleId, payload)
+      if (wasEditing) {
+        await updateJewelrySale(wasEditing, payload)
         notifySaleCompleted('Satış güncellendi.')
       } else {
         await createJewelrySale(payload)
         notifySaleCompleted('Satış kaydedildi.')
       }
-      resetForm()
+      exitEditMode()
       await load()
     } catch {
-      setError(editingSaleId ? 'Satış kaydı güncellenemedi.' : 'Satış kaydı oluşturulamadı.')
+      setError(wasEditing ? 'Satış kaydı güncellenemedi.' : 'Satış kaydı oluşturulamadı.')
     } finally {
       setSubmitting(false)
     }
@@ -707,7 +737,7 @@ export default function JewelerSaleFormSection({
                     : 'Satış Kaydet'}
               </Button>
               {editingSaleId && (
-                <Button type="button" variant="secondary" className="w-full" onClick={resetForm}>
+                <Button type="button" variant="secondary" className="w-full" onClick={exitEditMode}>
                   İptal
                 </Button>
               )}
