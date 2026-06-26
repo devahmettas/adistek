@@ -1,23 +1,26 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import AppHeader from '../components/AppHeader'
 import JewelrySaleCartButton from '../components/jeweler/JewelrySaleCartButton'
 import JewelrySaleCartCheckoutModal from '../components/jeweler/JewelrySaleCartCheckoutModal'
 import JewelrySaleToastListener from '../components/jeweler/JewelrySaleToastListener'
 import RestaurantSidebar from '../components/RestaurantSidebar'
-import { isJewelerBusiness } from '../constants/businessType'
-import { DashboardProvider } from '../context/DashboardContext'
 import { JewelrySaleCartProvider } from '../context/JewelrySaleCartContext'
-import { useAuth } from '../store/AuthStore'
 
 function MainLayoutContent() {
-  const { restaurant } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const panelLabel = isJewelerBusiness(restaurant?.business_type) ? 'Kuyumcu Paneli' : 'Yönetim Paneli'
-  const isJeweler = isJewelerBusiness(restaurant?.business_type)
+
+  const handleToggleMenu = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setSidebarOpen((value) => !value)
+    } else {
+      setMobileMenuOpen((value) => !value)
+    }
+  }
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-slate-50">
+    <div className="app-canvas min-h-dvh overflow-x-clip">
       <RestaurantSidebar
         open={sidebarOpen}
         mobileOpen={mobileMenuOpen}
@@ -25,62 +28,33 @@ function MainLayoutContent() {
       />
 
       <div
-        className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ${
+        className={`flex min-h-dvh min-w-0 flex-col transition-[margin] duration-200 ${
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
         }`}
       >
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-          <div className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-4 lg:px-6">
-            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.matchMedia('(min-width: 1024px)').matches) {
-                    setSidebarOpen((value) => !value)
-                  } else {
-                    setMobileMenuOpen((value) => !value)
-                  }
-                }}
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-                aria-label="Menüyü aç/kapat"
-              >
-                <span className="text-base leading-none">☰</span>
-                <span className="hidden sm:inline">Menü</span>
-              </button>
-              <p className="hidden truncate text-sm text-slate-500 sm:block">{panelLabel}</p>
-            </div>
-            {isJeweler && <JewelrySaleCartButton />}
-          </div>
-        </header>
+        <AppHeader
+          label="Kuyumcu Paneli"
+          onToggleMenu={handleToggleMenu}
+          trailing={<JewelrySaleCartButton />}
+        />
 
         <main className="flex-1 p-3 sm:p-4 lg:p-6">
-          <div className="mx-auto w-full min-w-0 max-w-7xl">
+          <div className="mx-auto w-full min-w-0 max-w-7xl animate-fade-in">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {isJeweler && <JewelrySaleCartCheckoutModal />}
-      {isJeweler && <JewelrySaleToastListener />}
+      <JewelrySaleCartCheckoutModal />
+      <JewelrySaleToastListener />
     </div>
   )
 }
 
 export default function MainLayout() {
-  const { restaurant } = useAuth()
-  const isJeweler = isJewelerBusiness(restaurant?.business_type)
-
-  const layout = isJeweler ? (
+  return (
     <JewelrySaleCartProvider>
       <MainLayoutContent />
     </JewelrySaleCartProvider>
-  ) : (
-    <MainLayoutContent />
   )
-
-  if (isJeweler) {
-    return layout
-  }
-
-  return <DashboardProvider>{layout}</DashboardProvider>
 }

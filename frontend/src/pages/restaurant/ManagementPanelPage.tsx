@@ -54,17 +54,21 @@ export default function ManagementPanelPage() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-700 via-brand-800 to-slate-900 px-6 py-8 text-white shadow-panel lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-200">Yönetim Paneli</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{restaurant?.name ?? 'İşletme'}</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-100">
-          Günlük operasyonlarınızı, menünüzü ve ayarlarınızı tek yerden yönetin.
-        </p>
-        <div className="mt-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-200/90">
-            Aktif modüller
+      <section className="panel-hero">
+        <div className="panel-hero__content">
+          <p className="panel-hero__eyebrow">Yönetim Paneli</p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+            {restaurant?.name ?? 'İşletme'}
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
+            Günlük operasyonlarınızı, menünüzü ve ayarlarınızı tek yerden yönetin.
           </p>
-          <ActiveFeaturesBadges restaurant={restaurant} />
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Aktif modüller
+            </p>
+            <ActiveFeaturesBadges restaurant={restaurant} />
+          </div>
         </div>
       </section>
 
@@ -72,8 +76,8 @@ export default function ManagementPanelPage() {
         <section className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Bugünün özeti</h2>
-              <p className="text-sm text-slate-600">Canlı satış ve masa durumu</p>
+              <h2 className="section-heading">Bugünün özeti</h2>
+              <p className="section-caption">Canlı satış ve masa durumu</p>
             </div>
             <Link
               to="/dashboard/stats"
@@ -140,8 +144,8 @@ export default function ManagementPanelPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Günlük işlemler</h2>
-          <p className="text-sm text-slate-600">Sık kullanılan ekranlara hızlı geçiş</p>
+          <h2 className="section-heading">Günlük işlemler</h2>
+          <p className="section-caption">Sık kullanılan ekranlara hızlı geçiş</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orderTracking && (
@@ -190,8 +194,8 @@ export default function ManagementPanelPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Kurulum ve ayarlar</h2>
-          <p className="text-sm text-slate-600">
+          <h2 className="section-heading">Kurulum ve ayarlar</h2>
+          <p className="section-caption">
             Personel, masa ve müşteri menüsü yapılandırmasını buradan yönetin
           </p>
         </div>

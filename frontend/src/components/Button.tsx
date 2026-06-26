@@ -13,7 +13,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 min-h-11'
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] min-h-11'
 
   const sizes = {
     sm: 'px-3 py-2 text-sm min-h-10',
@@ -22,9 +22,9 @@ export default function Button({
   }
 
   const variants = {
-    primary: 'bg-brand-700 text-white shadow-sm hover:bg-brand-800',
+    primary: 'bg-brand-700 text-white shadow-sm hover:bg-brand-800 hover:shadow-card',
     secondary:
-      'border border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-50',
+      'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50',
     ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
     danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
   }

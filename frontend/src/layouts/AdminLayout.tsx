@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import AppHeader from '../components/AppHeader'
 import AdminSidebar from '../components/AdminSidebar'
 import { getAdminPageLabel } from '../constants/adminNav'
 
@@ -10,8 +11,16 @@ export default function AdminLayout() {
   const pageLabel = getAdminPageLabel(location.pathname)
   const isCreatePage = location.pathname === '/admin/restaurants/new'
 
+  const handleToggleMenu = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setSidebarOpen((value) => !value)
+    } else {
+      setMobileMenuOpen((value) => !value)
+    }
+  }
+
   return (
-    <div className="min-h-screen overflow-x-clip bg-slate-50">
+    <div className="app-canvas min-h-screen overflow-x-clip">
       <AdminSidebar
         open={sidebarOpen}
         mobileOpen={mobileMenuOpen}
@@ -23,42 +32,27 @@ export default function AdminLayout() {
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
         }`}
       >
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-          <div className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-4 lg:px-6">
-            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.matchMedia('(min-width: 1024px)').matches) {
-                    setSidebarOpen((value) => !value)
-                  } else {
-                    setMobileMenuOpen((value) => !value)
-                  }
-                }}
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-                aria-label="Menüyü aç/kapat"
-              >
-                <span className="text-base leading-none">☰</span>
-                <span className="hidden sm:inline">Menü</span>
-              </button>
-              <p className="hidden truncate text-sm text-slate-500 sm:block">{pageLabel}</p>
-            </div>
-
-            {!isCreatePage && (
+        <AppHeader
+          label={pageLabel}
+          onToggleMenu={handleToggleMenu}
+          trailing={
+            !isCreatePage ? (
               <Link
                 to="/admin/restaurants/new"
-                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 sm:gap-2 sm:px-4"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 active:scale-[0.98] sm:gap-2 sm:px-4"
               >
-                <span aria-hidden>＋</span>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+                </svg>
                 <span className="hidden min-[360px]:inline">İşletme Ekle</span>
                 <span className="min-[360px]:hidden">Ekle</span>
               </Link>
-            )}
-          </div>
-        </header>
+            ) : undefined
+          }
+        />
 
         <main className="flex-1 p-3 sm:p-4 lg:p-6">
-          <div className="mx-auto w-full min-w-0 max-w-7xl">
+          <div className="mx-auto w-full min-w-0 max-w-7xl animate-fade-in">
             <Outlet />
           </div>
         </main>

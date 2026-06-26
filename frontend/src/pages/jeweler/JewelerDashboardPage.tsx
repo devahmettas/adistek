@@ -34,19 +34,23 @@ export default function JewelerDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl border border-amber-100 bg-gradient-to-br from-amber-600 via-amber-700 to-slate-900 px-6 py-8 text-white shadow-panel lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">Kuyumcu Paneli</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{restaurant?.name ?? 'İşletme'}</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-amber-100">
-          Stok, satış ve müşteri yönetimini tek panelden takip edin. Günlük, haftalık ve aylık performansınızı anlık görün.
-        </p>
+      <section className="panel-hero panel-hero--amber">
+        <div className="panel-hero__content">
+          <p className="panel-hero__eyebrow">Kuyumcu Paneli</p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+            {restaurant?.name ?? 'İşletme'}
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
+            Stok, satış ve müşteri yönetimini tek panelden takip edin. Günlük, haftalık ve aylık performansınızı anlık görün.
+          </p>
+        </div>
       </section>
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Bugünün özeti</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="section-heading">Bugünün özeti</h2>
+            <p className="section-caption">
               Günlük, haftalık ve aylık ciro · kar · stok ve satış analizi
             </p>
           </div>
@@ -86,8 +90,8 @@ export default function JewelerDashboardPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Modüller</h2>
-          <p className="text-sm text-slate-600">Kuyumcu yönetim ekranlarına hızlı erişim</p>
+          <h2 className="section-heading">Modüller</h2>
+          <p className="section-caption">Kuyumcu yönetim ekranlarına hızlı erişim</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {can('manage_products') && (

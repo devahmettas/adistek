@@ -3,6 +3,7 @@ import { ADMIN_NAV_ITEMS, type AdminNavItem } from '../constants/adminNav'
 import { useAdminAuth } from '../store/AdminAuthStore'
 import BrandLogo from './BrandLogo'
 import Button from './Button'
+import NavIcon from './icons/NavIcon'
 
 interface AdminSidebarProps {
   open: boolean
@@ -11,11 +12,7 @@ interface AdminSidebarProps {
 }
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
-  return `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-    isActive
-      ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/10'
-      : 'text-slate-300 hover:bg-white/10 hover:text-white'
-  }`
+  return `nav-item ${isActive ? 'nav-item--active' : 'nav-item--idle'}`
 }
 
 function isNavItemActive(item: AdminNavItem, pathname: string): boolean {
@@ -38,20 +35,24 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
     await logout()
   }
 
+  const initials = admin?.name
+    ? admin.name
+        .split(' ')
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase()
+    : 'A'
+
   const sidebarContent = (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-white/10 px-4 py-5">
+    <>
+      <div className="shrink-0 border-b border-white/10 px-4 py-4">
         <Link to="/admin/restaurants" onClick={onCloseMobile} className="block">
           <BrandLogo subtitle="Süper Admin" inverted />
         </Link>
-        {admin && (
-          <p className="mt-3 truncate rounded-lg bg-white/10 px-3 py-2 text-xs text-slate-300">
-            {admin.name}
-          </p>
-        )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {ADMIN_NAV_ITEMS.map((item) => (
           <Link
             key={item.to}
@@ -59,18 +60,34 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
             className={navLinkClass({ isActive: isNavItemActive(item, location.pathname) })}
             onClick={onCloseMobile}
           >
-            <span className="text-xs opacity-90">{item.icon}</span>
+            <NavIcon name={item.icon} className="opacity-90" />
             {item.label}
           </Link>
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-4">
-        <Button type="button" variant="secondary" className="w-full" onClick={handleLogout}>
+      <div className="mt-auto shrink-0 border-t border-white/15 bg-slate-950/50 p-4">
+        {admin && (
+          <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/25 text-xs font-bold text-brand-100 ring-1 ring-brand-400/30">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{admin.name}</p>
+              <p className="truncate text-xs font-medium text-slate-300">Süper Admin</p>
+            </div>
+          </div>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full border-white/20 bg-white/10 font-semibold text-white hover:border-white/30 hover:bg-white/15 hover:text-white"
+          onClick={handleLogout}
+        >
           Çıkış Yap
         </Button>
       </div>
-    </div>
+    </>
   )
 
   return (
@@ -79,18 +96,18 @@ export default function AdminSidebar({ open, mobileOpen, onCloseMobile }: AdminS
         <button
           type="button"
           aria-label="Menüyü kapat"
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
           onClick={onCloseMobile}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 h-screen w-64 shrink-0 bg-gradient-to-b from-slate-900 via-slate-900 to-brand-950 shadow-panel transition-all duration-200 ease-in-out ${
+        className={`app-sidebar transition-all duration-200 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 ${open ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden lg:shadow-none'}`}
       >
         <div
-          className={`flex h-screen w-64 flex-col transition-opacity duration-200 ease-in-out ${
+          className={`flex h-full min-h-0 w-64 flex-col transition-opacity duration-200 ease-in-out ${
             open ? 'lg:opacity-100' : 'lg:pointer-events-none lg:opacity-0'
           }`}
         >

@@ -14,17 +14,17 @@ export default function BrandLogo({ subtitle, size = 'md', inverted = false }: B
   const styles = sizes[size]
 
   return (
-    <div>
+    <div className="min-w-0">
       <p
-        className={`font-bold tracking-tight ${styles.title} ${
+        className={`font-display font-bold tracking-tight ${styles.title} ${
           inverted ? 'text-white' : 'text-slate-900'
         }`}
       >
-        <span className={inverted ? 'text-brand-300' : 'text-brand-700'}>Adi</span>
+        <span className={inverted ? 'text-brand-300' : 'text-brand-600'}>Adi</span>
         stek
       </p>
       {subtitle && (
-        <p className={`mt-0.5 ${styles.sub} ${inverted ? 'text-slate-400' : 'text-slate-500'}`}>
+        <p className={`mt-0.5 truncate ${styles.sub} ${inverted ? 'text-slate-200' : 'text-slate-500'}`}>
           {subtitle}
         </p>
       )}

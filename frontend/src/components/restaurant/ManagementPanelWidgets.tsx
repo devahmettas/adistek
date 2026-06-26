@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import NavIcon from '../icons/NavIcon'
 import {
   RESTAURANT_FEATURE_OPTIONS,
   isRestaurantFeatureEnabled,
@@ -16,21 +17,31 @@ interface PanelStatCardProps {
   accent?: 'brand' | 'emerald' | 'amber' | 'violet'
 }
 
-const accentMap = {
-  brand: 'from-brand-600 to-brand-800',
-  emerald: 'from-emerald-500 to-emerald-700',
-  amber: 'from-amber-500 to-amber-700',
-  violet: 'from-violet-500 to-violet-700',
+const accentBarMap = {
+  brand: 'bg-brand-500',
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-500',
+  violet: 'bg-violet-500',
+}
+
+const accentTextMap = {
+  brand: 'text-brand-700',
+  emerald: 'text-emerald-700',
+  amber: 'text-amber-700',
+  violet: 'text-violet-700',
 }
 
 export function PanelStatCard({ label, value, hint, accent = 'brand' }: PanelStatCardProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-      <div className={`bg-gradient-to-br ${accentMap[accent]} px-4 py-3 text-white`}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">{label}</p>
-        <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
+    <div className="stat-card py-5">
+      <div className={`stat-card__accent ${accentBarMap[accent]}`} />
+      <div className="pl-5 pr-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <p className={`mt-2 text-2xl font-bold tracking-tight text-slate-900 ${accentTextMap[accent]}`}>
+          {value}
+        </p>
+        {hint && <p className="mt-2 text-xs leading-relaxed text-slate-500">{hint}</p>}
       </div>
-      {hint && <p className="px-4 py-2 text-xs text-slate-500">{hint}</p>}
     </div>
   )
 }
@@ -49,10 +60,10 @@ export function PanelActionCard({ to, title, description, icon, badge, locked = 
     return (
       <Link
         to={to}
-        className="group flex items-start gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 shadow-sm transition hover:border-amber-200 hover:bg-amber-50/60"
+        className="group flex items-start gap-4 rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-amber-200 hover:bg-amber-50/60"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg text-slate-400">
-          🔒
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400">
+          <NavIcon name="🔒" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -75,21 +86,21 @@ export function PanelActionCard({ to, title, description, icon, badge, locked = 
   return (
     <Link
       to={to}
-      className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-panel"
+      className="group flex items-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200/60 hover:shadow-card-hover"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-lg text-brand-700 transition group-hover:bg-brand-100">
-        {icon}
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700 transition group-hover:border-brand-200 group-hover:bg-brand-100">
+        <NavIcon name={icon} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="font-semibold text-slate-900">{title}</p>
           {badge && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200/60">
               {badge}
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">{description}</p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p>
         <p className="mt-2 text-xs font-semibold text-brand-700 group-hover:text-brand-800">
           Aç →
         </p>
@@ -110,21 +121,25 @@ export function PanelSetupCard({ to, title, description, icon, items }: PanelSet
   return (
     <Link
       to={to}
-      className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-panel"
+      className="group flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200/60 hover:shadow-card-hover"
     >
       <div className="flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-xl text-white">
-          {icon}
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 text-white shadow-sm">
+          <NavIcon name={icon} className="text-white" />
         </span>
         <div>
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
+          <h3 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">{title}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p>
         </div>
       </div>
-      <ul className="mt-4 space-y-1.5 border-t border-slate-100 pt-4">
+      <ul className="mt-4 space-y-2 border-t border-slate-100 pt-4">
         {items.map((item) => (
-          <li key={item} className="flex items-center gap-2 text-sm text-slate-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+          <li key={item} className="flex items-center gap-2.5 text-sm text-slate-600">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12l5 5L20 7" />
+              </svg>
+            </span>
             {item}
           </li>
         ))}
@@ -157,7 +172,7 @@ export function ActiveFeaturesBadges({ restaurant }: ActiveFeaturesProps) {
 
   if (active.length === 0) {
     return (
-      <p className="text-sm text-slate-500">Aktif modül bulunmuyor. Yöneticinizle iletişime geçin.</p>
+      <p className="text-sm text-slate-400">Aktif modül bulunmuyor. Yöneticinizle iletişime geçin.</p>
     )
   }
 
@@ -166,9 +181,9 @@ export function ActiveFeaturesBadges({ restaurant }: ActiveFeaturesProps) {
       {active.map((feature) => (
         <span
           key={feature.key}
-          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           {feature.title}
         </span>
       ))}
