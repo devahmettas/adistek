@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\JewelryCashTransactionSource;
 use App\Enums\JewelryCashTransactionType;
+use App\Enums\JewelryPaymentMethod;
 use App\Models\JewelryCashTransaction;
 use App\Models\JewelryPurchase;
 use App\Models\JewelrySale;
@@ -72,7 +73,7 @@ class JewelryCashService
 
     public function recordSale(int $restaurantId, JewelrySale $sale): ?JewelryCashTransaction
     {
-        if ($sale->payment_method !== 'cash' || (float) $sale->total <= 0) {
+        if (! $this->isCashPayment($sale->payment_method) || (float) $sale->total <= 0) {
             return null;
         }
 
@@ -92,7 +93,7 @@ class JewelryCashService
 
     public function recordPurchase(int $restaurantId, JewelryPurchase $purchase): ?JewelryCashTransaction
     {
-        if ($purchase->payment_method !== 'cash' || (float) $purchase->total <= 0) {
+        if (! $this->isCashPayment($purchase->payment_method) || (float) $purchase->total <= 0) {
             return null;
         }
 
@@ -117,7 +118,7 @@ class JewelryCashService
             ->where('purchase_id', $purchase->id)
             ->first();
 
-        if ($purchase->payment_method === 'cash' && (float) $purchase->total > 0) {
+        if ($this->isCashPayment($purchase->payment_method) && (float) $purchase->total > 0) {
             $session = $this->sessionService->findOpen($restaurantId);
 
             if (! $session) {
@@ -150,7 +151,7 @@ class JewelryCashService
             ->where('sale_id', $sale->id)
             ->first();
 
-        if ($sale->payment_method === 'cash' && (float) $sale->total > 0) {
+        if ($this->isCashPayment($sale->payment_method) && (float) $sale->total > 0) {
             $session = $this->sessionService->findOpen($restaurantId);
 
             if (! $session) {
@@ -206,6 +207,15 @@ class JewelryCashService
         ]);
 
         return $transaction->fresh(['sale:id,sale_number']);
+    }
+
+    private function isCashPayment(mixed $paymentMethod): bool
+    {
+        if ($paymentMethod instanceof JewelryPaymentMethod) {
+            return $paymentMethod === JewelryPaymentMethod::Cash;
+        }
+
+        return (string) $paymentMethod === JewelryPaymentMethod::Cash->value;
     }
 
     public function formatTransaction(JewelryCashTransaction $transaction): array

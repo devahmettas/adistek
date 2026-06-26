@@ -100,6 +100,7 @@ export default function JewelerVaultPage() {
           transaction.source_label,
           transaction.notes,
           transaction.sale_number,
+          transaction.purchase_number,
         ]
           .filter(Boolean)
           .join(' ')
@@ -132,6 +133,37 @@ export default function JewelerVaultPage() {
       net: Math.round((totalIn - totalOut) * 100) / 100,
     }
   }, [filteredCashTransactions])
+
+  const cashTransactionsWithBalance = useMemo(() => {
+    if (!overview) {
+      return []
+    }
+
+    const balanceById = new Map<number, number>()
+    let runningBalance = 0
+
+    const chronological = [...overview.cash_transactions].sort((left, right) => {
+      const leftTime = new Date(left.created_at ?? 0).getTime()
+      const rightTime = new Date(right.created_at ?? 0).getTime()
+
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime
+      }
+
+      return left.id - right.id
+    })
+
+    for (const transaction of chronological) {
+      const amount = Number(transaction.amount) || 0
+      runningBalance += transaction.type === 'in' ? amount : -amount
+      balanceById.set(transaction.id, Math.round(runningBalance * 100) / 100)
+    }
+
+    return filteredCashTransactions.map((transaction) => ({
+      ...transaction,
+      balance_after: balanceById.get(transaction.id) ?? 0,
+    }))
+  }, [overview, filteredCashTransactions])
 
   const hasTransactionFilters = (
     transactionPeriod !== DEFAULT_HISTORY_PERIOD
@@ -238,13 +270,13 @@ export default function JewelerVaultPage() {
 
           <Card
             title={`Nakit İşlemleri (${filteredCashTransactions.length})`}
-            description="Manuel giriş/çıkışlar ve nakit satışlardan oluşan hareketler"
+            description="Manuel giriş/çıkışlar ile nakit satış ve nakit alımlardan oluşan kasa hareketleri"
           >
             <div className="mb-4 space-y-2.5 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 sm:p-3">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
                 <input
                   type="search"
-                  placeholder="Açıklama, satış no..."
+                  placeholder="Açıklama, satış veya alım no..."
                   value={transactionSearch}
                   onChange={(event) => setTransactionSearch(event.target.value)}
                   className="input-field h-9 min-w-0 flex-1 px-3 text-sm"
@@ -288,7 +320,7 @@ export default function JewelerVaultPage() {
               </div>
             </div>
 
-            {filteredCashTransactions.length > 0 ? (
+            {cashTransactionsWithBalance.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -298,14 +330,16 @@ export default function JewelerVaultPage() {
                       <th className="px-3 py-2">Kaynak</th>
                       <th className="px-3 py-2">Açıklama</th>
                       <th className="px-3 py-2 text-right">Tutar</th>
+                      <th className="px-3 py-2 text-right">Bakiye</th>
                       <th className="px-3 py-2 text-right">İşlem</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredCashTransactions.map((transaction) => (
+                    {cashTransactionsWithBalance.map((transaction) => (
                       <CashTransactionRow
                         key={transaction.id}
                         transaction={transaction}
+                        balanceAfter={transaction.balance_after}
                         onEdit={transaction.source === 'manual'
                           ? () => setEditingTransaction(transaction)
                           : undefined}
@@ -317,7 +351,7 @@ export default function JewelerVaultPage() {
             ) : (
               <p className="text-sm text-slate-600">
                 {overview.cash_transactions.length === 0
-                  ? 'Henüz nakit işlemi yok. Nakit girişi ekleyebilir veya nakit satış yaptığınızda otomatik kayıt oluşur.'
+                  ? 'Henüz nakit işlemi yok. Manuel giriş/çıkış ekleyebilir; nakit satış veya nakit alım yaptığınızda kasa otomatik güncellenir.'
                   : 'Seçili döneme uygun nakit işlemi bulunamadı.'}
               </p>
             )}
@@ -593,14 +627,18 @@ function SessionHistoryRow({ session }: { session: JewelryCashSessionSummary }) 
 
 function CashTransactionRow({
   transaction,
+  balanceAfter,
   onEdit,
 }: {
   transaction: JewelryVaultCashTransaction
+  balanceAfter?: number
   onEdit?: () => void
 }) {
   const isIn = transaction.type === 'in'
   const description = transaction.notes
-    || (transaction.sale_number ? `Satış #${transaction.sale_number}` : '—')
+    || (transaction.sale_number ? `Satış #${transaction.sale_number}` : null)
+    || (transaction.purchase_number ? `Alım #${transaction.purchase_number}` : null)
+    || '—'
 
   return (
     <tr>
@@ -620,7 +658,10 @@ function CashTransactionRow({
       <td className="px-3 py-3 text-slate-700">{transaction.source_label}</td>
       <td className="px-3 py-3 text-slate-700">{description}</td>
       <td className={`px-3 py-3 text-right font-semibold ${isIn ? 'text-emerald-700' : 'text-red-700'}`}>
-        {isIn ? '+' : '-'}{formatPanelMoney(transaction.amount)}
+        {isIn ? '+' : '−'}{formatPanelMoney(transaction.amount)}
+      </td>
+      <td className="px-3 py-3 text-right font-medium text-slate-700">
+        {balanceAfter !== undefined ? formatPanelMoney(balanceAfter) : '—'}
       </td>
       <td className="px-3 py-3 text-right">
         {onEdit && (
