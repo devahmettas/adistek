@@ -35,6 +35,11 @@ import {
   type JewelryPriceBreakdown,
 } from '../../utils/jewelryPrice'
 import { formatMoneyInputFromNumber, parseMoneyInput } from '../../utils/moneyInput'
+import {
+  getGoldProductCategoryDefaults,
+  GOLD_PURCHASE_QUICK_TYPES,
+  type GoldPurchaseQuickType,
+} from '../../utils/jewelryPurchaseGold'
 import { useJewelerFeatures } from '../../hooks/useJewelerFeatures'
 
 type ProductsTab = 'list' | 'add' | 'edit'
@@ -109,6 +114,10 @@ interface ProductFormProps {
   priceBreakdown: JewelryPriceBreakdown | null
   pendingBarcode?: string | null
   onChangeBarcode?: () => void
+  fixedGoldDefaults?: { weightGram: number; karat: number; categoryName: string } | null
+  activeQuickGoldKey?: string | null
+  onQuickGoldSelect?: (quickType: GoldPurchaseQuickType) => void
+  quickGoldStockHint?: Record<string, number>
 }
 
 function ProductForm({
@@ -149,6 +158,10 @@ function ProductForm({
   priceBreakdown,
   pendingBarcode,
   onChangeBarcode,
+  fixedGoldDefaults = null,
+  activeQuickGoldKey = null,
+  onQuickGoldSelect,
+  quickGoldStockHint = {},
 }: ProductFormProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -158,6 +171,37 @@ function ProductForm({
         )}
       <Card title={editingId ? 'Ürün Bilgileri' : pendingBarcode ? 'Ürün Bilgilerini Girin' : 'Yeni Ürün'}>
         <form onSubmit={onSubmit} className="space-y-4">
+          {!editingId && onQuickGoldSelect && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Hızlı Ekle</p>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                {GOLD_PURCHASE_QUICK_TYPES.map((quickType) => {
+                  const isActive = activeQuickGoldKey === quickType.key
+                  const stockHint = quickGoldStockHint[quickType.key]
+
+                  return (
+                    <Button
+                      key={quickType.key}
+                      type="button"
+                      variant={isActive ? 'primary' : 'secondary'}
+                      size="sm"
+                      className="flex h-auto w-full flex-col gap-0.5 px-1 py-2 text-xs"
+                      onClick={() => onQuickGoldSelect(quickType)}
+                    >
+                      <span className="font-semibold">{quickType.label}</span>
+                      <span className={`text-[10px] font-medium ${
+                        stockHint !== undefined ? 'text-emerald-700' : 'text-slate-500'
+                      }`}
+                      >
+                        {stockHint !== undefined ? `${stockHint} stok` : 'Yeni'}
+                      </span>
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <Input
             label="Ürün Adı"
             value={name}
@@ -178,15 +222,24 @@ function ProductForm({
                 })),
               ]}
             />
-            <Select
-              label="Ayar"
-              value={karat}
-              onChange={(e) => setKarat(e.target.value)}
-              options={KARAT_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
+            {fixedGoldDefaults ? (
+              <div className="flex flex-col justify-end">
+                <p className="mb-1.5 text-sm font-medium text-slate-700">Ayar</p>
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-900">
+                  {fixedGoldDefaults.karat} ayar (sabit)
+                </p>
+              </div>
+            ) : (
+              <Select
+                label="Ayar"
+                value={karat}
+                onChange={(e) => setKarat(e.target.value)}
+                options={KARAT_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+              />
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -210,15 +263,27 @@ function ProductForm({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="Gram"
-              type="number"
-              step="0.001"
-              min="0"
-              value={weightGram}
-              onChange={(e) => setWeightGram(e.target.value)}
-              required
-            />
+            {fixedGoldDefaults ? (
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-slate-700">Standart Ağırlık</p>
+                <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-900">
+                  {fixedGoldDefaults.weightGram.toLocaleString('tr-TR')} gr
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {fixedGoldDefaults.categoryName} için standart gramaj otomatik uygulanır.
+                </p>
+              </div>
+            ) : (
+              <Input
+                label="Gram"
+                type="number"
+                step="0.001"
+                min="0"
+                value={weightGram}
+                onChange={(e) => setWeightGram(e.target.value)}
+                required
+              />
+            )}
             <MoneyInput
               label="İşçilik (₺)"
               value={laborCost}
@@ -436,6 +501,78 @@ export default function JewelerProductsPage() {
     [categories],
   )
 
+  const fixedGoldDefaults = useMemo(() => {
+    if (!categoryId) {
+      return null
+    }
+
+    const categoryName = categoryNameById.get(Number(categoryId))
+    const defaults = getGoldProductCategoryDefaults(categoryName)
+
+    if (!defaults || !categoryName) {
+      return null
+    }
+
+    return {
+      ...defaults,
+      categoryName,
+    }
+  }, [categoryId, categoryNameById])
+
+  useEffect(() => {
+    if (!fixedGoldDefaults) {
+      return
+    }
+
+    setWeightGram(String(fixedGoldDefaults.weightGram))
+    setKarat(String(fixedGoldDefaults.karat))
+  }, [fixedGoldDefaults])
+
+  const applyQuickGoldProduct = useCallback((quickType: GoldPurchaseQuickType) => {
+    const category = categories.find((row) => row.name === quickType.categoryName)
+    const defaults = getGoldProductCategoryDefaults(quickType.categoryName)
+
+    setName(quickType.defaultDescription)
+    setCategoryId(category ? String(category.id) : '')
+    if (defaults) {
+      setWeightGram(String(defaults.weightGram))
+      setKarat(String(defaults.karat))
+    }
+    setFormError(null)
+  }, [categories])
+
+  const activeQuickGoldKey = useMemo(() => {
+    if (!categoryId) {
+      return null
+    }
+
+    const categoryName = categoryNameById.get(Number(categoryId))
+    return GOLD_PURCHASE_QUICK_TYPES.find((quickType) => quickType.categoryName === categoryName)?.key ?? null
+  }, [categoryId, categoryNameById])
+
+  const quickGoldStockHint = useMemo(() => {
+    const hints: Record<string, number> = {}
+
+    for (const quickType of GOLD_PURCHASE_QUICK_TYPES) {
+      const category = categories.find((row) => row.name === quickType.categoryName)
+      if (!category) {
+        continue
+      }
+
+      const existing = products.find(
+        (product) => product.category_id === category.id
+          && product.name === quickType.defaultDescription
+          && product.is_active,
+      )
+
+      if (existing) {
+        hints[quickType.key] = existing.stock_quantity
+      }
+    }
+
+    return hints
+  }, [products, categories])
+
   const categoryCounts = useMemo(() => {
     const counts = new Map<CategoryFilter, number>()
     counts.set('all', products.length)
@@ -540,7 +677,11 @@ export default function JewelerProductsPage() {
     }
 
     if (!isManualPrice && !priceBreakdown) {
-      setFormError('Otomatik fiyat hesaplanamadı. Gram ve ayar bilgilerini kontrol edin veya manuel fiyat girin.')
+      setFormError(
+        fixedGoldDefaults
+          ? 'Otomatik fiyat hesaplanamadı. Güncel altın fiyatlarını kontrol edin veya manuel fiyat girin.'
+          : 'Otomatik fiyat hesaplanamadı. Gram ve ayar bilgilerini kontrol edin veya manuel fiyat girin.',
+      )
       return
     }
 
@@ -554,11 +695,16 @@ export default function JewelerProductsPage() {
 
     setSubmitting(true)
 
+    const resolvedWeightGram = fixedGoldDefaults
+      ? String(fixedGoldDefaults.weightGram)
+      : weightGram || '0'
+    const resolvedKarat = fixedGoldDefaults?.karat ?? Number(karat)
+
     const payload = {
       name: name.trim(),
       category_id: categoryId ? Number(categoryId) : null,
-      karat: Number(karat),
-      weight_gram: weightGram || '0',
+      karat: resolvedKarat,
+      weight_gram: resolvedWeightGram,
       labor_cost: String(parseMoneyInput(laborCost) || 0),
       profit_rate: profitRate || '0',
       description: description.trim() || null,
@@ -650,6 +796,10 @@ export default function JewelerProductsPage() {
     submitting,
     onSubmit: handleSubmit,
     priceBreakdown,
+    fixedGoldDefaults,
+    activeQuickGoldKey,
+    onQuickGoldSelect: editingId ? undefined : applyQuickGoldProduct,
+    quickGoldStockHint,
     pendingBarcode: barcodeEnabled && addMode === 'barcode-form' ? pendingBarcode : null,
     onChangeBarcode: barcodeEnabled
       ? () => {

@@ -79,6 +79,39 @@ export const GOLD_PURCHASE_QUICK_TYPES: GoldPurchaseQuickType[] = [
 
 export const GOLD_PURCHASE_CATEGORY_NAMES = GOLD_PURCHASE_QUICK_TYPES.map((type) => type.categoryName)
 
+/** Türkiye'de yaygın ziynet altın standart ağırlıkları (gr) */
+export const STANDARD_GOLD_WEIGHTS = {
+  gram: 1,
+  ceyrek: 1.754,
+  yarim: 3.508,
+  tam: 7.016,
+  ata: 7.216,
+  cumhuriyet: 7.216,
+} as const
+
+export const GOLD_PRODUCT_CATEGORY_DEFAULTS: Record<string, { weightGram: number; karat: number }> = {
+  'Gram Altın': { weightGram: STANDARD_GOLD_WEIGHTS.gram, karat: 24 },
+  'Çeyrek Altın': { weightGram: STANDARD_GOLD_WEIGHTS.ceyrek, karat: 22 },
+  'Yarım Altın': { weightGram: STANDARD_GOLD_WEIGHTS.yarim, karat: 22 },
+  'Tam Altın': { weightGram: STANDARD_GOLD_WEIGHTS.tam, karat: 22 },
+  'Ata Altın': { weightGram: STANDARD_GOLD_WEIGHTS.ata, karat: 22 },
+  'Cumhuriyet Altını': { weightGram: STANDARD_GOLD_WEIGHTS.cumhuriyet, karat: 22 },
+}
+
+export function getGoldProductCategoryDefaults(
+  categoryName: string | null | undefined,
+): { weightGram: number; karat: number } | null {
+  if (!categoryName) {
+    return null
+  }
+
+  return GOLD_PRODUCT_CATEGORY_DEFAULTS[categoryName] ?? null
+}
+
+export function isFixedWeightGoldCategory(categoryName: string | null | undefined): boolean {
+  return getGoldProductCategoryDefaults(categoryName) !== null
+}
+
 export interface PurchaseFormItem {
   key: string
   item_description: string
