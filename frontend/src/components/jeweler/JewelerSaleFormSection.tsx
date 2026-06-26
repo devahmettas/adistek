@@ -128,7 +128,6 @@ export default function JewelerSaleFormSection({
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null)
   const [editingSaleNumber, setEditingSaleNumber] = useState<string | null>(null)
   const [originalSaleStockBonus, setOriginalSaleStockBonus] = useState<Map<number, number>>(new Map())
-  const [saveNotice, setSaveNotice] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -175,7 +174,6 @@ export default function JewelerSaleFormSection({
     setEditingSaleId(null)
     setEditingSaleNumber(null)
     setOriginalSaleStockBonus(new Map())
-    setSaveNotice(null)
     setCustomerId('')
     setPaymentMethod('cash')
     setNotes('')
@@ -191,7 +189,6 @@ export default function JewelerSaleFormSection({
     setNotes(sale.notes ?? '')
     setItems(formItems)
     setOriginalSaleStockBonus(buildExtraStockFromSaleItems(formItems))
-    setSaveNotice(null)
   }, [])
 
   useEffect(() => {
@@ -455,16 +452,13 @@ export default function JewelerSaleFormSection({
 
     try {
       if (editingSaleId) {
-        const updated = await updateJewelrySale(editingSaleId, payload)
+        await updateJewelrySale(editingSaleId, payload)
         notifySaleCompleted('Satış güncellendi.')
-        startEditSale(updated)
-        setSaveNotice('Satış güncellendi. Gerekirse kalemleri tekrar düzenleyebilirsiniz.')
       } else {
-        const saved = await createJewelrySale(payload)
+        await createJewelrySale(payload)
         notifySaleCompleted('Satış kaydedildi.')
-        startEditSale(saved)
-        setSaveNotice('Satış kaydedildi. Yanlışlık varsa kalemleri düzenleyip "Satışı Güncelle" ile kaydedin.')
       }
+      resetForm()
       await load()
     } catch {
       setError(editingSaleId ? 'Satış kaydı güncellenemedi.' : 'Satış kaydı oluşturulamadı.')
@@ -530,18 +524,6 @@ export default function JewelerSaleFormSection({
         <p className="rounded-lg border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-900">
           Barkod okunuyor...
         </p>
-      )}
-      {saveNotice && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          <p>{saveNotice}</p>
-          <button
-            type="button"
-            onClick={() => resetForm()}
-            className="shrink-0 text-xs font-semibold text-emerald-800 underline hover:text-emerald-950"
-          >
-            Yeni satış başlat
-          </button>
-        </div>
       )}
 
       <Card title={editingSaleId ? `Satış Düzenle #${editingSaleNumber ?? ''}` : 'Müşteriye Satış'}>
