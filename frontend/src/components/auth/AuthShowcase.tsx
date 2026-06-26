@@ -51,9 +51,11 @@ export default function AuthShowcase({ variant = 'desktop' }: AuthShowcaseProps)
             <span className="auth-showcase__title-accent"> tek panelden </span>
             yönetin
           </h1>
-          <p className="auth-showcase__lede">
-            Stok, satış, kasa ve müşteri yönetimi — güvenli, hızlı ve profesyonel.
-          </p>
+          {!isMobile && (
+            <p className="auth-showcase__lede">
+              Stok, satış, kasa ve müşteri yönetimi — güvenli, hızlı ve profesyonel.
+            </p>
+          )}
         </div>
 
         {!isMobile && (
