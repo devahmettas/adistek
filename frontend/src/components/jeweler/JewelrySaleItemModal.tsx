@@ -1,10 +1,10 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../Button'
 import Input from '../Input'
 import MoneyInput from '../MoneyInput'
 import Select from '../Select'
 import type { JewelryCategory, JewelryProduct, MarketGoldPriceRecord } from '../../api/jeweler'
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useModalPresentation } from '../../hooks/useBodyScrollLock'
 import {
   calculateSaleLineMarketValue,
   calculateSaleLineTotal,
@@ -38,7 +38,8 @@ export default function JewelrySaleItemModal({
   onClose,
   onSave,
 }: JewelrySaleItemModalProps) {
-  useBodyScrollLock(true)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useModalPresentation(true, panelRef)
 
   const [draft, setDraft] = useState<SaleFormItem>(item)
 
@@ -138,32 +139,36 @@ export default function JewelrySaleItemModal({
       : 'Ürün Ekle'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-3 sm:items-center sm:p-4">
+    <div className="modal-overlay fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-3 sm:items-center sm:p-4">
       <button type="button" className="absolute inset-0" aria-label="Kapat" onClick={onClose} />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        className="relative z-10 max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {mode === 'quick-gold'
-                ? 'Güncel satış fiyatlarını kontrol edip tahsil tutarını girin.'
-                : 'Ürün açıklaması ve satış detaylarını girin.'}
-            </p>
+        <div className="shrink-0 p-5 pb-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {mode === 'quick-gold'
+                  ? 'Güncel satış fiyatlarını kontrol edip tahsil tutarını girin.'
+                  : 'Ürün açıklaması ve satış detaylarını girin.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-          >
-            ✕
-          </button>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <div data-modal-scroll className="modal-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {mode === 'custom' && (
             <Input
               label="Ürün Açıklaması"
@@ -209,11 +214,13 @@ export default function JewelrySaleItemModal({
             <div>
               <Input
                 label="Adet"
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min="1"
                 max={quantityLimit ?? undefined}
                 value={draft.quantity}
-                onChange={(event) => handleQuantityChange(event.target.value)}
+                onChange={(event) => handleQuantityChange(event.target.value.replace(/\D/g, ''))}
                 required
               />
               {quantityLimit !== null && (
@@ -297,7 +304,9 @@ export default function JewelrySaleItemModal({
             )}
           </div>
 
-          <div className="flex flex-wrap justify-end gap-2">
+          </div>
+
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-100 p-5">
             <Button type="button" variant="secondary" onClick={onClose}>İptal</Button>
             <Button
               type="submit"

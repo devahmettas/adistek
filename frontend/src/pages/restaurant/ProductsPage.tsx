@@ -5,6 +5,7 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import ImageUploadField from '../../components/ImageUploadField'
 import Input from '../../components/Input'
+import MoneyInput from '../../components/MoneyInput'
 import LoadingState from '../../components/LoadingState'
 import PageHeader from '../../components/PageHeader'
 import PageSubNav from '../../components/PageSubNav'
@@ -12,6 +13,7 @@ import ProductList from '../../components/ProductList'
 import Select from '../../components/Select'
 import Textarea from '../../components/Textarea'
 import { useDashboardData } from '../../context/DashboardContext'
+import { parseMoneyInput } from '../../utils/moneyInput'
 
 type ProductsTab = 'list' | 'add'
 
@@ -53,7 +55,7 @@ export default function ProductsPage() {
       return
     }
 
-    const price = Number(productPrice)
+    const price = parseMoneyInput(productPrice)
     if (Number.isNaN(price) || price < 0) {
       setProductError('Geçerli bir fiyat girin.')
       return
@@ -150,15 +152,12 @@ export default function ProductsPage() {
               onChange={(event) => setProductName(event.target.value)}
               placeholder="Örn: Latte"
             />
-            <Input
+            <MoneyInput
               label="Fiyat"
               name="productPrice"
-              type="number"
-              min="0"
-              step="0.01"
               value={productPrice}
-              onChange={(event) => setProductPrice(event.target.value)}
-              placeholder="0.00"
+              onValueChange={setProductPrice}
+              placeholder="0,00"
             />
             <Textarea
               label="Açıklama"

@@ -114,6 +114,17 @@
     @apply inline-flex min-h-11 min-w-11 items-center justify-center;
   }
 
+  .modal-overlay {
+    overscroll-behavior: contain;
+    touch-action: none;
+  }
+
+  .modal-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
   .scroll-x-contained {
     @apply -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0;
     -webkit-overflow-scrolling: touch;

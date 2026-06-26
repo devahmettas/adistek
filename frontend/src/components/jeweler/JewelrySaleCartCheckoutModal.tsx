@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../Button'
 import MoneyInput from '../MoneyInput'
 import Select from '../Select'
@@ -12,7 +12,7 @@ import {
   type MarketGoldPriceRecord,
 } from '../../api/jeweler'
 import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useModalPresentation } from '../../hooks/useBodyScrollLock'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
 import {
   calculateJewelryCartTotals,
@@ -46,7 +46,8 @@ export default function JewelrySaleCartCheckoutModal() {
     setPaymentMethod,
   } = useJewelrySaleCart()
 
-  useBodyScrollLock(isCheckoutOpen)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useModalPresentation(isCheckoutOpen, panelRef)
 
   const [goldPrices, setGoldPrices] = useState<MarketGoldPriceRecord[]>([])
   const [jewelrySettings, setJewelrySettings] = useState<JewelrySettings | null>(null)
@@ -223,11 +224,12 @@ export default function JewelrySaleCartCheckoutModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
+      className="modal-overlay fixed inset-0 z-[70] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
       onClick={closeCheckout}
       role="presentation"
     >
       <div
+        ref={panelRef}
         className="relative flex max-h-[92dvh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl lg:max-h-[88vh] lg:max-w-5xl lg:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
@@ -256,7 +258,7 @@ export default function JewelrySaleCartCheckoutModal() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:px-5 lg:px-6 lg:py-3">
+            <div data-modal-scroll className="modal-scroll min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:px-5 lg:px-6 lg:py-3">
               {items.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
                   <p className="text-sm font-medium text-slate-700">Sepetiniz boş</p>
@@ -324,9 +326,16 @@ export default function JewelrySaleCartCheckoutModal() {
                               <input
                                 type="text"
                                 inputMode="decimal"
+                                pattern="[0-9.,]*"
                                 autoComplete="off"
+                                enterKeyHint="done"
                                 value={linePriceInputs[item.id] ?? formatMoneyInputFromNumber(item.unit_price)}
                                 onChange={(e) => handleLinePriceChange(item.id, e.target.value)}
+                                onFocus={(e) => {
+                                  window.requestAnimationFrame(() => {
+                                    e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                                  })
+                                }}
                                 className="input-field h-10 w-full px-2 py-1 sm:h-8 sm:text-center md:text-sm"
                               />
                             </label>
@@ -334,11 +343,11 @@ export default function JewelrySaleCartCheckoutModal() {
                             <label className="sm:contents">
                               <span className="mb-1 block text-[11px] text-slate-500 sm:hidden">Adet</span>
                               <input
-                                type="number"
-                                min="1"
-                                max={item.stock_quantity}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={String(item.quantity)}
-                                onChange={(e) => handleLineQuantityChange(item.id, e.target.value)}
+                                onChange={(e) => handleLineQuantityChange(item.id, e.target.value.replace(/\D/g, ''))}
                                 className="input-field h-10 w-full px-2 py-1 sm:h-8 sm:text-center md:text-sm"
                               />
                             </label>

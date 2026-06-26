@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../Button'
 import Input from '../Input'
 import MoneyInput from '../MoneyInput'
@@ -19,7 +19,7 @@ import {
   type JewelrySaleFinancialSettings,
 } from '../../utils/jewelryPrice'
 import { resolveMenuAssetUrl } from '../../utils/menuAssetUrl'
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useModalPresentation } from '../../hooks/useBodyScrollLock'
 import { useJewelrySaleCart } from '../../context/JewelrySaleCartContext'
 import { parseMoneyInput } from '../../utils/moneyInput'
 
@@ -51,7 +51,8 @@ export default function JewelryProductSaleModal({
   extraStock = 0,
   onAddToForm,
 }: JewelryProductSaleModalProps) {
-  useBodyScrollLock(true)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useModalPresentation(true, panelRef)
   const { addItem, getReservedQuantity, notifySaleCompleted } = useJewelrySaleCart()
 
   const catalogPrice = Number(product.sale_price)
@@ -214,11 +215,12 @@ export default function JewelryProductSaleModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
+      className="modal-overlay fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-slate-900/50 p-0 lg:items-center lg:p-4"
       onClick={onClose}
       role="presentation"
     >
       <div
+        ref={panelRef}
         className="relative flex max-h-[92dvh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl lg:h-[min(88vh,600px)] lg:max-h-[88vh] lg:max-w-5xl lg:flex-row lg:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
@@ -236,7 +238,7 @@ export default function JewelryProductSaleModal({
           </svg>
         </button>
 
-        <div className="min-h-0 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:flex lg:flex-row lg:overflow-hidden">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
           <div className="flex w-full min-w-0 shrink-0 flex-col lg:h-full lg:w-[38%] lg:min-h-0 lg:border-r lg:border-slate-100">
             <div className="flex aspect-[4/3] w-full min-w-0 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-4 sm:p-5 lg:aspect-auto lg:min-h-0 lg:flex-1 lg:p-5">
               {previewUrl ? (
@@ -300,8 +302,11 @@ export default function JewelryProductSaleModal({
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
-              <div className="min-h-0 w-full min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-4 pb-4 sm:px-5 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden lg:px-5 lg:pb-0">
+            <form onSubmit={handleSubmit} className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+              <div
+                data-modal-scroll
+                className="modal-scroll min-h-0 w-full min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-4 pb-4 sm:px-5 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden lg:px-5 lg:pb-0"
+              >
                 <div className="w-full min-w-0 space-y-1 lg:shrink-0">
                   <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3 [&>*]:min-w-0">
                     <MoneyInput
@@ -315,11 +320,13 @@ export default function JewelryProductSaleModal({
 
                     <Input
                       label="Adet"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       min="1"
                       max={availableStock || undefined}
                       value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
+                      onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ''))}
                       className="lg:py-2 lg:text-sm"
                       required
                     />

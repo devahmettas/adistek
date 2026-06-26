@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import type { AllergenKey } from '../constants/allergens'
 import Button from './Button'
 import Input from './Input'
+import MoneyInput from './MoneyInput'
 import Select from './Select'
 import Textarea from './Textarea'
 import AllergenPicker from './AllergenPicker'
@@ -9,6 +10,7 @@ import ImageUploadField from './ImageUploadField'
 import AllergenBadges from './menu/AllergenBadges'
 import CalorieBadge from './menu/CalorieBadge'
 import { resolveMenuAssetUrl } from '../utils/menuAssetUrl'
+import { formatMoneyInputFromNumber, parseMoneyInput } from '../utils/moneyInput'
 import type { Category, Product } from '../api/types'
 
 interface ProductListProps {
@@ -59,7 +61,7 @@ export default function ProductList({
     setEditingId(product.id)
     setEditName(product.name)
     setEditCategoryId(String(product.category_id))
-    setEditPrice(String(product.price))
+    setEditPrice(formatMoneyInputFromNumber(product.price))
     setEditDescription(product.description || '')
     setEditCalories(product.calories != null ? String(product.calories) : '')
     setEditAllergens(product.allergens ?? [])
@@ -88,7 +90,7 @@ export default function ProductList({
       return
     }
 
-    const price = Number(editPrice)
+    const price = parseMoneyInput(editPrice)
     if (Number.isNaN(price) || price < 0) {
       setEditError('Geçerli bir fiyat girin.')
       return
@@ -219,14 +221,11 @@ export default function ProductList({
                           label: category.name,
                         }))}
                       />
-                      <Input
+                      <MoneyInput
                         label="Fiyat"
                         name={`editPrice-${product.id}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
                         value={editPrice}
-                        onChange={(event) => setEditPrice(event.target.value)}
+                        onValueChange={setEditPrice}
                       />
                       <Select
                         label="Durum"
@@ -392,14 +391,11 @@ export default function ProductList({
                   label: category.name,
                 }))}
               />
-              <Input
+              <MoneyInput
                 label="Fiyat"
                 name={`mobileEditPrice-${product.id}`}
-                type="number"
-                min="0"
-                step="0.01"
                 value={editPrice}
-                onChange={(event) => setEditPrice(event.target.value)}
+                onValueChange={setEditPrice}
               />
               <Select
                 label="Durum"

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Category, Product, RestaurantTable } from '../api/types'
 import {
   TABLE_STATUS_STYLES,
@@ -35,6 +35,7 @@ import {
   getTableWaiterName,
   hasUnpaidTableOrders,
 } from '../utils/tableHelpers'
+import { useModalPresentation } from '../hooks/useBodyScrollLock'
 
 type ViewMode = 'main' | 'categories' | 'products' | 'bill'
 
@@ -109,6 +110,9 @@ export default function TableDetailModal({
   onPayBill,
   onPartialPayBill,
 }: TableDetailModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useModalPresentation(true, panelRef)
+
   const operationalStatus = (table.status || 'empty') as TableStatus
   const displayStatus = getTableDisplayStatus(table)
   const styles = TABLE_STATUS_STYLES[displayStatus] ?? TABLE_STATUS_STYLES.empty
@@ -424,10 +428,11 @@ export default function TableDetailModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden bg-black/50 p-2 sm:items-center sm:p-4"
+        className="modal-overlay fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-black/50 p-2 sm:items-center sm:p-4"
         onClick={onClose}
       >
       <div
+        ref={panelRef}
         className="flex max-h-[94dvh] min-h-0 w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[94vh] sm:min-h-[82vh] sm:max-w-6xl lg:max-w-7xl"
         onClick={(event) => event.stopPropagation()}
       >
@@ -568,7 +573,7 @@ export default function TableDetailModal({
                 )}
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2 sm:px-6">
+              <div data-modal-scroll className="modal-scroll min-h-0 flex-1 overflow-y-auto px-5 py-2 sm:px-6">
                 {itemCount > 0 ? (
                   <div className="space-y-1.5">
                     {tableProducts.map((product) => {
@@ -651,11 +656,12 @@ export default function TableDetailModal({
 
           {!isBillView && view !== 'main' && (
             <div
-              className={`min-h-0 flex-1 px-3 py-2 sm:px-6 sm:py-4 lg:overflow-y-auto ${
+              className={`modal-scroll min-h-0 flex-1 px-3 py-2 sm:px-6 sm:py-4 lg:overflow-y-auto ${
                 view === 'products' && addingProduct
                   ? 'flex justify-center overflow-hidden lg:overflow-y-auto'
                   : 'overflow-y-auto'
               }`}
+              data-modal-scroll
             >
           {view === 'categories' && (
             <div className="space-y-3">
@@ -744,7 +750,7 @@ export default function TableDetailModal({
 
           {isBillView && (
             <>
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:px-5">
+              <div data-modal-scroll className="modal-scroll min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:px-5">
                 <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 sm:text-sm">
                   <span className="font-medium text-gray-700">Hesap</span>
                   <span>Ürüne dokunarak seçin</span>
@@ -911,7 +917,7 @@ export default function TableDetailModal({
 
       {showPayConfirm && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden bg-black/60 p-2 sm:items-center sm:p-4"
+          className="modal-overlay fixed inset-0 z-[60] flex items-end justify-center overflow-x-hidden overscroll-behavior-contain bg-black/60 p-2 sm:items-center sm:p-4"
           onClick={(event) => {
             event.stopPropagation()
             if (!submitting) {
