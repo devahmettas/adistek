@@ -31,10 +31,7 @@ function MainLayoutContent() {
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
         }`}
       >
-        <AppHeader
-          label="Kuyumcu Paneli"
-          onToggleMenu={handleToggleMenu}
-        />
+        <AppHeader onToggleMenu={handleToggleMenu} />
 
         <main className="flex-1 p-3 sm:p-4 lg:p-6">
           <div className="mx-auto w-full min-w-0 max-w-7xl animate-fade-in">
