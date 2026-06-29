@@ -35,14 +35,11 @@ function showScanToast(
   }, SCAN_TOAST_MS)
 }
 
+/** İnce kuyumcu etiketleri (72×10 mm) için tüm kamera alanı taranır; qrbox sınırlaması yok. */
 const SCANNER_CONFIG = {
-  fps: 10,
+  fps: 15,
   disableFlip: false,
-  qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-    const width = Math.min(viewfinderWidth * 0.88, 340)
-    const height = Math.min(viewfinderHeight * 0.42, 140)
-    return { width, height }
-  },
+  aspectRatio: 1.7777778,
 }
 
 async function waitForDom(): Promise<void> {
@@ -159,6 +156,9 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
           Html5QrcodeSupportedFormats.EAN_8,
           Html5QrcodeSupportedFormats.CODE_39,
         ],
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+        },
       })
       scannerRef.current = scanner
 
@@ -272,8 +272,8 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
         />
 
         <div
-          className="pointer-events-none absolute inset-x-4 top-1/2 mx-auto max-w-lg -translate-y-1/2 rounded-xl border-2 border-amber-300/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.35)]"
-          style={{ aspectRatio: '2.4 / 1' }}
+          className="pointer-events-none absolute inset-x-3 top-1/2 mx-auto w-[94%] max-w-lg -translate-y-1/2 rounded-lg border-2 border-amber-300/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.35)]"
+          style={{ aspectRatio: '7 / 1' }}
         />
 
         {starting && !cameraError && (
@@ -290,7 +290,7 @@ export default function BarcodeScannerModal({ onScan, onClose, continuous = fals
       <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-slate-400">
         {continuous
           ? 'Kamera açık kaldığı sürece her barkod otomatik sayılır. Bitince Kapat\'a basın.'
-          : 'Telefonu barkoda yaklaştırın. Okuma otomatik yapılır.'}
+          : 'İnce etiketi yatay hizalayın; telefonu yaklaştırın veya uzaklaştırın. Okuma otomatik yapılır.'}
       </div>
 
       <style>{`
