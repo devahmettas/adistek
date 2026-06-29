@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
-import JewelrySaleCartButton from '../components/jeweler/JewelrySaleCartButton'
 import JewelrySaleCartCheckoutModal from '../components/jeweler/JewelrySaleCartCheckoutModal'
 import JewelrySaleToastListener from '../components/jeweler/JewelrySaleToastListener'
 import RestaurantSidebar from '../components/RestaurantSidebar'
@@ -35,7 +34,6 @@ function MainLayoutContent() {
         <AppHeader
           label="Kuyumcu Paneli"
           onToggleMenu={handleToggleMenu}
-          trailing={<JewelrySaleCartButton />}
         />
 
         <main className="flex-1 p-3 sm:p-4 lg:p-6">
