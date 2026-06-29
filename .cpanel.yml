@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - /bin/chmod -R 775 backend/storage backend/bootstrap/cache 2>/dev/null || true
