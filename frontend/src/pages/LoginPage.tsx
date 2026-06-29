@@ -17,6 +17,14 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
     return 'Sunucuya bağlanılamadı. Backend çalışıyor mu kontrol edin.'
   }
 
+  if (error.response.status === 503) {
+    const data = error.response.data as { error?: string; fix?: string } | string
+    if (typeof data === 'object' && data?.fix) {
+      return `${data.error ?? 'Sunucu kurulumu eksik.'} ${data.fix}`
+    }
+    return 'Sunucu kurulumu eksik. Tarayıcıda /setup.php adresini açıp kurulumu tamamlayın.'
+  }
+
   const data = error.response.data as {
     message?: string
     errors?: Record<string, string[]>

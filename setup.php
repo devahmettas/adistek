@@ -115,13 +115,14 @@ $config = [
     'app_url' => 'https://adistek.polleyndigitale.com',
     'db_host' => 'localhost',
     'db_port' => '3306',
-    'db_database' => '',
-    'db_username' => '',
-    'db_password' => '',
+    'db_database' => 'polleynd_adistek',
+    'db_username' => 'polleynd_adistek',
+    'db_password' => '3451x58x35',
 ];
 
 $errors = [];
 $result = null;
+$showForm = isset($_GET['form']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $config['app_url'] = trim($_POST['app_url'] ?? $config['app_url']);
@@ -130,12 +131,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $config['db_database'] = trim($_POST['db_database'] ?? $config['db_database']);
     $config['db_username'] = trim($_POST['db_username'] ?? $config['db_username']);
     $config['db_password'] = (string) ($_POST['db_password'] ?? $config['db_password']);
+    $showForm = true;
+}
 
+if (! $showForm && ($_SERVER['REQUEST_METHOD'] === 'GET' || $_SERVER['REQUEST_METHOD'] === 'POST')) {
     if ($config['db_database'] === '' || $config['db_username'] === '') {
-        $errors[] = 'Veritabanı adı ve kullanıcı adı zorunludur.';
+        $errors[] = 'Veritabanı bilgileri eksik.';
+        $showForm = true;
     } else {
         $result = installEnv($basePath, $exampleFile, $envFile, $config);
         $errors = $result['errors'];
+        if ($errors !== []) {
+            $showForm = true;
+        }
     }
 }
 
@@ -184,7 +192,7 @@ header('Content-Type: text/html; charset=utf-8');
     <?php endif; ?>
     <h2>Storage link</h2>
     <pre><?= h($result['storage_link']['output'] ?: ($result['storage_link']['ok'] ? 'OK' : 'Atlandı / zaten var')) ?></pre>
-  <?php else: ?>
+  <?php elseif ($showForm): ?>
     <form method="post">
       <label for="app_url">Site adresi</label>
       <input id="app_url" name="app_url" value="<?= h($config['app_url']) ?>" required />
