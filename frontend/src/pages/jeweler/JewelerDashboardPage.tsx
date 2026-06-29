@@ -116,7 +116,7 @@ export default function JewelerDashboardPage() {
             <PanelActionCard
               to="/dashboard/jeweler/barcode"
               title="Barkod Sistemi"
-              description="Ürün okutun, sorgulayın ve takı şerit etiketi yazdırın."
+              description="Ürün okutun, sorgulayın ve kuyumcu barkod etiketi yazdırın."
               icon="▥"
               locked={!barcodeEnabled}
             />

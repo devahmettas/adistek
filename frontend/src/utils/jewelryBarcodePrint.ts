@@ -1,4 +1,4 @@
-import { renderBarcodeSvgString } from './jewelryBarcode'
+import { renderBarcodeSvgForLabel } from './jewelryBarcode'
 
 export interface JewelryBarcodeLabel {
   name: string
@@ -8,9 +8,21 @@ export interface JewelryBarcodeLabel {
   salePrice?: string | number | null
 }
 
-/** Şerit ölçüsü: takıya geçirip arkada yapıştırılabilir ince uzun etiket */
-export const STRIP_LABEL_WIDTH_MM = 12
-export const STRIP_LABEL_HEIGHT_MM = 82
+/** Kuyumcu barkod etiketi: 10 mm genişlik × 72 mm yükseklik */
+export const LABEL_WIDTH_MM = 10
+export const LABEL_HEIGHT_MM = 72
+
+const LABEL_PADDING_V_MM = 0.4
+const LABEL_PADDING_H_MM = 0.3
+const META_ROW_MM = 5
+const CODE_ROW_MM = 5
+
+/** Barkod çizgisi — metin satırlarına taşmaması için içeride ve biraz küçük */
+const BARCODE_LENGTH_MM = 54
+const BARCODE_THICKNESS_MM = 6.8
+
+export const LABEL_BARCODE_LENGTH_MM = BARCODE_LENGTH_MM
+export const LABEL_BARCODE_THICKNESS_MM = BARCODE_THICKNESS_MM
 
 function escapeHtml(value: string): string {
   return value
@@ -20,15 +32,29 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function formatPrice(value: string | number | null | undefined): string | null {
-  if (value === null || value === undefined || value === '') return null
-  const amount = Number(value)
-  if (Number.isNaN(amount)) return null
-  return `${amount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`
+function resolveBarcodeDimensions(barcode: string): { lengthMm: number; thicknessMm: number } {
+  const len = barcode.trim().length
+  let lengthMm = BARCODE_LENGTH_MM
+
+  if (len > 14) {
+    lengthMm = BARCODE_LENGTH_MM - 8
+  } else if (len > 10) {
+    lengthMm = BARCODE_LENGTH_MM - 4
+  }
+
+  return {
+    lengthMm,
+    thicknessMm: BARCODE_THICKNESS_MM,
+  }
 }
 
-function buildLabelHtml(label: JewelryBarcodeLabel): string {
-  const barcodeSvg = renderBarcodeSvgString(label.barcode, 'strip', false)
+function buildLabelPageHtml(label: JewelryBarcodeLabel): string {
+  const { lengthMm, thicknessMm } = resolveBarcodeDimensions(label.barcode)
+  const barcodeSvg = renderBarcodeSvgForLabel(
+    label.barcode,
+    lengthMm,
+    thicknessMm,
+  )
   if (!barcodeSvg) return ''
 
   const metaParts = [
@@ -36,233 +62,128 @@ function buildLabelHtml(label: JewelryBarcodeLabel): string {
     label.weightGram ? `${label.weightGram}g` : null,
   ].filter(Boolean)
 
-  const priceLine = formatPrice(label.salePrice)
-  const shortName = label.name.length > 18 ? `${label.name.slice(0, 17)}…` : label.name
+  const metaLine = metaParts.length > 0
+    ? `<div class="meta">${escapeHtml(metaParts.join(' '))}</div>`
+    : '<div class="meta meta-empty">&nbsp;</div>'
 
   return `
-    <article class="strip">
-      <div class="tab tab-top">YAPIŞTIR</div>
-
-      <div class="panel panel-front">
-        <p class="name">${escapeHtml(shortName)}</p>
-        ${metaParts.length > 0 ? `<p class="meta">${escapeHtml(metaParts.join(' '))}</p>` : ''}
-        <div class="barcode-wrap">
-          <div class="barcode">${barcodeSvg}</div>
+    <section class="label-page">
+      <div class="label">
+        ${metaLine}
+        <div class="barcode-area">
+          <div class="barcode-rotated" style="width:${lengthMm}mm;height:${thicknessMm}mm">
+            ${barcodeSvg}
+          </div>
         </div>
-        <p class="code">${escapeHtml(label.barcode)}</p>
-        ${priceLine ? `<p class="price">${escapeHtml(priceLine)}</p>` : ''}
+        <div class="code">${escapeHtml(label.barcode)}</div>
       </div>
-
-      <div class="fold">
-        <span class="fold-line"></span>
-        <span class="fold-text">KATLA · TAKIDAN GEÇİR</span>
-        <span class="fold-line"></span>
-      </div>
-
-      <div class="panel panel-back">
-        <p class="hint">Uçları arkada birleştirin</p>
-        <p class="code code-back">${escapeHtml(label.barcode)}</p>
-        ${metaParts.length > 0 ? `<p class="meta">${escapeHtml(metaParts.join(' '))}</p>` : ''}
-      </div>
-
-      <div class="tab tab-bottom">YAPIŞTIR</div>
-    </article>
+    </section>
   `
 }
 
 function buildLabelsHtml(labels: JewelryBarcodeLabel[]): string {
-  const labelBlocks = labels.map(buildLabelHtml).filter(Boolean).join('')
+  const pages = labels.map(buildLabelPageHtml).filter(Boolean).join('')
 
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <title>Barkod Şerit Etiketleri</title>
+  <title>Kuyumcu Barkod Etiketleri</title>
   <style>
     @page {
-      size: A4;
-      margin: 8mm;
+      size: ${LABEL_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
+      margin: 0;
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html,
     body {
       margin: 0;
       padding: 0;
+      width: ${LABEL_WIDTH_MM}mm;
       color: #000;
       font-family: Arial, Helvetica, sans-serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
-    .sheet {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2.5mm 2mm;
-      align-content: flex-start;
+    .label-page {
+      width: ${LABEL_WIDTH_MM}mm;
+      height: ${LABEL_HEIGHT_MM}mm;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
     }
 
-    .strip {
-      width: ${STRIP_LABEL_WIDTH_MM}mm;
-      height: ${STRIP_LABEL_HEIGHT_MM}mm;
-      border: 0.15mm dashed #999;
-      overflow: hidden;
-      page-break-inside: avoid;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
+    .label-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .label {
+      width: ${LABEL_WIDTH_MM}mm;
+      height: ${LABEL_HEIGHT_MM}mm;
+      padding: ${LABEL_PADDING_V_MM}mm ${LABEL_PADDING_H_MM}mm;
+      display: grid;
+      grid-template-rows: ${META_ROW_MM}mm 1fr ${CODE_ROW_MM}mm;
+      align-items: center;
+      justify-items: center;
       text-align: center;
       background: #fff;
-    }
-
-    .tab {
-      flex: 0 0 7mm;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4.5px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      line-height: 1;
-      color: #444;
-      background: repeating-linear-gradient(
-        -45deg,
-        #f3f4f6,
-        #f3f4f6 1mm,
-        #e5e7eb 1mm,
-        #e5e7eb 2mm
-      );
-      border-bottom: 0.1mm solid #ccc;
-    }
-
-    .tab-bottom {
-      border-bottom: none;
-      border-top: 0.1mm solid #ccc;
-    }
-
-    .panel {
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0.8mm 0.6mm;
-      min-height: 0;
       overflow: hidden;
     }
 
-    .panel-front {
-      gap: 0.4mm;
-    }
-
-    .panel-back {
-      gap: 0.5mm;
-      background: #fafafa;
-    }
-
-    .name {
-      margin: 0;
+    .meta {
       width: 100%;
-      font-size: 5.5px;
+      font-size: 2mm;
       font-weight: 700;
-      line-height: 1.15;
-      word-break: break-word;
-      hyphens: auto;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #000;
     }
 
-    .meta,
-    .price,
-    .hint {
-      margin: 0;
-      width: 100%;
-      font-size: 5px;
-      line-height: 1.1;
-      color: #333;
-    }
-
-    .price {
-      font-weight: 700;
-      font-size: 5.5px;
-    }
-
-    .hint {
-      font-size: 4.5px;
-      color: #666;
+    .meta-empty {
+      visibility: hidden;
     }
 
     .code {
-      margin: 0;
       width: 100%;
       font-family: Consolas, Monaco, monospace;
-      font-size: 4.5px;
-      line-height: 1.1;
-      letter-spacing: 0.02em;
-      word-break: break-all;
-    }
-
-    .code-back {
+      font-size: 1.6mm;
       font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      word-break: break-all;
+      color: #000;
     }
 
-    .barcode-wrap {
+    .barcode-area {
       width: 100%;
-      height: 18mm;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
 
-    .barcode {
+    .barcode-rotated {
+      flex-shrink: 0;
       transform: rotate(90deg);
       transform-origin: center center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
-    .barcode svg {
+    .barcode-rotated svg {
       display: block;
-      height: 9mm;
-      width: auto;
-    }
-
-    .fold {
-      flex: 0 0 5mm;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.3mm;
-      padding: 0.2mm 0;
-      background: #fff;
-    }
-
-    .fold-line {
-      display: block;
-      width: 72%;
-      border-top: 0.2mm dashed #888;
-    }
-
-    .fold-text {
-      font-size: 3.8px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      color: #555;
-      line-height: 1;
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      max-height: 4mm;
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
 <body>
-  <div class="sheet">
-    ${labelBlocks}
-  </div>
+  ${pages}
 </body>
 </html>`
 }
@@ -312,7 +233,7 @@ function printHtml(html: string): Promise<void> {
           cleanup()
         }
       }, 5000)
-    }, 150)
+    }, 200)
   })
 }
 

@@ -14,6 +14,8 @@ import {
 } from '../../api/jeweler'
 import { formatPanelMoney } from '../../components/restaurant/ManagementPanelWidgets'
 import {
+  LABEL_HEIGHT_MM,
+  LABEL_WIDTH_MM,
   printJewelryBarcodeLabel,
   printJewelryBarcodeLabels,
   toJewelryBarcodeLabel,
@@ -185,7 +187,7 @@ export default function JewelerBarcodePage() {
     <div className="space-y-6">
       <PageHeader
         title="Barkod Sistemi"
-        description="Telefon kamerası ile ürün okutun, sorgulayın ve takı şerit etiketi yazdırın."
+        description="Telefon kamerası ile ürün okutun, sorgulayın ve kuyumcu barkod etiketi yazdırın."
       />
 
       <PageSubNav
@@ -264,7 +266,7 @@ export default function JewelerBarcodePage() {
                       onClick={() => void handlePrintProduct(product)}
                     >
                       <PrintIcon />
-                      <span className="ml-2">Şerit Yazdır</span>
+                      <span className="ml-2">Etiket Yazdır</span>
                     </Button>
                   )}
                 </div>
@@ -288,9 +290,33 @@ export default function JewelerBarcodePage() {
           {!productsLoading && (
             <div className="space-y-4">
               <p className="text-sm text-slate-600">
-                İnce uzun şerit formatında yazdırılır (12×82 mm). Takıdan geçirip üst ve alt
-                yapışkan uçları arkada birleştirin.
+                Her etiket ayrı sayfa olarak yazdırılır ({LABEL_WIDTH_MM}×{LABEL_HEIGHT_MM} mm).
               </p>
+
+              <details className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+                <summary className="cursor-pointer font-semibold">
+                  TSC TE210 yazıcı ayarları (ilk kurulum)
+                </summary>
+                <ol className="mt-3 list-decimal space-y-2 pl-5 text-amber-900">
+                  <li>
+                    Yazdır penceresinde <strong>Daha fazla ayar</strong> bölümünü açın.
+                  </li>
+                  <li>
+                    <strong>Kağıt boyutu:</strong> Özel veya Kullanıcı tanımlı →{' '}
+                    <strong>{LABEL_WIDTH_MM} mm × {LABEL_HEIGHT_MM} mm</strong>
+                  </li>
+                  <li>
+                    <strong>Kenar boşlukları:</strong> Yok / 0 mm
+                  </li>
+                  <li>
+                    <strong>Ölçek:</strong> %100 — &quot;Sayfaya sığdır&quot; kapalı olsun
+                  </li>
+                  <li>
+                    Windows&apos;ta <strong>Ayarlar → Yazıcılar → TSC TE210 → Yazdırma tercihleri</strong>{' '}
+                    içinde etiket rulosu genişliğini fiziksel etiketinize göre ayarlayın.
+                  </li>
+                </ol>
+              </details>
 
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-0 flex-1 sm:min-w-[12rem]">

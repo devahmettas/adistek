@@ -201,7 +201,7 @@ export default function JewelryProductDetailModal({
               </Button>
               {barcodeEnabled && product.barcode && (
                 <Button type="button" variant="secondary" onClick={handlePrintLabel}>
-                  Şerit Yazdır
+                  Etiket Yazdır
                 </Button>
               )}
               <Button type="button" variant="secondary" className="lg:w-auto" onClick={onClose}>
