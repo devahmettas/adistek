@@ -1,28 +1,26 @@
 import { renderBarcodeSvgForLabel } from './jewelryBarcode'
+import {
+  buildLabelLayout,
+  LABEL_BARCODE_SHIFT_MM,
+  LABEL_BODY_WIDTH_MM,
+  LABEL_HEIGHT_MM,
+  LABEL_MARGIN_MM,
+  LABEL_TAIL_SAFE_GAP_MM,
+  LABEL_TAIL_WIDTH_MM,
+  LABEL_WIDTH_MM,
+  type JewelryBarcodeLabel,
+} from './jewelryBarcodeLabelLayout'
 
-export interface JewelryBarcodeLabel {
-  name: string
-  barcode: string
-  karat?: number | null
-  weightGram?: string | null
-  salePrice?: string | number | null
-}
+export {
+  LABEL_BODY_WIDTH_MM,
+  LABEL_HEIGHT_MM,
+  LABEL_TAIL_WIDTH_MM,
+  LABEL_WIDTH_MM,
+  toJewelryBarcodeLabel,
+  type JewelryBarcodeLabel,
+} from './jewelryBarcodeLabelLayout'
 
-/** Kuyumcu barkod etiketi: 10 mm genişlik × 72 mm yükseklik */
-export const LABEL_WIDTH_MM = 10
-export const LABEL_HEIGHT_MM = 72
-
-const LABEL_PADDING_V_MM = 0.4
-const LABEL_PADDING_H_MM = 0.3
-const META_ROW_MM = 5
-const CODE_ROW_MM = 5
-
-/** Barkod çizgisi — metin satırlarına taşmaması için içeride ve biraz küçük */
-const BARCODE_LENGTH_MM = 54
-const BARCODE_THICKNESS_MM = 6.8
-
-export const LABEL_BARCODE_LENGTH_MM = BARCODE_LENGTH_MM
-export const LABEL_BARCODE_THICKNESS_MM = BARCODE_THICKNESS_MM
+export { buildJewelryBarcodeTspl, buildJewelryBarcodeTsplBatch } from './jewelryBarcodeTspl'
 
 function escapeHtml(value: string): string {
   return value
@@ -32,50 +30,47 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function resolveBarcodeDimensions(barcode: string): { lengthMm: number; thicknessMm: number } {
-  const len = barcode.trim().length
-  let lengthMm = BARCODE_LENGTH_MM
-
-  if (len > 14) {
-    lengthMm = BARCODE_LENGTH_MM - 8
-  } else if (len > 10) {
-    lengthMm = BARCODE_LENGTH_MM - 4
-  }
-
-  return {
-    lengthMm,
-    thicknessMm: BARCODE_THICKNESS_MM,
-  }
-}
-
 function buildLabelPageHtml(label: JewelryBarcodeLabel): string {
-  const { lengthMm, thicknessMm } = resolveBarcodeDimensions(label.barcode)
+  const layout = buildLabelLayout(label)
+  const barcodeWidthMm = layout.barcodeWidth / 8
+  const barcodeBlockWidthMm = layout.barcodeBlockWidth / 8
+  const barcodeHeightMm = layout.barcodeHeight / 8
   const barcodeSvg = renderBarcodeSvgForLabel(
     label.barcode,
-    lengthMm,
-    thicknessMm,
+    barcodeWidthMm,
+    barcodeHeightMm,
+    layout.barcodeNarrow / 8,
+    layout.barcodeWide / 8,
   )
   if (!barcodeSvg) return ''
 
-  const metaParts = [
-    label.karat ? `${label.karat}A` : null,
-    label.weightGram ? `${label.weightGram}g` : null,
+  const infoLines = [
+    layout.productName,
+    layout.gramLine,
+    layout.ayarLine,
   ].filter(Boolean)
 
-  const metaLine = metaParts.length > 0
-    ? `<div class="meta">${escapeHtml(metaParts.join(' '))}</div>`
-    : '<div class="meta meta-empty">&nbsp;</div>'
+  const infoHtml = infoLines
+    .map((line) => `<div class="info-line">${escapeHtml(line)}</div>`)
+    .join('')
 
   return `
     <section class="label-page">
       <div class="label">
-        ${metaLine}
-        <div class="barcode-area">
-          <div class="barcode-rotated" style="width:${lengthMm}mm;height:${thicknessMm}mm">
-            ${barcodeSvg}
+        <div class="tail" aria-hidden="true"></div>
+        <div class="body">
+          <div class="barcode-col">
+            <div class="barcode-block" style="width:${barcodeBlockWidthMm}mm">
+              <div class="barcode-wrap" style="height:${barcodeHeightMm}mm;width:${barcodeWidthMm}mm">
+                ${barcodeSvg}
+              </div>
+              <div class="barcode-no">${escapeHtml(label.barcode)}</div>
+            </div>
+          </div>
+          <div class="info-col">
+            ${infoHtml}
           </div>
         </div>
-        <div class="code">${escapeHtml(label.barcode)}</div>
       </div>
     </section>
   `
@@ -106,6 +101,7 @@ function buildLabelsHtml(labels: JewelryBarcodeLabel[]): string {
       width: ${LABEL_WIDTH_MM}mm;
       color: #000;
       font-family: Arial, Helvetica, sans-serif;
+      font-weight: 400;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -126,59 +122,95 @@ function buildLabelsHtml(labels: JewelryBarcodeLabel[]): string {
     .label {
       width: ${LABEL_WIDTH_MM}mm;
       height: ${LABEL_HEIGHT_MM}mm;
-      padding: ${LABEL_PADDING_V_MM}mm ${LABEL_PADDING_H_MM}mm;
-      display: grid;
-      grid-template-rows: ${META_ROW_MM}mm 1fr ${CODE_ROW_MM}mm;
-      align-items: center;
-      justify-items: center;
-      text-align: center;
+      display: flex;
       background: #fff;
       overflow: hidden;
     }
 
-    .meta {
-      width: 100%;
-      font-size: 2mm;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0.02em;
-      color: #000;
+    .body {
+      width: ${LABEL_BODY_WIDTH_MM}mm;
+      height: ${LABEL_HEIGHT_MM}mm;
+      padding: ${LABEL_MARGIN_MM}mm;
+      padding-left: ${LABEL_TAIL_SAFE_GAP_MM + LABEL_MARGIN_MM}mm;
+      display: flex;
+      gap: 1mm;
+      align-items: stretch;
+      overflow: hidden;
     }
 
-    .meta-empty {
-      visibility: hidden;
+    .tail {
+      width: ${LABEL_TAIL_WIDTH_MM}mm;
+      height: ${LABEL_HEIGHT_MM}mm;
+      flex-shrink: 0;
+      background: #fff;
     }
 
-    .code {
-      width: 100%;
-      font-family: Consolas, Monaco, monospace;
-      font-size: 1.6mm;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0;
-      word-break: break-all;
-      color: #000;
+    .barcode-col {
+      flex: 0 0 45%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      overflow: visible;
     }
 
-    .barcode-area {
-      width: 100%;
-      height: 100%;
+    .barcode-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform: translateX(${LABEL_BARCODE_SHIFT_MM}mm);
+      gap: 0.2mm;
+      overflow: visible;
+    }
+
+    .info-col {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 0.2mm;
+      overflow: hidden;
+      text-align: right;
+    }
+
+    .barcode-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
 
-    .barcode-rotated {
-      flex-shrink: 0;
-      transform: rotate(90deg);
-      transform-origin: center center;
-    }
-
-    .barcode-rotated svg {
+    .barcode-wrap svg {
       display: block;
       width: 100%;
       height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .barcode-no {
+      width: 100%;
+      text-align: center;
+      font-size: 1.7mm;
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+      color: #000;
+      white-space: nowrap;
+      overflow: visible;
+    }
+
+    .info-line {
+      font-size: 2mm;
+      font-weight: 400;
+      line-height: 1.15;
+      color: #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   </style>
 </head>
@@ -235,24 +267,6 @@ function printHtml(html: string): Promise<void> {
       }, 5000)
     }, 200)
   })
-}
-
-export function toJewelryBarcodeLabel(product: {
-  name: string
-  barcode: string | null
-  karat?: number | null
-  weight_gram?: string | null
-  sale_price?: string | number | null
-}): JewelryBarcodeLabel | null {
-  if (!product.barcode?.trim()) return null
-
-  return {
-    name: product.name,
-    barcode: product.barcode.trim(),
-    karat: product.karat,
-    weightGram: product.weight_gram,
-    salePrice: product.sale_price,
-  }
 }
 
 export async function printJewelryBarcodeLabels(labels: JewelryBarcodeLabel[]): Promise<void> {

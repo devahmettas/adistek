@@ -15,6 +15,7 @@ import {
 import { formatPanelMoney } from '../../components/restaurant/ManagementPanelWidgets'
 import {
   LABEL_HEIGHT_MM,
+  LABEL_TAIL_WIDTH_MM,
   LABEL_WIDTH_MM,
   printJewelryBarcodeLabel,
   printJewelryBarcodeLabels,
@@ -291,6 +292,8 @@ export default function JewelerBarcodePage() {
             <div className="space-y-4">
               <p className="text-sm text-slate-600">
                 Her etiket ayrı sayfa olarak yazdırılır ({LABEL_WIDTH_MM}×{LABEL_HEIGHT_MM} mm).
+                Soldaki {LABEL_TAIL_WIDTH_MM} mm çentik/kuyruk alanı boş bırakılır; baskı sağdan
+                sola doğru başlar — ürün bilgisi sağda, barkod solda.
               </p>
 
               <details className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
@@ -303,7 +306,7 @@ export default function JewelerBarcodePage() {
                   </li>
                   <li>
                     <strong>Kağıt boyutu:</strong> Özel veya Kullanıcı tanımlı →{' '}
-                    <strong>{LABEL_WIDTH_MM} mm × {LABEL_HEIGHT_MM} mm</strong>
+                    <strong>{LABEL_WIDTH_MM} mm × {LABEL_HEIGHT_MM} mm</strong> (203 DPI, 1 mm ≈ 8 dot)
                   </li>
                   <li>
                     <strong>Kenar boşlukları:</strong> Yok / 0 mm

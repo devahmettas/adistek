@@ -49,6 +49,8 @@ export function renderBarcodeSvgForLabel(
   value: string | null | undefined,
   lengthMm: number,
   thicknessMm: number,
+  preferredModuleWidthMm = 0.12,
+  preferredWideModuleWidthMm = 0.24,
 ): string | null {
   const trimmed = value?.trim()
   if (!trimmed || typeof document === 'undefined') return null
@@ -57,14 +59,21 @@ export function renderBarcodeSvgForLabel(
   const targetWidthPx = lengthMm * pxPerMm * 0.96
   const targetHeightPx = thicknessMm * pxPerMm * 0.96
   const modules = estimateCode128Modules(trimmed)
-  const moduleWidth = targetWidthPx / modules
+  const moduleWidthFromPreferred = preferredModuleWidthMm * pxPerMm
+  const moduleWidthFromFit = targetWidthPx / modules
+  const moduleWidth = Math.min(
+    moduleWidthFromPreferred > 0 ? moduleWidthFromPreferred : moduleWidthFromFit,
+    moduleWidthFromFit,
+    preferredWideModuleWidthMm * pxPerMm,
+    1.2,
+  )
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 
   try {
     JsBarcode(svg, trimmed, {
       format: 'CODE128',
-      width: moduleWidth,
+      width: Math.max(0.5, moduleWidth),
       height: targetHeightPx,
       displayValue: false,
       margin: 0,
